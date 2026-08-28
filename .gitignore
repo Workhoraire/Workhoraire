@@ -1,0 +1,15 @@
+node_modules/
+dist/
+coverage/
+.env
+.env.*
+!.env.example
+
+# Keycloak exports may contain users or credentials
+infrastructure/keycloak/exports/
+
+# NestJS / TypeScript
+*.tsbuildinfo
+
+# Local development
+.DS_Store
