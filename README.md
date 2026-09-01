@@ -28,6 +28,27 @@ docker compose up -d postgres keycloak
 Le backend autorise les appels navigateur provenant de `FRONTEND_URL`, defini
 par defaut sur `http://localhost:4200`.
 
+## Frontend
+
+Le frontend Angular standalone se trouve dans `frontend/`. Sa configuration
+publique (URL API, realm et client Keycloak) est dans
+`frontend/src/environments/environment.ts`.
+
+```bash
+cd frontend
+npm install
+npm start
+```
+
+L'application est ensuite disponible sur `http://localhost:4200`. Elle utilise
+le client public `workhoraire-web` avec Authorization Code + PKCE, puis charge
+le profil applicatif via `GET /me`.
+
+Un utilisateur Keycloak qui n'est pas encore rattaché à une entreprise est
+redirigé vers l'onboarding. Le formulaire appelle `POST /onboarding/company`
+avec le nom, le SIRET facultatif et le fuseau horaire. La création de la
+`Company` et du premier `User` ADMIN est réalisée dans une transaction.
+
 La configuration partagee est presentee dans `.env.example`. Les commandes
 Prisma utilisent directement le `.env` racine :
 
@@ -35,6 +56,33 @@ Prisma utilisent directement le `.env` racine :
 cd backend
 npm run prisma:validate
 ```
+
+## Gestion des employés
+
+Le modèle `User` représente directement un employé rattaché à une `Company`.
+Il contient son prénom, son nom, son e-mail, son rôle et son statut actif.
+L'interface de gestion est disponible sur `/employees` pour les utilisateurs
+ayant le rôle `ADMIN`.
+
+Les endpoints principaux sont :
+
+```text
+GET   /employees
+GET   /employees/:id
+PATCH /employees/:id
+POST  /employees/invitations
+POST  /employee-invitations/:token/accept
+```
+
+Toutes les opérations d'administration utilisent l'entreprise de l'utilisateur
+authentifié. Le frontend ne fournit jamais de `companyId`.
+
+La première version des invitations génère un lien à copier et à transmettre
+au salarié. Il doit disposer d'un compte dans le realm Keycloak et se connecter
+avec l'adresse invitée avant d'ouvrir le lien. L'acceptation crée son `User`
+dans la bonne entreprise ; le mot de passe reste entièrement géré par
+Keycloak et n'est jamais demandé ni stocké par WorkHoraire. L'envoi d'e-mails
+automatique sera ajouté avec la configuration SMTP de Keycloak.
 
 ## Keycloak local
 
@@ -57,11 +105,12 @@ npm run start:dev
 Le compte administrateur utilise les valeurs `KEYCLOAK_ADMIN` et
 `KEYCLOAK_ADMIN_PASSWORD` du fichier `.env`. Apres connexion a la console,
 selectionner le realm `workhoraire`, puis creer les utilisateurs dans
-`Users`. Attribuer ensuite un role realm parmi `ADMIN`, `MANAGER` ou
-`EMPLOYEE` dans `Role mapping`.
+`Users` si un compte Keycloak doit être préparé pour une invitation. Le rôle
+applicatif (`ADMIN`, `MANAGER` ou `EMPLOYEE`) est géré par WorkHoraire en base,
+et non par les rôles realm Keycloak.
 
 Le backend utilise le client bearer-only `workhoraire-api`. Le client public
-`workhoraire-web` est reserve a la future application Angular et ajoute
+`workhoraire-web` est utilise par l'application Angular et ajoute
 `workhoraire-api` comme audience des access tokens.
 
 ## Utilisateur applicatif
@@ -72,9 +121,9 @@ etre rattache a une `Company`. Le role utilise par l'application est celui de
 la base (`ADMIN`, `MANAGER` ou `EMPLOYEE`). Une identité Keycloak inconnue est
 refusee avec une reponse `403`.
 
-La creation de la premiere societe et le rattachement des utilisateurs ne sont
-pas encore exposes par une route publique. Cette etape sera implementee dans
-le flux d'administration suivant.
+La creation de la premiere societe et le rattachement initial sont realises par
+le parcours d'onboarding apres authentification Keycloak. Les employes suivants
+rejoignent une entreprise via une invitation generee par son administrateur.
 
 ## Partage du realm
 

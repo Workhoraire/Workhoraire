@@ -1,0 +1,37 @@
+<div class="invitation-shell">
+  <header class="topbar">
+    <a class="brand" routerLink="/dashboard" aria-label="WorkHoraire, tableau de bord">
+      <span class="brand-mark" aria-hidden="true">WH</span>
+      <span class="brand-name">WorkHoraire</span>
+    </a>
+    <button mat-button type="button" (click)="logout()">
+      <mat-icon aria-hidden="true">logout</mat-icon>
+      Se déconnecter
+    </button>
+  </header>
+
+  <main class="invitation-content">
+    <mat-card class="invitation-card">
+      @if (state() === 'loading') {
+        <mat-spinner diameter="42"></mat-spinner>
+        <p class="eyebrow">INVITATION</p>
+        <h1>Vérification en cours.</h1>
+        <p>Nous rattachons votre compte Keycloak à l’entreprise.</p>
+      } @else if (state() === 'success') {
+        <div class="state-icon success-icon"><mat-icon aria-hidden="true">check</mat-icon></div>
+        <p class="eyebrow">BIENVENUE DANS L’ÉQUIPE</p>
+        <h1>Votre accès est prêt.</h1>
+        <p>Votre compte a été rattaché. Redirection vers votre espace...</p>
+      } @else {
+        <div class="state-icon error-icon"><mat-icon aria-hidden="true">link_off</mat-icon></div>
+        <p class="eyebrow">INVITATION</p>
+        <h1>Le lien n’a pas fonctionné.</h1>
+        <p>{{ error() }}</p>
+        <div class="invitation-actions">
+          <button mat-flat-button type="button" (click)="acceptInvitation()">Réessayer</button>
+          <a mat-button routerLink="/dashboard">Retour au dashboard</a>
+        </div>
+      }
+    </mat-card>
+  </main>
+</div>

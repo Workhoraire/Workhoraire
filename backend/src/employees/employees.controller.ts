@@ -1,0 +1,58 @@
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
+import { UserRole } from '@prisma/client';
+import { ApplicationUser } from '../auth/auth.types';
+import { ApplicationRolesGuard } from '../auth/application-roles.guard';
+import { ApplicationUserGuard } from '../auth/application-user.guard';
+import { CurrentUser } from '../auth/current-user.decorator';
+import { KeycloakAuthGuard } from '../auth/keycloak-auth.guard';
+import { Roles } from '../auth/roles.decorator';
+import { CreateEmployeeInvitationDto } from './dto/create-employee-invitation.dto';
+import { UpdateEmployeeDto } from './dto/update-employee.dto';
+import { EmployeeInvitationResponse, EmployeeResponse } from './employee.types';
+import { EmployeesService } from './employees.service';
+
+@Controller('employees')
+@UseGuards(KeycloakAuthGuard, ApplicationUserGuard, ApplicationRolesGuard)
+@Roles(UserRole.ADMIN)
+export class EmployeesController {
+  constructor(private readonly employeesService: EmployeesService) {}
+
+  @Get()
+  listEmployees(@CurrentUser() currentUser: ApplicationUser): Promise<EmployeeResponse[]> {
+    return this.employeesService.listEmployees(currentUser.companyId);
+  }
+
+  @Get(':id')
+  getEmployee(
+    @CurrentUser() currentUser: ApplicationUser,
+    @Param('id', ParseUUIDPipe) employeeId: string,
+  ): Promise<EmployeeResponse> {
+    return this.employeesService.getEmployee(currentUser.companyId, employeeId);
+  }
+
+  @Post('invitations')
+  createInvitation(
+    @CurrentUser() currentUser: ApplicationUser,
+    @Body() dto: CreateEmployeeInvitationDto,
+  ): Promise<EmployeeInvitationResponse> {
+    return this.employeesService.createInvitation(currentUser, dto);
+  }
+
+  @Patch(':id')
+  updateEmployee(
+    @CurrentUser() currentUser: ApplicationUser,
+    @Param('id', ParseUUIDPipe) employeeId: string,
+    @Body() dto: UpdateEmployeeDto,
+  ): Promise<EmployeeResponse> {
+    return this.employeesService.updateEmployee(currentUser, employeeId, dto);
+  }
+}

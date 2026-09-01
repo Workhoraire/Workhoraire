@@ -1,0 +1,232 @@
+<div class="employees-shell">
+  <header class="topbar">
+    <a class="brand" routerLink="/dashboard" aria-label="WorkHoraire, tableau de bord">
+      <span class="brand-mark" aria-hidden="true">WH</span>
+      <span class="brand-name">WorkHoraire</span>
+    </a>
+
+    <div class="topbar-actions">
+      <a mat-button routerLink="/dashboard">Tableau de bord</a>
+      <button mat-stroked-button type="button" (click)="logout()">
+        <mat-icon aria-hidden="true">logout</mat-icon>
+        Déconnexion
+      </button>
+    </div>
+  </header>
+
+  <main class="employees-content">
+    <section class="page-heading" aria-labelledby="employees-title">
+      <div>
+        <p class="eyebrow">ADMINISTRATION</p>
+        <h1 id="employees-title">Votre équipe.</h1>
+        <p class="heading-copy">
+          Invitez les membres de votre entreprise et gardez le contrôle de leurs accès WorkHoraire.
+        </p>
+      </div>
+      <div class="team-count">
+        <span class="count-value">{{ employees().length }}</span>
+        <span class="count-label">collaborateur{{ employees().length > 1 ? 's' : '' }}</span>
+      </div>
+    </section>
+
+    @if (error(); as errorMessage) {
+      <div class="message error-message" role="alert">
+        <mat-icon aria-hidden="true">error_outline</mat-icon>
+        <span>{{ errorMessage }}</span>
+      </div>
+    }
+
+    @if (notice(); as noticeMessage) {
+      <div class="message notice-message" role="status">
+        <mat-icon aria-hidden="true">check_circle</mat-icon>
+        <span>{{ noticeMessage }}</span>
+      </div>
+    }
+
+    <section class="employees-layout">
+      <mat-card class="invite-card">
+        <div class="card-kicker">NOUVEAU MEMBRE</div>
+        <mat-card-title>Inviter un employé</mat-card-title>
+        <mat-card-subtitle>Un lien sécurisé sera généré pour son compte Keycloak.</mat-card-subtitle>
+
+        <mat-card-content>
+          <form [formGroup]="inviteForm" (ngSubmit)="inviteEmployee()" novalidate>
+            <div class="form-row">
+              <mat-form-field appearance="outline">
+                <mat-label>Prénom</mat-label>
+                <input matInput formControlName="firstName" autocomplete="given-name" />
+                @if (inviteForm.controls.firstName.hasError('required')) {
+                  <mat-error>Le prénom est obligatoire.</mat-error>
+                }
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Nom</mat-label>
+                <input matInput formControlName="lastName" autocomplete="family-name" />
+                @if (inviteForm.controls.lastName.hasError('required')) {
+                  <mat-error>Le nom est obligatoire.</mat-error>
+                }
+              </mat-form-field>
+            </div>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Adresse e-mail</mat-label>
+              <input matInput formControlName="email" type="email" autocomplete="email" />
+              @if (inviteForm.controls.email.hasError('required')) {
+                <mat-error>L’adresse e-mail est obligatoire.</mat-error>
+              } @else if (inviteForm.controls.email.hasError('email')) {
+                <mat-error>Saisissez une adresse e-mail valide.</mat-error>
+              }
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Rôle</mat-label>
+              <mat-select formControlName="role">
+                @for (role of roles; track role) {
+                  <mat-option [value]="role">{{ roleLabel(role) }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+
+            <button mat-flat-button class="invite-button" type="submit" [disabled]="saving()">
+              @if (saving()) {
+                <span class="button-content">
+                  <mat-spinner diameter="20"></mat-spinner>
+                  <span>Création du lien...</span>
+                </span>
+              } @else {
+                <span class="button-content">
+                  <span>Générer l’invitation</span>
+                  <mat-icon aria-hidden="true">arrow_forward</mat-icon>
+                </span>
+              }
+            </button>
+          </form>
+
+          @if (invitationLink(); as link) {
+            <div class="invitation-result">
+              <div class="result-heading">
+                <mat-icon aria-hidden="true">link</mat-icon>
+                <span>Lien prêt à transmettre</span>
+              </div>
+              <div class="link-row">
+                <input matInput readonly [value]="link" aria-label="Lien d’invitation" />
+                <button
+                  mat-icon-button
+                  type="button"
+                  aria-label="Copier le lien d’invitation"
+                  (click)="copyInvitationLink()"
+                >
+                  <mat-icon aria-hidden="true">content_copy</mat-icon>
+                </button>
+              </div>
+              @if (copied()) {
+                <p class="copied-label">Lien copié.</p>
+              }
+              <p class="result-note">
+                L’invitation expire dans 7 jours. Le salarié devra se connecter avec l’adresse
+                indiquée.
+              </p>
+            </div>
+          }
+        </mat-card-content>
+      </mat-card>
+
+      <section class="team-list" aria-labelledby="team-list-title">
+        <div class="list-heading">
+          <div>
+            <p class="card-kicker">MEMBRES DE L’ENTREPRISE</p>
+            <h2 id="team-list-title">Tous les employés</h2>
+          </div>
+          <button mat-icon-button type="button" aria-label="Actualiser la liste" (click)="loadEmployees()">
+            <mat-icon aria-hidden="true">refresh</mat-icon>
+          </button>
+        </div>
+
+        @if (loading()) {
+          <div class="list-loading" role="status" aria-label="Chargement des employés">
+            <mat-spinner diameter="32"></mat-spinner>
+            <span>Chargement de l’équipe...</span>
+          </div>
+        } @else if (employees().length === 0) {
+          <mat-card class="empty-card">
+            <div class="empty-icon"><mat-icon aria-hidden="true">group_add</mat-icon></div>
+            <h3>Votre équipe vous attend.</h3>
+            <p>Générez votre première invitation pour commencer à la constituer.</p>
+          </mat-card>
+        } @else {
+          <div class="employee-cards">
+            @for (employee of employees(); track employee.id) {
+              <mat-card class="employee-card">
+                @if (editingId() === employee.id) {
+                  <form class="edit-form" [formGroup]="editForm" (ngSubmit)="saveEmployee(employee)" novalidate>
+                    <div class="edit-heading">
+                      <span>Modifier le profil</span>
+                      <button mat-icon-button type="button" aria-label="Annuler la modification" (click)="cancelEditing()">
+                        <mat-icon aria-hidden="true">close</mat-icon>
+                      </button>
+                    </div>
+                    <div class="form-row">
+                      <mat-form-field appearance="outline">
+                        <mat-label>Prénom</mat-label>
+                        <input matInput formControlName="firstName" />
+                      </mat-form-field>
+                      <mat-form-field appearance="outline">
+                        <mat-label>Nom</mat-label>
+                        <input matInput formControlName="lastName" />
+                      </mat-form-field>
+                    </div>
+                    <mat-form-field appearance="outline">
+                      <mat-label>Adresse e-mail</mat-label>
+                      <input matInput formControlName="email" type="email" />
+                    </mat-form-field>
+                    <mat-form-field appearance="outline">
+                      <mat-label>Rôle</mat-label>
+                      <mat-select formControlName="role">
+                        @for (role of roles; track role) {
+                          <mat-option [value]="role">{{ roleLabel(role) }}</mat-option>
+                        }
+                      </mat-select>
+                    </mat-form-field>
+                    <div class="edit-actions">
+                      <button mat-button type="button" (click)="cancelEditing()">Annuler</button>
+                      <button mat-flat-button type="submit" [disabled]="savingEmployeeId() === employee.id">
+                        Enregistrer
+                      </button>
+                    </div>
+                  </form>
+                } @else {
+                  <div class="employee-topline">
+                    <div class="employee-main">
+                      <div class="employee-avatar" aria-hidden="true">{{ initials(employee) }}</div>
+                      <div>
+                        <h3>{{ fullName(employee) }}</h3>
+                        <p>{{ employee.email ?? 'E-mail non renseigné' }}</p>
+                      </div>
+                    </div>
+                    <span class="status" [class.status-inactive]="!employee.isActive">
+                      <span class="status-dot"></span>{{ statusLabel(employee.isActive) }}
+                    </span>
+                  </div>
+                  <div class="employee-bottomline">
+                    <span class="role-tag">{{ roleLabel(employee.role) }}</span>
+                    <div class="employee-actions">
+                      <button mat-button type="button" (click)="startEditing(employee)">Modifier</button>
+                      <button
+                        mat-stroked-button
+                        type="button"
+                        [disabled]="savingEmployeeId() === employee.id"
+                        (click)="toggleActive(employee)"
+                      >
+                        {{ employee.isActive ? 'Désactiver' : 'Réactiver' }}
+                      </button>
+                    </div>
+                  </div>
+                }
+              </mat-card>
+            }
+          </div>
+        }
+      </section>
+    </section>
+  </main>
+</div>

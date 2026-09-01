@@ -16,6 +16,20 @@ export type ApplicationUser = User & {
   company: Company;
 };
 
+export interface ApplicationUserResponse {
+  id: string;
+  subject: string;
+  email: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  isActive: boolean;
+  role: User['role'];
+  company: {
+    id: string;
+    name: string;
+  };
+}
+
 interface KeycloakAccessToken {
   content: KeycloakUser;
 }

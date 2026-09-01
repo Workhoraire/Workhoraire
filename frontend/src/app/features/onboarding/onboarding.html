@@ -1,0 +1,108 @@
+<div class="onboarding-shell">
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="WorkHoraire, accueil">
+      <span class="brand-mark" aria-hidden="true">WH</span>
+      <span class="brand-name">WorkHoraire</span>
+    </a>
+    <button mat-button type="button" (click)="logout()">
+      <mat-icon aria-hidden="true">logout</mat-icon>
+      Se déconnecter
+    </button>
+  </header>
+
+  <main class="onboarding-content">
+    <section class="intro" aria-labelledby="onboarding-title">
+      <p class="eyebrow">PREMIÈRE ÉTAPE</p>
+      <h1 id="onboarding-title">Créons votre espace d'entreprise.</h1>
+      <p class="intro-copy">
+        Quelques informations suffisent pour commencer à organiser vos horaires et votre équipe.
+      </p>
+      <div class="security-note">
+        <mat-icon aria-hidden="true">verified_user</mat-icon>
+        <span>Vous deviendrez automatiquement administrateur de cette entreprise.</span>
+      </div>
+    </section>
+
+    <mat-card class="form-card">
+      <mat-card-header>
+        <mat-card-title>Votre entreprise</mat-card-title>
+        <mat-card-subtitle>Ces informations pourront être complétées plus tard.</mat-card-subtitle>
+      </mat-card-header>
+
+      <mat-card-content>
+        <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+          <mat-form-field appearance="outline">
+            <mat-label>Nom de l'entreprise</mat-label>
+            <input
+              matInput
+              formControlName="name"
+              autocomplete="organization"
+              maxlength="120"
+              placeholder="Ex. Atelier Martin"
+            />
+            <mat-hint>Le nom affiché dans votre espace WorkHoraire.</mat-hint>
+            @if (form.controls.name.hasError('required')) {
+              <mat-error>Le nom de l'entreprise est obligatoire.</mat-error>
+            } @else if (form.controls.name.hasError('pattern')) {
+              <mat-error>Le nom de l'entreprise ne peut pas être vide.</mat-error>
+            } @else if (form.controls.name.hasError('minlength')) {
+              <mat-error>Le nom doit contenir au moins 2 caractères.</mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>SIRET <span class="optional">(facultatif)</span></mat-label>
+            <input
+              matInput
+              formControlName="siret"
+              inputmode="numeric"
+              maxlength="14"
+              placeholder="14 chiffres"
+            />
+            <mat-hint>Il doit contenir exactement 14 chiffres.</mat-hint>
+            @if (form.controls.siret.hasError('pattern')) {
+              <mat-error>Le SIRET doit contenir exactement 14 chiffres.</mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Fuseau horaire</mat-label>
+            <input matInput formControlName="timezone" autocomplete="off" />
+            <mat-hint>Europe/Paris est utilisé par défaut.</mat-hint>
+            @if (form.controls.timezone.hasError('required')) {
+              <mat-error>Le fuseau horaire est obligatoire.</mat-error>
+            }
+          </mat-form-field>
+
+          @if (error(); as errorMessage) {
+            <div class="form-error" role="alert">
+              <mat-icon aria-hidden="true">error_outline</mat-icon>
+              <span>{{ errorMessage }}</span>
+            </div>
+          }
+
+          @if (success()) {
+            <div class="form-success" role="status">
+              <mat-icon aria-hidden="true">check_circle</mat-icon>
+              <span>Entreprise créée. Redirection vers votre espace...</span>
+            </div>
+          }
+
+          <button mat-flat-button class="submit-button" type="submit" [disabled]="submitting()">
+            @if (submitting()) {
+              <span class="button-content">
+                <mat-spinner diameter="20"></mat-spinner>
+                <span>Création en cours...</span>
+              </span>
+            } @else {
+              <span class="button-content">
+                <span>Créer mon entreprise</span>
+                <mat-icon aria-hidden="true">arrow_forward</mat-icon>
+              </span>
+            }
+          </button>
+        </form>
+      </mat-card-content>
+    </mat-card>
+  </main>
+</div>

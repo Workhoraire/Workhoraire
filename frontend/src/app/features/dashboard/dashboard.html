@@ -1,0 +1,127 @@
+<div class="dashboard-shell">
+  <header class="topbar">
+    <a class="brand" routerLink="/dashboard" aria-label="WorkHoraire, tableau de bord">
+      <span class="brand-mark" aria-hidden="true">WH</span>
+      <span class="brand-name">WorkHoraire</span>
+    </a>
+
+    <div class="topbar-actions">
+      @if (user(); as currentUser) {
+        <span class="role-badge">{{ roleLabel(currentUser.role) }}</span>
+        @if (currentUser.role === 'ADMIN') {
+          <a mat-button class="nav-link" routerLink="/employees">
+            <mat-icon aria-hidden="true">groups</mat-icon>
+            Employés
+          </a>
+        }
+      }
+      <button mat-stroked-button type="button" (click)="logout()">
+        <mat-icon aria-hidden="true">logout</mat-icon>
+        Déconnexion
+      </button>
+    </div>
+  </header>
+
+  <main class="dashboard-content">
+    <section class="hero" aria-labelledby="dashboard-title">
+      <div>
+        <p class="eyebrow">ESPACE DE TRAVAIL</p>
+        @if (user(); as currentUser) {
+          <h1 id="dashboard-title">{{ greeting(currentUser) }}</h1>
+        } @else {
+          <h1 id="dashboard-title">Votre espace de travail</h1>
+        }
+        <p class="hero-copy">
+          Retrouvez ici vos horaires, vos présences et les informations de votre équipe.
+        </p>
+      </div>
+      <div class="hero-orbit" aria-hidden="true">
+        <span class="orbit orbit-large"></span>
+        <span class="orbit orbit-small"></span>
+        <span class="orbit-core"></span>
+      </div>
+    </section>
+
+    @if (loading()) {
+      <div class="loading-state" role="status" aria-label="Chargement du profil">
+        <mat-spinner diameter="36"></mat-spinner>
+        <span>Chargement de votre espace...</span>
+      </div>
+    }
+
+    @if (error(); as errorMessage) {
+      <mat-card class="message-card error-card">
+        <mat-icon aria-hidden="true">info</mat-icon>
+        <div>
+          <h2>Connexion au profil impossible</h2>
+          <p>{{ errorMessage }}</p>
+        </div>
+        <button mat-flat-button type="button" (click)="loadCurrentUser()">Réessayer</button>
+      </mat-card>
+    }
+
+    @if (!loading() && user(); as currentUser) {
+      <section class="stats-grid" aria-label="Résumé du compte">
+        <mat-card class="stat-card stat-card-lime">
+          <div class="stat-icon"><mat-icon aria-hidden="true">business</mat-icon></div>
+          <p class="stat-label">Entreprise</p>
+          <p class="stat-value">{{ currentUser.company.name }}</p>
+          <p class="stat-note">Espace partagé de votre société</p>
+        </mat-card>
+
+        <mat-card class="stat-card stat-card-coral">
+          <div class="stat-icon"><mat-icon aria-hidden="true">badge</mat-icon></div>
+          <p class="stat-label">Votre rôle</p>
+          <p class="stat-value">{{ roleLabel(currentUser.role) }}</p>
+          <p class="stat-note">Accès défini par votre entreprise</p>
+        </mat-card>
+
+        <mat-card class="stat-card stat-card-ink">
+          <div class="stat-icon"><mat-icon aria-hidden="true">verified_user</mat-icon></div>
+          <p class="stat-label">Compte</p>
+          <p class="stat-value">Actif</p>
+          <p class="stat-note">Session Keycloak sécurisée</p>
+        </mat-card>
+      </section>
+
+      <section class="lower-grid" aria-label="Informations du compte">
+        <mat-card class="details-card">
+          <mat-card-header>
+            <div mat-card-avatar class="avatar">{{ (currentUser.firstName ?? 'W')[0] }}</div>
+            <mat-card-title>Votre profil</mat-card-title>
+            <mat-card-subtitle>Informations applicatives</mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-content>
+            <dl class="profile-list">
+              <div>
+                <dt>Nom complet</dt>
+                <dd>{{ fullName(currentUser) }}</dd>
+              </div>
+              <div>
+                <dt>Adresse e-mail</dt>
+                <dd>{{ currentUser.email ?? 'Non renseignée' }}</dd>
+              </div>
+              <div>
+                <dt>Identifiant Keycloak</dt>
+                <dd class="subject">{{ currentUser.subject }}</dd>
+              </div>
+            </dl>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="next-card">
+          <div class="next-card-topline">
+            <span class="coming-soon">PROCHAINEMENT</span>
+            <mat-icon aria-hidden="true">schedule</mat-icon>
+          </div>
+          <h2>Le suivi des heures arrive ici.</h2>
+          <p>
+            Le prochain module permettra de pointer en un geste et de suivre votre journée en temps
+            réel.
+          </p>
+          <div class="next-line" aria-hidden="true"></div>
+        </mat-card>
+      </section>
+    }
+  </main>
+</div>

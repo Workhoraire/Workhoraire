@@ -29,6 +29,10 @@ export class ApplicationUserGuard implements CanActivate {
       );
     }
 
+    if (!applicationUser.isActive) {
+      throw new ForbiddenException('The application user is inactive');
+    }
+
     request.applicationUser = applicationUser;
     return true;
   }

@@ -1,0 +1,43 @@
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
+import { UserRole } from '@prisma/client';
+import { CreateEmployeeInvitationDto } from './create-employee-invitation.dto';
+import { UpdateEmployeeDto } from './update-employee.dto';
+
+describe('Employee DTOs', () => {
+  it('normalizes a valid invitation payload', async () => {
+    const dto = plainToInstance(CreateEmployeeInvitationDto, {
+      firstName: ' Jean ',
+      lastName: ' Dupont ',
+      email: ' EMPLOYEE@EXAMPLE.COM ',
+      role: UserRole.MANAGER,
+    });
+
+    const errors = await validate(dto);
+
+    expect(errors).toHaveLength(0);
+    expect(dto).toMatchObject({
+      firstName: 'Jean',
+      lastName: 'Dupont',
+      email: 'employee@example.com',
+      role: UserRole.MANAGER,
+    });
+  });
+
+  it('rejects invalid invitation and update values', async () => {
+    const invitation = plainToInstance(CreateEmployeeInvitationDto, {
+      firstName: '',
+      lastName: '',
+      email: 'not-an-email',
+      role: 'OWNER',
+    });
+    const update = plainToInstance(UpdateEmployeeDto, {
+      email: 'not-an-email',
+      role: 'OWNER',
+      isActive: 'false',
+    });
+
+    expect(await validate(invitation)).not.toHaveLength(0);
+    expect(await validate(update)).not.toHaveLength(0);
+  });
+});

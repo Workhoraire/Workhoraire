@@ -2,10 +2,7 @@
 
 ## 1. Project Overview
 
-WorkHoraire is a SaaS application for TPEs and SMEs.
-
-Its purpose is to replace Excel-based employee time tracking with a simple web application.
-
+WorkHoraire is a SaaS application for TPEs and SMEs. Its purpose is to replace Excel-based employee time tracking with a simple web application.
 The main features will include:
 
 * Employee management
@@ -19,11 +16,9 @@ The main features will include:
 * Role-based access control
 
 The project is currently being developed as an MVP.
-
 ---
 
 ## 2. Technical Stack
-
 ### Frontend
 
 * Angular
@@ -78,9 +73,7 @@ workhoraire/
 └── CLAUDE.md
 ```
 
-Keep frontend and backend separated.
-
-Do not introduce Nx, Turborepo, micro-frontends, or another monorepo framework unless explicitly requested.
+Keep frontend and backend separated. Do not introduce Nx, Turborepo, micro-frontends, or another monorepo framework unless explicitly requested.
 
 ---
 
@@ -118,9 +111,7 @@ NestJS
 PostgreSQL
 ```
 
-Do not introduce microservices.
-
-Do not introduce distributed systems unless a concrete requirement justifies them.
+Do not introduce microservices. Do not introduce distributed systems unless a concrete requirement justifies them.
 
 ---
 

@@ -10,10 +10,13 @@ datasource db {
 model Company {
   id        String   @id @default(uuid()) @db.Uuid
   name      String   @db.VarChar(120)
+  siret     String?  @unique @db.VarChar(14)
+  timezone  String   @default("Europe/Paris") @db.VarChar(64)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  users User[]
+  users       User[]
+  invitations EmployeeInvitation[]
 }
 
 enum UserRole {
@@ -23,16 +26,38 @@ enum UserRole {
 }
 
 model User {
-  id              String    @id @default(uuid()) @db.Uuid
-  keycloakSubject String    @unique @db.VarChar(255)
-  email           String?   @db.VarChar(320)
-  firstName       String?   @db.VarChar(100)
-  lastName        String?   @db.VarChar(100)
-  role            UserRole  @default(EMPLOYEE)
-  companyId       String    @db.Uuid
-  company         Company   @relation(fields: [companyId], references: [id], onDelete: Restrict)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id              String               @id @default(uuid()) @db.Uuid
+  keycloakSubject String               @unique @db.VarChar(255)
+  email           String?              @db.VarChar(320)
+  firstName       String?              @db.VarChar(100)
+  lastName        String?              @db.VarChar(100)
+  isActive        Boolean              @default(true)
+  role            UserRole             @default(EMPLOYEE)
+  companyId       String               @db.Uuid
+  company         Company              @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  sentInvitations EmployeeInvitation[] @relation("EmployeeInvitations")
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
 
   @@index([companyId])
+}
+
+model EmployeeInvitation {
+  id          String    @id @default(uuid()) @db.Uuid
+  email       String    @db.VarChar(320)
+  firstName   String    @db.VarChar(100)
+  lastName    String    @db.VarChar(100)
+  role        UserRole  @default(EMPLOYEE)
+  tokenHash   String    @unique @db.VarChar(64)
+  companyId   String    @db.Uuid
+  invitedById String    @db.Uuid
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  createdAt   DateTime  @default(now())
+
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  invitedBy User    @relation("EmployeeInvitations", fields: [invitedById], references: [id], onDelete: Restrict)
+
+  @@index([companyId])
+  @@index([email])
 }
