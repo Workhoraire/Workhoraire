@@ -1,145 +1,108 @@
-# Workhoraire
-Un SaaS destiné aux entreprises souhaitant moderniser leur système de pointage.
+# WorkHoraire
 
-## Backend
+Le pointage et le suivi des heures, simples et conformes, pour les TPE et PME françaises.
 
-Le backend NestJS se trouve dans `backend/`.
+- **Salariés** : pointer en un geste, voir sa journée et sa semaine, déclarer une sortie oubliée, poser ses absences.
+- **Managers et dirigeants** : tableau de bord de l'équipe, heures par jour et par semaine, corrections tracées avec motif, validation des absences, alertes légales.
+- **Paie** : exports CSV hebdomadaire (heures sup +25/+50 %, heures complémentaires +10/+25 %, absences, matricule) et journalier.
 
-```bash
-cp .env.example .env
-cd backend
-npm install
-npm run start:dev
-```
+La vision produit, l'étude de marché, le cadre légal, la roadmap et la documentation technique sont dans [`docs/`](docs/README.md). Commencer par la [synthèse](docs/produit/00-synthese.md).
 
-L'endpoint de santé est disponible sur `GET http://localhost:3000/health`.
-L'identité courante est disponible sur `GET http://localhost:3000/me` avec un
-access token Keycloak dans l'en-tête `Authorization: Bearer ...`.
+## Stack
 
-Le fichier `.env` racine est la source unique de configuration locale pour
-Docker, NestJS et Prisma. Il est ignore par Git. Pour lancer PostgreSQL et
-Keycloak en local, copiez d'abord `.env.example` vers `.env` et remplacez les
-placeholders de mot de passe :
+Angular 20 (standalone, Material 3) · NestJS 11 · Prisma 6 · PostgreSQL 16 · Keycloak 26 · Docker Compose. Les règles de développement sont dans [AGENTS.md](AGENTS.md).
+
+## Démarrage rapide
 
 ```bash
+cp .env.example .env            # puis remplacer les placeholders de mot de passe
 docker compose up -d postgres keycloak
 ```
 
-Le backend autorise les appels navigateur provenant de `FRONTEND_URL`, defini
-par defaut sur `http://localhost:4200`.
-
-## Frontend
-
-Le frontend Angular standalone se trouve dans `frontend/`. Sa configuration
-publique (URL API, realm et client Keycloak) est dans
-`frontend/src/environments/environment.ts`.
+Dans un premier terminal, lancez l'API :
 
 ```bash
-cd frontend
-npm install
-npm start
+cd backend && npm install && npm run prisma:migrate:deploy && npm run start:dev
 ```
 
-L'application est ensuite disponible sur `http://localhost:4200`. Elle utilise
-le client public `workhoraire-web` avec Authorization Code + PKCE, puis charge
-le profil applicatif via `GET /me`.
+Dans un second terminal, lancez l'application :
 
-Un utilisateur Keycloak qui n'est pas encore rattaché à une entreprise est
-redirigé vers l'onboarding. Le formulaire appelle `POST /onboarding/company`
-avec le nom, le SIRET facultatif et le fuseau horaire. La création de la
-`Company` et du premier `User` ADMIN est réalisée dans une transaction.
+```bash
+cd frontend && npm install && npm start
+```
 
-La configuration partagee est presentee dans `.env.example`. Les commandes
-Prisma utilisent directement le `.env` racine :
+- API : `http://localhost:3000` (santé : `GET /health`).
+- Application : `http://localhost:4200`.
+- Keycloak : `http://localhost:8180`.
+
+Sur la page de connexion, **« Enregistrement »** crée un compte. Au premier accès, l'onboarding crée l'entreprise, et vous en devenez l'administrateur.
+
+> Si le port 5432 est déjà occupé sur votre machine, changez `POSTGRES_PORT` dans `.env` et reportez le port dans `DATABASE_URL`.
+
+## Configuration
+
+Le `.env` à la racine est la source unique de configuration pour Docker, NestJS et Prisma. Il est ignoré par Git ; ne créez pas de second fichier de configuration dans `backend/`. Variables notables :
+
+| Variable | Rôle |
+|---|---|
+| `DATABASE_URL` | Base applicative |
+| `E2E_DATABASE_URL` | Base dédiée aux tests e2e, **vidée à chaque exécution** (son nom doit finir par `_e2e`) |
+| `FRONTEND_URL` | Origine autorisée par CORS |
+| `KEYCLOAK_*` | Serveur, realm et client de l'API |
+| `KEYCLOAK_REQUIRE_VERIFIED_EMAIL` | Exige un e-mail vérifié pour accepter une invitation (`true` par défaut ; `false` seulement en local, sans SMTP) |
+
+La configuration publique du frontend (URL de l'API, realm et client Keycloak) est dans `frontend/src/environments/environment.ts`.
+
+## Tests
+
+```bash
+cd backend && npm test               # unitaires (moteur de calcul, services, DTO)
+cd backend && npm run test:e2e       # API complète sur une vraie base PostgreSQL (voir docs/technique/tests-et-qualite.md)
+cd frontend && npx ng test --watch=false --browsers=ChromeHeadless
+```
+
+## Base de données
+
+Les changements de schéma passent par des migrations Prisma (`backend/prisma/migrations`) :
 
 ```bash
 cd backend
 npm run prisma:validate
+npm run prisma:migrate          # en développement : crée et applique une migration
+npm run prisma:migrate:deploy   # applique les migrations existantes
 ```
 
-## Gestion des employés
+Des contraintes `CHECK` complètent le schéma Prisma : une période se termine après son début, il y a un seul pointage ouvert par salarié, les dates d'absence sont cohérentes. Voir [docs/technique/architecture.md](docs/technique/architecture.md).
 
-Le modèle `User` représente directement un employé rattaché à une `Company`.
-Il contient son prénom, son nom, son e-mail, son rôle et son statut actif.
-L'interface de gestion est disponible sur `/employees` pour les utilisateurs
-ayant le rôle `ADMIN`.
+## Utilisateurs, rôles et entreprises
 
-Les endpoints principaux sont :
+- `GET /me` ne repose pas seulement sur les claims Keycloak. Le `sub` du jeton doit correspondre à `User.keycloakSubject` en base, et cet utilisateur doit être actif et rattaché à une `Company`. Une identité Keycloak inconnue est refusée (`403`).
+- Le rôle applicatif (`ADMIN`, `MANAGER` ou `EMPLOYEE`) est géré en base, pas par les rôles du realm Keycloak.
+- Toutes les opérations utilisent l'entreprise de l'utilisateur authentifié : le frontend ne fournit jamais de `companyId`.
+- **Invitations** : l'administrateur génère un lien valable 7 jours, qu'il transmet au salarié. Le salarié crée son compte (ou se connecte) avec l'adresse invitée, puis ouvre le lien. Son mot de passe reste géré par Keycloak.
 
-```text
-GET   /employees
-GET   /employees/:id
-PATCH /employees/:id
-POST  /employees/invitations
-POST  /employee-invitations/:token/accept
-```
-
-Toutes les opérations d'administration utilisent l'entreprise de l'utilisateur
-authentifié. Le frontend ne fournit jamais de `companyId`.
-
-La première version des invitations génère un lien à copier et à transmettre
-au salarié. Il doit disposer d'un compte dans le realm Keycloak et se connecter
-avec l'adresse invitée avant d'ouvrir le lien. L'acceptation crée son `User`
-dans la bonne entreprise ; le mot de passe reste entièrement géré par
-Keycloak et n'est jamais demandé ni stocké par WorkHoraire. L'envoi d'e-mails
-automatique sera ajouté avec la configuration SMTP de Keycloak.
+La liste complète des routes est dans [docs/technique/api.md](docs/technique/api.md).
 
 ## Keycloak local
 
-Le service Keycloak est expose sur `http://localhost:8180` et importe
-automatiquement le realm `workhoraire` depuis
-`infrastructure/keycloak/realms/workhoraire-realm.json`.
+Keycloak importe le realm `workhoraire` depuis `infrastructure/keycloak/realms/workhoraire-realm.json` : inscription ouverte, page de connexion en français, protection anti-brute-force.
 
-```bash
-docker compose up -d postgres keycloak
-```
+- Le backend utilise le client *bearer-only* `workhoraire-api`.
+- Le client public `workhoraire-web` sert à l'application Angular (Authorization Code + PKCE) et ajoute `workhoraire-api` comme audience des jetons.
+- La console d'administration utilise `KEYCLOAK_ADMIN` et `KEYCLOAK_ADMIN_PASSWORD` du fichier `.env`.
 
-Le backend charge le `.env` racine. Il ne faut pas créer de second fichier de
-configuration dans `backend/`.
+### Partage du realm
 
-```bash
-cd backend
-npm run start:dev
-```
-
-Le compte administrateur utilise les valeurs `KEYCLOAK_ADMIN` et
-`KEYCLOAK_ADMIN_PASSWORD` du fichier `.env`. Apres connexion a la console,
-selectionner le realm `workhoraire`, puis creer les utilisateurs dans
-`Users` si un compte Keycloak doit être préparé pour une invitation. Le rôle
-applicatif (`ADMIN`, `MANAGER` ou `EMPLOYEE`) est géré par WorkHoraire en base,
-et non par les rôles realm Keycloak.
-
-Le backend utilise le client bearer-only `workhoraire-api`. Le client public
-`workhoraire-web` est utilise par l'application Angular et ajoute
-`workhoraire-api` comme audience des access tokens.
-
-## Utilisateur applicatif
-
-`GET /me` ne repose pas uniquement sur les claims Keycloak. Le `sub` du token
-doit correspondre a `User.keycloakSubject` en base, et cet utilisateur doit
-etre rattache a une `Company`. Le role utilise par l'application est celui de
-la base (`ADMIN`, `MANAGER` ou `EMPLOYEE`). Une identité Keycloak inconnue est
-refusee avec une reponse `403`.
-
-La creation de la premiere societe et le rattachement initial sont realises par
-le parcours d'onboarding apres authentification Keycloak. Les employes suivants
-rejoignent une entreprise via une invitation generee par son administrateur.
-
-## Partage du realm
-
-Le fichier versionne est un export de configuration sans utilisateurs ni
-secret de production. Un realm est importe automatiquement uniquement lors de
-sa premiere creation. Pour repartir d'une configuration propre en local :
+Le fichier versionné est un export de configuration sans utilisateurs ni secret de production. **Un realm n'est importé qu'à sa première création.** Pour repartir d'une configuration propre en local :
 
 ```bash
 docker compose down -v
 docker compose up -d postgres keycloak
 ```
 
-La commande `down -v` supprime les donnees locales PostgreSQL. Ne pas l'utiliser
-sur un environnement partage ou de production.
+La commande `down -v` supprime les données locales PostgreSQL. Ne l'utilisez pas sur un environnement partagé ou de production.
 
-Pour exporter une configuration mise a jour sans exporter les utilisateurs :
+Pour exporter une configuration mise à jour sans exporter les utilisateurs :
 
 ```bash
 mkdir -p infrastructure/keycloak/exports
@@ -150,7 +113,8 @@ docker compose run --rm --no-deps \
 docker compose start keycloak
 ```
 
-Verifier l'export, retirer toute donnee sensible, puis mettre a jour
-`infrastructure/keycloak/realms/workhoraire-realm.json`. Le dossier
-`infrastructure/keycloak/exports/` est ignore par Git car un export peut
-contenir des utilisateurs ou des secrets.
+Vérifiez l'export et retirez toute donnée sensible avant de mettre à jour `infrastructure/keycloak/realms/workhoraire-realm.json`. Le dossier `infrastructure/keycloak/exports/` est ignoré par Git, car un export peut contenir des utilisateurs ou des secrets.
+
+## Mise en production
+
+Suivre la checklist de [docs/technique/securite-et-rgpd.md](docs/technique/securite-et-rgpd.md) : HTTPS, vérification des e-mails avec SMTP, MFA des administrateurs, hébergement dans l'UE, sauvegardes, contrat de sous-traitance RGPD.
