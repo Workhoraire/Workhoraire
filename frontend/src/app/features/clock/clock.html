@@ -1,0 +1,193 @@
+<section class="wh-page">
+  <header class="wh-page-header">
+    <div>
+      <p class="wh-eyebrow">{{ formatLongDate(todayKey()) }}</p>
+      <h1>{{ user()?.firstName ? 'Bonjour ' + user()?.firstName : 'Bonjour' }}</h1>
+      <p>{{ statusLine() }}</p>
+    </div>
+  </header>
+
+  @if (error(); as message) {
+    <div class="wh-message wh-message-error" role="alert">
+      <mat-icon aria-hidden="true">error_outline</mat-icon>
+      <span>{{ message }}</span>
+    </div>
+  }
+
+  @if (loading() && !status()) {
+    <div class="wh-loading" role="status">
+      <mat-spinner diameter="32" />
+      <span>Chargement de votre journée…</span>
+    </div>
+  }
+
+  @if (status(); as currentStatus) {
+    @if (isForgotten() && openEntry(); as entry) {
+      <section class="wh-card forgotten" aria-labelledby="forgotten-title">
+        <h2 id="forgotten-title">
+          <mat-icon aria-hidden="true">history</mat-icon>
+          Sortie non pointée
+        </h2>
+        <p>
+          Vous avez pointé votre arrivée le {{ formatDayLabel(forgottenForm.controls.date.value) }} à
+          {{ formatTime(entry.startAt, timezone()) }} sans pointer de sortie. Indiquez l’heure à
+          laquelle vous avez réellement terminé : votre responsable verra que l’heure a été déclarée.
+        </p>
+        <form class="wh-form" [formGroup]="forgottenForm" (ngSubmit)="closeForgottenEntry()">
+          <div class="wh-form-row">
+            <mat-form-field>
+              <mat-label>Date de sortie</mat-label>
+              <input matInput type="date" formControlName="date" required />
+            </mat-form-field>
+            <mat-form-field>
+              <mat-label>Heure de sortie</mat-label>
+              <input matInput type="time" formControlName="time" required />
+              @if (forgottenForm.controls.time.hasError('required')) {
+                <mat-error>L’heure est obligatoire.</mat-error>
+              }
+            </mat-form-field>
+          </div>
+          <mat-form-field>
+            <mat-label>Motif</mat-label>
+            <input matInput formControlName="reason" maxlength="500" />
+          </mat-form-field>
+          <div class="wh-actions">
+            <button mat-flat-button type="submit" [disabled]="busy()">Enregistrer ma sortie</button>
+          </div>
+        </form>
+      </section>
+    } @else {
+      <section class="clock-card" [class.working]="isWorking()" aria-live="polite">
+        <div class="clock-state">
+          <span class="state-dot" aria-hidden="true"></span>
+          <span>{{ isWorking() ? 'En poste' : 'Hors poste' }}</span>
+        </div>
+
+        <p class="today-total">
+          <span class="today-value">{{ formatDuration(todayMinutes()) }}</span>
+          <span class="today-label">travaillées aujourd’hui</span>
+        </p>
+
+        @if (sessionClock(); as clock) {
+          <p class="session">Session en cours : <strong>{{ clock }}</strong></p>
+        }
+
+        <button
+          type="button"
+          class="clock-button"
+          [class.clock-out]="isWorking()"
+          [disabled]="busy()"
+          (click)="toggleClock()"
+        >
+          @if (busy()) {
+            <mat-spinner diameter="26" />
+          } @else {
+            <mat-icon aria-hidden="true">{{ isWorking() ? 'logout' : 'login' }}</mat-icon>
+          }
+          <span>{{ clockLabel() }}</span>
+        </button>
+
+        @if (showNote()) {
+          <mat-form-field class="note-field">
+            <mat-label>Note (facultative)</mat-label>
+            <textarea
+              matInput
+              rows="2"
+              maxlength="500"
+              [formControl]="noteControl"
+              placeholder="Ex. : livraison, réunion chez un client…"
+            ></textarea>
+          </mat-form-field>
+        } @else {
+          <button mat-button type="button" class="note-toggle" (click)="showNote.set(true)">
+            <mat-icon aria-hidden="true">edit_note</mat-icon>
+            Ajouter une note
+          </button>
+        }
+        <p class="server-time-note">L’heure enregistrée est celle du serveur, pas celle de votre appareil.</p>
+      </section>
+    }
+
+    <div class="wh-grid details">
+      <section class="wh-card" aria-labelledby="today-title">
+        <h2 id="today-title">Aujourd’hui</h2>
+
+        @if (currentStatus.today.publicHoliday; as holiday) {
+          <p class="wh-chip wh-chip-sky">Jour férié : {{ holiday }}</p>
+        }
+        @for (absence of currentStatus.today.absences; track absence.id) {
+          <p class="wh-chip wh-chip-lime">
+            {{ absenceLabels[absence.type] }}{{ absence.portion < 1 ? ' (demi-journée)' : '' }}
+          </p>
+        }
+
+        @if (currentStatus.today.entries.length === 0) {
+          <p class="wh-muted">Aucun pointage pour l’instant.</p>
+        } @else {
+          <ol class="entries">
+            @for (entry of currentStatus.today.entries; track entry.id) {
+              <li>
+                <span class="entry-times">
+                  {{ formatTime(entry.startAt, timezone()) }}
+                  <mat-icon aria-hidden="true">arrow_forward</mat-icon>
+                  {{ entry.isOpen ? 'en cours' : formatTime(entry.endAt, timezone()) }}
+                </span>
+                <span class="entry-duration">{{ formatDuration(liveDuration(entry)) }}</span>
+                @if (entry.source === 'MANUAL') {
+                  <span class="wh-chip wh-chip-amber">Saisie manuelle</span>
+                } @else if (entry.isCorrected) {
+                  <span class="wh-chip wh-chip-amber">Corrigé</span>
+                }
+                @if (entry.note) {
+                  <span class="entry-note">{{ entry.note }}</span>
+                }
+              </li>
+            }
+          </ol>
+          @if (currentStatus.today.breakMinutes > 0) {
+            <p class="wh-muted">Pauses et coupures : {{ formatDuration(currentStatus.today.breakMinutes) }}</p>
+          }
+        }
+
+        @for (alert of currentStatus.today.alerts; track alert.code) {
+          <div class="wh-message wh-message-warning">
+            <mat-icon aria-hidden="true">info</mat-icon>
+            <span>{{ describeAlert(alert) }}</span>
+          </div>
+        }
+      </section>
+
+      <section class="wh-card" aria-labelledby="week-title">
+        <h2 id="week-title">Ma semaine</h2>
+        <p class="week-total">
+          <strong>{{ formatDuration(weekMinutes()) }}</strong>
+          <span class="wh-muted"> / {{ formatDuration(currentStatus.week.contractMinutes) }} prévues au contrat</span>
+        </p>
+        @if (weekExtraLabel(); as extra) {
+          <p class="wh-chip wh-chip-coral">{{ extra }}</p>
+        }
+
+        <div class="bars" role="img" [attr.aria-label]="'Heures travaillées par jour cette semaine'">
+          @for (bar of weekBars(); track bar.date) {
+            <div class="bar" [class.today]="bar.isToday" [title]="bar.label + ' : ' + formatDuration(bar.minutes)">
+              <span class="bar-value">{{ bar.minutes > 0 ? formatDuration(bar.minutes) : (bar.isAbsent ? 'abs.' : '') }}</span>
+              <span class="bar-track">
+                <span class="bar-fill" [style.height.%]="bar.percent"></span>
+              </span>
+              <span class="bar-label">{{ bar.label }}</span>
+            </div>
+          }
+        </div>
+
+        @for (alert of currentStatus.week.alerts; track alert.code) {
+          <div class="wh-message wh-message-warning">
+            <mat-icon aria-hidden="true">info</mat-icon>
+            <span>{{ describeAlert(alert) }}</span>
+          </div>
+        }
+
+        <a mat-stroked-button routerLink="/my-time">Voir le détail de mes heures</a>
+      </section>
+    </div>
+  }
+</section>

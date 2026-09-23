@@ -1,20 +1,5 @@
 <div class="employees-shell">
-  <header class="topbar">
-    <a class="brand" routerLink="/dashboard" aria-label="WorkHoraire, tableau de bord">
-      <span class="brand-mark" aria-hidden="true">WH</span>
-      <span class="brand-name">WorkHoraire</span>
-    </a>
-
-    <div class="topbar-actions">
-      <a mat-button routerLink="/dashboard">Tableau de bord</a>
-      <button mat-stroked-button type="button" (click)="logout()">
-        <mat-icon aria-hidden="true">logout</mat-icon>
-        Déconnexion
-      </button>
-    </div>
-  </header>
-
-  <main class="employees-content">
+  <div class="employees-content">
     <section class="page-heading" aria-labelledby="employees-title">
       <div>
         <p class="eyebrow">ADMINISTRATION</p>
@@ -78,14 +63,24 @@
               }
             </mat-form-field>
 
-            <mat-form-field appearance="outline">
-              <mat-label>Rôle</mat-label>
-              <mat-select formControlName="role">
-                @for (role of roles; track role) {
-                  <mat-option [value]="role">{{ roleLabel(role) }}</mat-option>
+            <div class="form-row">
+              <mat-form-field appearance="outline">
+                <mat-label>Rôle</mat-label>
+                <mat-select formControlName="role">
+                  @for (role of roles; track role) {
+                    <mat-option [value]="role">{{ roleLabel(role) }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Heures par semaine</mat-label>
+                <input matInput type="number" min="1" max="48" step="0.5" formControlName="weeklyHours" />
+                <mat-hint>Au contrat (35 pour un temps plein)</mat-hint>
+                @if (inviteForm.controls.weeklyHours.invalid) {
+                  <mat-error>Entre 1 et 48 heures.</mat-error>
                 }
-              </mat-select>
-            </mat-form-field>
+              </mat-form-field>
+            </div>
 
             <button mat-flat-button class="invite-button" type="submit" [disabled]="saving()">
               @if (saving()) {
@@ -179,13 +174,24 @@
                       <mat-label>Adresse e-mail</mat-label>
                       <input matInput formControlName="email" type="email" />
                     </mat-form-field>
+                    <div class="form-row">
+                      <mat-form-field appearance="outline">
+                        <mat-label>Rôle</mat-label>
+                        <mat-select formControlName="role">
+                          @for (role of roles; track role) {
+                            <mat-option [value]="role">{{ roleLabel(role) }}</mat-option>
+                          }
+                        </mat-select>
+                      </mat-form-field>
+                      <mat-form-field appearance="outline">
+                        <mat-label>Heures / semaine</mat-label>
+                        <input matInput type="number" min="1" max="48" step="0.5" formControlName="weeklyHours" />
+                      </mat-form-field>
+                    </div>
                     <mat-form-field appearance="outline">
-                      <mat-label>Rôle</mat-label>
-                      <mat-select formControlName="role">
-                        @for (role of roles; track role) {
-                          <mat-option [value]="role">{{ roleLabel(role) }}</mat-option>
-                        }
-                      </mat-select>
+                      <mat-label>Matricule paie (facultatif)</mat-label>
+                      <input matInput formControlName="payrollId" maxlength="50" />
+                      <mat-hint>Repris dans les exports pour votre gestionnaire de paie</mat-hint>
                     </mat-form-field>
                     <div class="edit-actions">
                       <button mat-button type="button" (click)="cancelEditing()">Annuler</button>
@@ -208,7 +214,12 @@
                     </span>
                   </div>
                   <div class="employee-bottomline">
-                    <span class="role-tag">{{ roleLabel(employee.role) }}</span>
+                    <span class="role-tag">
+                      {{ roleLabel(employee.role) }} · {{ contractLabel(employee.weeklyContractMinutes) }}
+                      @if (employee.payrollId) {
+                        · matricule {{ employee.payrollId }}
+                      }
+                    </span>
                     <div class="employee-actions">
                       <button mat-button type="button" (click)="startEditing(employee)">Modifier</button>
                       <button
@@ -228,5 +239,5 @@
         }
       </section>
     </section>
-  </main>
+  </div>
 </div>

@@ -65,7 +65,7 @@ export class Onboarding {
       .subscribe({
         next: () => {
           this.success.set(true);
-          void this.router.navigateByUrl('/dashboard');
+          void this.router.navigateByUrl('/');
         },
         error: (response: HttpErrorResponse) => {
           this.submitting.set(false);

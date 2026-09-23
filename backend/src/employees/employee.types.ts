@@ -7,6 +7,8 @@ export interface EmployeeResponse {
   email: string | null;
   isActive: boolean;
   role: UserRole;
+  weeklyContractMinutes: number;
+  payrollId: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -17,6 +19,7 @@ export interface EmployeeInvitationResponse {
   firstName: string;
   lastName: string;
   role: UserRole;
+  weeklyContractMinutes: number;
   token: string;
   expiresAt: Date;
 }

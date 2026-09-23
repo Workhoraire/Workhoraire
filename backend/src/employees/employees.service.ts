@@ -6,12 +6,14 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Prisma, UserRole } from '@prisma/client';
 import { createHash, randomBytes } from 'node:crypto';
 import {
   ApplicationUser,
   ApplicationUserResponse,
   KeycloakUser,
+  toApplicationUserResponse,
 } from '../auth/auth.types';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEmployeeInvitationDto } from './dto/create-employee-invitation.dto';
@@ -22,6 +24,7 @@ import {
 } from './employee.types';
 
 const INVITATION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const DEFAULT_WEEKLY_CONTRACT_MINUTES = 35 * 60;
 
 const employeeSelect = {
   id: true,
@@ -30,13 +33,27 @@ const employeeSelect = {
   email: true,
   isActive: true,
   role: true,
+  weeklyContractMinutes: true,
+  payrollId: true,
   createdAt: true,
   updatedAt: true,
 } as const;
 
 @Injectable()
 export class EmployeesService {
-  constructor(private readonly prisma: PrismaService) {}
+  /**
+   * With self-registration open, the invitation email only proves an identity
+   * once Keycloak has verified it. Disabled only for local development without SMTP.
+   */
+  private readonly requireVerifiedEmail: boolean;
+
+  constructor(
+    private readonly prisma: PrismaService,
+    configService: ConfigService,
+  ) {
+    this.requireVerifiedEmail =
+      configService.get<string>('KEYCLOAK_REQUIRE_VERIFIED_EMAIL', 'true') !== 'false';
+  }
 
   listEmployees(companyId: string): Promise<EmployeeResponse[]> {
     return this.prisma.user.findMany({
@@ -103,6 +120,12 @@ export class EmployeesService {
     if (dto.isActive !== undefined) {
       data.isActive = dto.isActive;
     }
+    if (dto.weeklyContractMinutes !== undefined) {
+      data.weeklyContractMinutes = dto.weeklyContractMinutes;
+    }
+    if (dto.payrollId !== undefined) {
+      data.payrollId = dto.payrollId || null;
+    }
 
     if (Object.keys(data).length === 0) {
       throw new BadRequestException('At least one employee field is required');
@@ -162,6 +185,7 @@ export class EmployeesService {
             firstName: dto.firstName.trim(),
             lastName: dto.lastName.trim(),
             role,
+            weeklyContractMinutes: dto.weeklyContractMinutes ?? DEFAULT_WEEKLY_CONTRACT_MINUTES,
             tokenHash: this.hashToken(token),
             companyId: currentUser.companyId,
             invitedById: currentUser.id,
@@ -176,6 +200,7 @@ export class EmployeesService {
         firstName: invitation.firstName,
         lastName: invitation.lastName,
         role: invitation.role,
+        weeklyContractMinutes: invitation.weeklyContractMinutes,
         token,
         expiresAt: invitation.expiresAt,
       };
@@ -207,6 +232,12 @@ export class EmployeesService {
     if (!identityEmail) {
       throw new ForbiddenException(
         'A Keycloak email is required to accept this invitation',
+      );
+    }
+
+    if (this.requireVerifiedEmail && keycloakUser.email_verified !== true) {
+      throw new ForbiddenException(
+        'The Keycloak email must be verified to accept this invitation',
       );
     }
 
@@ -262,24 +293,13 @@ export class EmployeesService {
             firstName: invitation.firstName,
             lastName: invitation.lastName,
             role: invitation.role,
+            weeklyContractMinutes: invitation.weeklyContractMinutes,
             isActive: true,
             companyId: invitation.companyId,
           },
         });
 
-        return {
-          id: user.id,
-          subject: user.keycloakSubject,
-          email: user.email,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          isActive: user.isActive,
-          role: user.role,
-          company: {
-            id: invitation.company.id,
-            name: invitation.company.name,
-          },
-        };
+        return toApplicationUserResponse(user, invitation.company);
       });
     } catch (error: unknown) {
       if (

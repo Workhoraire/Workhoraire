@@ -1,0 +1,99 @@
+:host {
+  display: block;
+}
+
+.team-table {
+  min-width: 56rem;
+
+  .sticky {
+    position: sticky;
+    z-index: 1;
+    left: 0;
+    min-width: 11rem;
+    background: var(--wh-panel);
+  }
+
+  tbody th {
+    color: inherit;
+    font-size: 0.88rem;
+    font-weight: 400;
+    letter-spacing: normal;
+    text-align: left;
+    text-transform: none;
+
+    a {
+      display: block;
+      color: var(--wh-ink);
+      font-weight: 700;
+    }
+  }
+
+  .today {
+    background: #fafdf2;
+  }
+
+  .total {
+    font-weight: 800;
+  }
+
+  tr.inactive th a {
+    color: var(--wh-muted);
+  }
+}
+
+.contract {
+  color: var(--wh-muted);
+  font-size: 0.75rem;
+}
+
+.holiday {
+  display: block;
+  color: var(--wh-sky-ink);
+  font-size: 0.65rem;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.running {
+  color: #2f6e3f;
+  font-weight: 700;
+
+  &::before {
+    display: inline-block;
+    width: 0.45rem;
+    height: 0.45rem;
+    margin-right: 0.3rem;
+    border-radius: 50%;
+    background: #3b9d55;
+    content: '';
+    vertical-align: middle;
+  }
+}
+
+.absence {
+  display: block;
+  color: var(--wh-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.day-alert {
+  width: 1rem;
+  height: 1rem;
+  color: var(--wh-coral-ink);
+  font-size: 1rem;
+  vertical-align: middle;
+}
+
+.legend {
+  margin-top: 0.75rem;
+  font-size: 0.8rem;
+}
+
+.running-dot {
+  display: inline-block;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: #3b9d55;
+}

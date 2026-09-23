@@ -8,10 +8,9 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
-import { RouterLink } from '@angular/router';
 
-import { AuthService } from '../../core/auth/auth.service';
 import { UserRole } from '../../core/auth/auth.models';
+import { formatDuration } from '../../core/time/time-format';
 import {
   CreateEmployeeInvitationRequest,
   Employee,
@@ -31,7 +30,6 @@ import { EmployeesService } from './employees.service';
     MatProgressSpinnerModule,
     MatSelectModule,
     ReactiveFormsModule,
-    RouterLink,
   ],
   templateUrl: './employees.html',
   styleUrl: './employees.scss',
@@ -40,7 +38,6 @@ import { EmployeesService } from './employees.service';
 export class Employees {
   private readonly formBuilder = inject(FormBuilder);
   private readonly employeesService = inject(EmployeesService);
-  private readonly authService = inject(AuthService);
 
   protected readonly employees = signal<Employee[]>([]);
   protected readonly loading = signal(true);
@@ -59,6 +56,7 @@ export class Employees {
     lastName: ['', [Validators.required, Validators.maxLength(100)]],
     email: ['', [Validators.required, Validators.email, Validators.maxLength(320)]],
     role: ['EMPLOYEE' as UserRole, [Validators.required]],
+    weeklyHours: [35, [Validators.required, Validators.min(1), Validators.max(48)]],
   });
 
   protected readonly editForm = this.formBuilder.nonNullable.group({
@@ -66,6 +64,8 @@ export class Employees {
     lastName: ['', [Validators.required, Validators.maxLength(100)]],
     email: ['', [Validators.required, Validators.email, Validators.maxLength(320)]],
     role: ['EMPLOYEE' as UserRole, [Validators.required]],
+    weeklyHours: [35, [Validators.required, Validators.min(1), Validators.max(48)]],
+    payrollId: ['', [Validators.maxLength(50)]],
   });
 
   constructor() {
@@ -100,6 +100,7 @@ export class Employees {
       lastName: values.lastName.trim(),
       email: values.email.trim().toLowerCase(),
       role: values.role,
+      weeklyContractMinutes: Math.round(values.weeklyHours * 60),
     };
 
     this.saving.set(true);
@@ -121,6 +122,7 @@ export class Employees {
           lastName: '',
           email: '',
           role: 'EMPLOYEE',
+          weeklyHours: 35,
         });
       },
       error: (response: HttpErrorResponse) => {
@@ -138,6 +140,8 @@ export class Employees {
       lastName: employee.lastName ?? '',
       email: employee.email ?? '',
       role: employee.role,
+      weeklyHours: employee.weeklyContractMinutes / 60,
+      payrollId: employee.payrollId ?? '',
     });
   }
 
@@ -148,6 +152,8 @@ export class Employees {
       lastName: '',
       email: '',
       role: 'EMPLOYEE',
+      weeklyHours: 35,
+      payrollId: '',
     });
   }
 
@@ -163,6 +169,8 @@ export class Employees {
       lastName: values.lastName.trim(),
       email: values.email.trim().toLowerCase(),
       role: values.role,
+      weeklyContractMinutes: Math.round(values.weeklyHours * 60),
+      payrollId: values.payrollId.trim(),
     };
 
     this.savingEmployeeId.set(employee.id);
@@ -220,8 +228,8 @@ export class Employees {
     }
   }
 
-  protected async logout(): Promise<void> {
-    await this.authService.logout();
+  protected contractLabel(minutes: number): string {
+    return `${formatDuration(minutes)} / semaine`;
   }
 
   protected fullName(employee: Employee): string {

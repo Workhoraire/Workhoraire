@@ -1,0 +1,114 @@
+<section class="wh-page">
+  <header class="wh-page-header">
+    <div>
+      <p class="wh-eyebrow">Équipe</p>
+      <h1>Heures de l’équipe</h1>
+      <p>
+        Les heures travaillées par salarié et par jour. Ouvrez une ligne pour voir le détail, corriger
+        un oubli ou ajouter une période : chaque correction est tracée avec son motif.
+      </p>
+    </div>
+    <app-week-navigator
+      [weekStart]="weekStart()"
+      [currentWeekStart]="currentWeekStart()"
+      (weekChange)="selectWeek($event)"
+    />
+  </header>
+
+  @if (error(); as message) {
+    <div class="wh-message wh-message-error" role="alert">
+      <mat-icon aria-hidden="true">error_outline</mat-icon>
+      <span>{{ message }}</span>
+    </div>
+  }
+
+  @if (loading()) {
+    <div class="wh-loading" role="status">
+      <mat-spinner diameter="32" />
+      <span>Chargement de la semaine…</span>
+    </div>
+  } @else if (team(); as sheet) {
+    @if (sheet.rows.length === 0) {
+      <div class="wh-card wh-empty">
+        <mat-icon aria-hidden="true">group_add</mat-icon>
+        <p>Aucun salarié actif. Invitez votre équipe depuis la page Salariés.</p>
+      </div>
+    } @else {
+      <div class="wh-table-scroll">
+        <table class="wh-table team-table">
+          <caption class="wh-visually-hidden">Heures travaillées par salarié et par jour</caption>
+          <thead>
+            <tr>
+              <th scope="col" class="sticky">Salarié</th>
+              @for (date of dates(); track date) {
+                <th scope="col" class="wh-num" [class.today]="date === today()">
+                  {{ dayLabel(date) }}
+                  @if (holidays().get(date); as holiday) {
+                    <span class="holiday" [title]="holiday">férié</span>
+                  }
+                </th>
+              }
+              <th scope="col" class="wh-num">Total</th>
+              <th scope="col" class="wh-num">Sup. / compl.</th>
+              <th scope="col">Alertes</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of sheet.rows; track row.employee.id) {
+              <tr [class.inactive]="!row.employee.isActive">
+                <th scope="row" class="sticky">
+                  <a [routerLink]="['/team', row.employee.id]">{{ fullName(row.employee) }}</a>
+                  <span class="contract">{{ formatDuration(row.employee.weeklyContractMinutes) }}/sem.</span>
+                </th>
+                @for (day of row.days; track day.date) {
+                  <td class="wh-num" [class.today]="day.date === today()">
+                    @if (day.workedMinutes > 0) {
+                      <span [class.running]="day.hasOpenEntry">{{ formatDuration(day.workedMinutes) }}</span>
+                    }
+                    @for (absence of day.absences; track absence.id) {
+                      <span class="absence" [title]="absenceLabels[absence.type]">
+                        {{ absence.portion < 1 ? '½ ' : '' }}{{ absenceShort[absence.type] }}
+                      </span>
+                    }
+                    @if (day.alerts.length > 0) {
+                      <mat-icon class="day-alert" aria-label="Alerte">warning_amber</mat-icon>
+                    }
+                  </td>
+                }
+                <td class="wh-num total">{{ formatDuration(row.weeks[0]?.workedMinutes ?? 0) }}</td>
+                <td class="wh-num">
+                  @if (row.weeks[0]; as week) {
+                    @if (overtime(week) > 0) {
+                      <span class="wh-chip wh-chip-coral">{{ formatDuration(overtime(week)) }} sup.</span>
+                    } @else if (complementary(week) > 0) {
+                      <span class="wh-chip wh-chip-amber">{{ formatDuration(complementary(week)) }} compl.</span>
+                    } @else {
+                      <span class="wh-muted">—</span>
+                    }
+                  }
+                </td>
+                <td>
+                  @if (rowAlertCount(row) > 0) {
+                    <span
+                      class="wh-chip wh-chip-coral"
+                      [matTooltip]="alertTooltip(row)"
+                      matTooltipClass="multiline-tooltip"
+                    >
+                      {{ rowAlertCount(row) }}
+                    </span>
+                  } @else {
+                    <span class="wh-muted">—</span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <p class="legend wh-muted">
+        <span class="running-dot"></span> pointage en cours · CP : congés payés · Mal. : arrêt maladie
+        · SS : sans solde · Fam. : événement familial · ½ : demi-journée
+      </p>
+    }
+  }
+</section>

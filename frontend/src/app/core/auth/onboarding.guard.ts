@@ -9,7 +9,7 @@ export const onboardingGuard: CanActivateFn = () => {
   const router = inject(Router);
 
   return currentUserService.getCurrentUser().pipe(
-    map(() => router.createUrlTree(['/dashboard'])),
+    map(() => router.createUrlTree(['/'])),
     catchError(() => of(true)),
   );
 };

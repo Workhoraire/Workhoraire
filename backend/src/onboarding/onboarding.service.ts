@@ -4,7 +4,11 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { Prisma, UserRole } from '@prisma/client';
-import { ApplicationUserResponse, KeycloakUser } from '../auth/auth.types';
+import {
+  ApplicationUserResponse,
+  KeycloakUser,
+  toApplicationUserResponse,
+} from '../auth/auth.types';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCompanyDto } from './dto/create-company.dto';
 
@@ -56,19 +60,7 @@ export class OnboardingService {
           },
         });
 
-        return {
-          id: user.id,
-          subject: user.keycloakSubject,
-          email: user.email,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          isActive: user.isActive,
-          role: user.role,
-          company: {
-            id: company.id,
-            name: company.name,
-          },
-        };
+        return toApplicationUserResponse(user, company);
       });
     } catch (error: unknown) {
       if (error instanceof ConflictException) {

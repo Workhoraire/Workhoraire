@@ -15,8 +15,11 @@ model Company {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  users       User[]
-  invitations EmployeeInvitation[]
+  users              User[]
+  invitations        EmployeeInvitation[]
+  timeEntries        TimeEntry[]
+  timeEntryAuditLogs TimeEntryAuditLog[]
+  absenceRequests    AbsenceRequest[]
 }
 
 enum UserRole {
@@ -26,38 +29,154 @@ enum UserRole {
 }
 
 model User {
-  id              String               @id @default(uuid()) @db.Uuid
-  keycloakSubject String               @unique @db.VarChar(255)
-  email           String?              @db.VarChar(320)
-  firstName       String?              @db.VarChar(100)
-  lastName        String?              @db.VarChar(100)
-  isActive        Boolean              @default(true)
-  role            UserRole             @default(EMPLOYEE)
-  companyId       String               @db.Uuid
-  company         Company              @relation(fields: [companyId], references: [id], onDelete: Restrict)
-  sentInvitations EmployeeInvitation[] @relation("EmployeeInvitations")
-  createdAt       DateTime             @default(now())
-  updatedAt       DateTime             @updatedAt
+  id                    String               @id @default(uuid()) @db.Uuid
+  keycloakSubject       String               @unique @db.VarChar(255)
+  email                 String?              @db.VarChar(320)
+  firstName             String?              @db.VarChar(100)
+  lastName              String?              @db.VarChar(100)
+  isActive              Boolean              @default(true)
+  role                  UserRole             @default(EMPLOYEE)
+  /// Contractual weekly working time, in minutes (2100 = 35 h).
+  weeklyContractMinutes Int                  @default(2100)
+  /// Employee number in the payroll software (matricule), used in exports.
+  payrollId             String?              @db.VarChar(50)
+  companyId             String               @db.Uuid
+  company               Company              @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  sentInvitations       EmployeeInvitation[] @relation("EmployeeInvitations")
+  timeEntries           TimeEntry[]          @relation("EmployeeTimeEntries")
+  createdTimeEntries    TimeEntry[]          @relation("TimeEntryCreators")
+  timeEntryAuditLogs    TimeEntryAuditLog[]  @relation("TimeEntryAuditEmployees")
+  timeEntryAuditActions TimeEntryAuditLog[]  @relation("TimeEntryAuditActors")
+  absenceRequests       AbsenceRequest[]     @relation("EmployeeAbsenceRequests")
+  reviewedAbsences      AbsenceRequest[]     @relation("AbsenceRequestReviewers")
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
 
   @@index([companyId])
 }
 
 model EmployeeInvitation {
-  id          String    @id @default(uuid()) @db.Uuid
-  email       String    @db.VarChar(320)
-  firstName   String    @db.VarChar(100)
-  lastName    String    @db.VarChar(100)
-  role        UserRole  @default(EMPLOYEE)
-  tokenHash   String    @unique @db.VarChar(64)
-  companyId   String    @db.Uuid
-  invitedById String    @db.Uuid
-  expiresAt   DateTime
-  acceptedAt  DateTime?
-  createdAt   DateTime  @default(now())
+  id                    String    @id @default(uuid()) @db.Uuid
+  email                 String    @db.VarChar(320)
+  firstName             String    @db.VarChar(100)
+  lastName              String    @db.VarChar(100)
+  role                  UserRole  @default(EMPLOYEE)
+  weeklyContractMinutes Int       @default(2100)
+  tokenHash             String    @unique @db.VarChar(64)
+  companyId             String    @db.Uuid
+  invitedById           String    @db.Uuid
+  expiresAt             DateTime
+  acceptedAt            DateTime?
+  createdAt             DateTime  @default(now())
 
   company   Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
   invitedBy User    @relation("EmployeeInvitations", fields: [invitedById], references: [id], onDelete: Restrict)
 
   @@index([companyId])
   @@index([email])
+}
+
+enum TimeEntrySource {
+  /// Clocked in real time by the employee.
+  CLOCK
+  /// Entered after the fact by a manager or an administrator.
+  MANUAL
+}
+
+/// A continuous period of work. A break is the gap between two entries.
+model TimeEntry {
+  id          String          @id @default(uuid()) @db.Uuid
+  companyId   String          @db.Uuid
+  userId      String          @db.Uuid
+  startAt     DateTime
+  endAt       DateTime?
+  /// Equals userId while the entry is open. The unique index guarantees a
+  /// single open entry per employee, even under concurrent requests.
+  openUserId  String?         @unique @db.Uuid
+  source      TimeEntrySource @default(CLOCK)
+  note        String?         @db.VarChar(500)
+  createdById String          @db.Uuid
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  user      User    @relation("EmployeeTimeEntries", fields: [userId], references: [id], onDelete: Restrict)
+  createdBy User    @relation("TimeEntryCreators", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([companyId, startAt])
+  @@index([userId, startAt])
+}
+
+enum TimeEntryAuditAction {
+  CREATED
+  UPDATED
+  DELETED
+}
+
+/// Append-only trail of every manual change made to a time entry.
+model TimeEntryAuditLog {
+  id           String               @id @default(uuid()) @db.Uuid
+  companyId    String               @db.Uuid
+  /// Deliberately not a foreign key: the trail must outlive a deleted entry.
+  timeEntryId  String               @db.Uuid
+  employeeId   String               @db.Uuid
+  actorId      String               @db.Uuid
+  action       TimeEntryAuditAction
+  reason       String               @db.VarChar(500)
+  /// Start of the entry concerned (after the change, or before a deletion).
+  entryStartAt DateTime
+  before       Json?
+  after        Json?
+  createdAt    DateTime             @default(now())
+
+  company  Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  employee User    @relation("TimeEntryAuditEmployees", fields: [employeeId], references: [id], onDelete: Restrict)
+  actor    User    @relation("TimeEntryAuditActors", fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([companyId, entryStartAt])
+  @@index([timeEntryId])
+  @@index([employeeId, entryStartAt])
+}
+
+enum AbsenceType {
+  PAID_LEAVE
+  RTT
+  SICK_LEAVE
+  UNPAID_LEAVE
+  FAMILY_EVENT
+  OTHER
+}
+
+enum AbsenceStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+model AbsenceRequest {
+  id              String        @id @default(uuid()) @db.Uuid
+  companyId       String        @db.Uuid
+  userId          String        @db.Uuid
+  type            AbsenceType
+  status          AbsenceStatus @default(PENDING)
+  startDate       DateTime      @db.Date
+  endDate         DateTime      @db.Date
+  /// The first day only covers the afternoon.
+  startsAfternoon Boolean       @default(false)
+  /// The last day only covers the morning.
+  endsMorning     Boolean       @default(false)
+  comment         String?       @db.VarChar(500)
+  reviewComment   String?       @db.VarChar(500)
+  reviewedById    String?       @db.Uuid
+  reviewedAt      DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  company    Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  user       User    @relation("EmployeeAbsenceRequests", fields: [userId], references: [id], onDelete: Restrict)
+  reviewedBy User?   @relation("AbsenceRequestReviewers", fields: [reviewedById], references: [id], onDelete: Restrict)
+
+  @@index([companyId, startDate])
+  @@index([userId, startDate])
 }

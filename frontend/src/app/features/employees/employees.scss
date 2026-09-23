@@ -3,72 +3,15 @@
 }
 
 .employees-shell {
-  min-height: 100vh;
   background:
     radial-gradient(circle at 100% 0%, rgba(200, 239, 115, 0.2), transparent 26rem),
     var(--wh-paper);
 }
 
-.topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  max-width: 1440px;
-  margin: 0 auto;
-  padding: 1.25rem clamp(1.25rem, 4vw, 4.5rem);
-}
-
-.brand {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.7rem;
-  color: var(--wh-ink);
-  font-weight: 800;
-  text-decoration: none;
-  letter-spacing: -0.04em;
-}
-
-.brand-mark {
-  display: grid;
-  width: 2.35rem;
-  height: 2.35rem;
-  place-items: center;
-  border-radius: 0.75rem;
-  background: var(--wh-ink);
-  color: var(--wh-lime);
-  font-size: 0.75rem;
-  letter-spacing: -0.08em;
-}
-
-.brand-name {
-  font-size: 1.1rem;
-}
-
-.topbar-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.7rem;
-}
-
-.topbar-actions a,
-.topbar-actions button {
-  color: var(--wh-ink);
-}
-
-.topbar-actions button {
-  border-color: var(--wh-line);
-}
-
-.topbar-actions mat-icon {
-  margin-right: 0.3rem;
-  font-size: 1.1rem;
-  vertical-align: middle;
-}
-
 .employees-content {
-  max-width: 1440px;
+  max-width: 1280px;
   margin: 0 auto;
-  padding: clamp(2rem, 6vw, 5.5rem) clamp(1.25rem, 4vw, 4.5rem) 5rem;
+  padding: clamp(1.25rem, 3vw, 2.5rem) clamp(1rem, 3vw, 2.5rem) 6rem;
 }
 
 .page-heading {
@@ -97,9 +40,10 @@ p {
 
 h1 {
   margin-bottom: 0.75rem;
-  font-size: clamp(2.8rem, 6vw, 5.8rem);
-  letter-spacing: -0.08em;
-  line-height: 0.95;
+  font-size: clamp(1.9rem, 4vw, 3rem);
+  font-weight: 750;
+  letter-spacing: -0.05em;
+  line-height: 1;
 }
 
 .heading-copy {
@@ -510,17 +454,6 @@ mat-form-field {
 }
 
 @media (max-width: 560px) {
-  .topbar {
-    align-items: flex-start;
-    gap: 1rem;
-  }
-
-  .topbar-actions {
-    flex-direction: column-reverse;
-    align-items: flex-end;
-    gap: 0.25rem;
-  }
-
   .page-heading {
     align-items: flex-start;
     flex-direction: column;

@@ -8,8 +8,14 @@ export interface CurrentUser {
   lastName: string | null;
   isActive: boolean;
   role: UserRole;
+  weeklyContractMinutes: number;
   company: {
     id: string;
     name: string;
+    timezone: string;
   };
+}
+
+export function isManagerRole(role: UserRole): boolean {
+  return role === 'ADMIN' || role === 'MANAGER';
 }

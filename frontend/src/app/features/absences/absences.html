@@ -1,0 +1,197 @@
+<section class="wh-page">
+  <header class="wh-page-header">
+    <div>
+      <p class="wh-eyebrow">Congés et absences</p>
+      <h1>Absences</h1>
+      <p>
+        Posez vos congés, RTT et absences. Les jours sont comptés en jours ouvrés (du lundi au
+        vendredi, hors jours fériés).
+      </p>
+    </div>
+  </header>
+
+  @if (error(); as message) {
+    <div class="wh-message wh-message-error" role="alert">
+      <mat-icon aria-hidden="true">error_outline</mat-icon>
+      <span>{{ message }}</span>
+    </div>
+  }
+
+  <mat-tab-group mat-stretch-tabs="false" animationDuration="150ms">
+    <mat-tab label="Mes absences">
+      <div class="tab-body layout">
+        <section class="wh-card" aria-labelledby="request-title">
+          <h2 id="request-title">Nouvelle demande</h2>
+          <form class="wh-form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+            <mat-form-field>
+              <mat-label>Type d’absence</mat-label>
+              <mat-select formControlName="type">
+                @for (type of types; track type) {
+                  <mat-option [value]="type">{{ typeLabels[type] }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+            <div class="wh-form-row">
+              <mat-form-field>
+                <mat-label>Du</mat-label>
+                <input matInput type="date" formControlName="startDate" required />
+              </mat-form-field>
+              <mat-form-field>
+                <mat-label>Au</mat-label>
+                <input matInput type="date" formControlName="endDate" required />
+              </mat-form-field>
+            </div>
+            @if (form.hasError('datesOrder')) {
+              <p class="form-error">La date de fin doit être égale ou postérieure à la date de début.</p>
+            }
+            <mat-checkbox formControlName="startsAfternoon">Le premier jour, à partir de l’après-midi</mat-checkbox>
+            <mat-checkbox formControlName="endsMorning">Le dernier jour, le matin seulement</mat-checkbox>
+            <mat-form-field class="comment-field">
+              <mat-label>Commentaire (facultatif)</mat-label>
+              <textarea matInput rows="2" maxlength="500" formControlName="comment"></textarea>
+              <mat-hint>N’indiquez aucune information médicale.</mat-hint>
+            </mat-form-field>
+            <div class="wh-actions">
+              <button mat-flat-button type="submit" [disabled]="saving()">Envoyer la demande</button>
+            </div>
+          </form>
+        </section>
+
+        <section aria-labelledby="mine-title">
+          <h2 id="mine-title" class="list-title">Mes demandes</h2>
+          @if (loading()) {
+            <div class="wh-loading" role="status"><mat-spinner diameter="28" /></div>
+          } @else if (mine().length === 0) {
+            <div class="wh-card wh-empty">
+              <mat-icon aria-hidden="true">beach_access</mat-icon>
+              <p>Aucune demande pour l’instant.</p>
+            </div>
+          } @else {
+            <ul class="requests">
+              @for (request of mine(); track request.id) {
+                <li class="wh-card request">
+                  <div class="request-head">
+                    <strong>{{ typeLabels[request.type] }}</strong>
+                    <span class="wh-chip" [class]="statusClass(request.status)">{{ statusLabels[request.status] }}</span>
+                  </div>
+                  <p class="request-period">{{ period(request) }} · {{ daysLabel(request.days) }}</p>
+                  @if (request.comment) {
+                    <p class="wh-muted">« {{ request.comment }} »</p>
+                  }
+                  @if (request.reviewedBy) {
+                    <p class="wh-muted">
+                      {{ request.status === 'APPROVED' ? 'Acceptée' : 'Traitée' }} par
+                      {{ fullName(request.reviewedBy) }}{{ request.reviewComment ? ' : « ' + request.reviewComment + ' »' : '' }}
+                    </p>
+                  }
+                  @if (canCancel(request)) {
+                    <div class="wh-actions">
+                      <button mat-button type="button" [disabled]="busyId() === request.id" (click)="cancel(request)">
+                        Annuler la demande
+                      </button>
+                    </div>
+                  }
+                </li>
+              }
+            </ul>
+          }
+        </section>
+      </div>
+    </mat-tab>
+
+    @if (isManager()) {
+      <mat-tab [label]="'À valider (' + pending().length + ')'">
+        <div class="tab-body">
+          @if (pending().length === 0) {
+            <div class="wh-card wh-empty">
+              <mat-icon aria-hidden="true">task_alt</mat-icon>
+              <p>Aucune demande en attente. Tout est à jour.</p>
+            </div>
+          } @else {
+            <ul class="requests">
+              @for (request of pending(); track request.id) {
+                <li class="wh-card request">
+                  <div class="request-head">
+                    <strong>{{ fullName(request.employee) }}</strong>
+                    <span class="wh-chip wh-chip-amber">{{ typeLabels[request.type] }}</span>
+                  </div>
+                  <p class="request-period">{{ period(request) }} · {{ daysLabel(request.days) }}</p>
+                  @if (request.comment) {
+                    <p class="wh-muted">« {{ request.comment }} »</p>
+                  }
+                  @if (canReview(request)) {
+                    <mat-form-field class="review-field">
+                      <mat-label>Réponse (facultative)</mat-label>
+                      <input
+                        matInput
+                        maxlength="500"
+                        [value]="reviewComments()[request.id] ?? ''"
+                        (input)="setComment(request.id, $any($event.target).value)"
+                      />
+                    </mat-form-field>
+                    <div class="wh-actions">
+                      <button mat-stroked-button type="button" [disabled]="busyId() === request.id" (click)="reject(request)">
+                        Refuser
+                      </button>
+                      <button mat-flat-button type="button" [disabled]="busyId() === request.id" (click)="approve(request)">
+                        Accepter
+                      </button>
+                    </div>
+                  } @else {
+                    <p class="wh-muted">Votre propre demande doit être validée par un administrateur.</p>
+                  }
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      </mat-tab>
+
+      <mat-tab label="Historique de l’équipe">
+        <div class="tab-body">
+          <mat-button-toggle-group
+            class="filters"
+            [value]="teamFilter()"
+            (change)="teamFilter.set($event.value)"
+            aria-label="Filtrer par statut"
+          >
+            @for (filter of statusFilters; track filter) {
+              <mat-button-toggle [value]="filter">
+                {{ filter === 'ALL' ? 'Toutes' : statusLabels[filter] }}
+              </mat-button-toggle>
+            }
+          </mat-button-toggle-group>
+
+          @if (filteredTeam().length === 0) {
+            <p class="wh-muted">Aucune demande.</p>
+          } @else {
+            <div class="wh-table-scroll">
+              <table class="wh-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Salarié</th>
+                    <th scope="col">Type</th>
+                    <th scope="col">Période</th>
+                    <th scope="col" class="wh-num">Jours</th>
+                    <th scope="col">Statut</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (request of filteredTeam(); track request.id) {
+                    <tr>
+                      <td>{{ fullName(request.employee) }}</td>
+                      <td>{{ typeLabels[request.type] }}</td>
+                      <td>{{ period(request) }}</td>
+                      <td class="wh-num">{{ request.days.toString().replace('.', ',') }}</td>
+                      <td><span class="wh-chip" [class]="statusClass(request.status)">{{ statusLabels[request.status] }}</span></td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </div>
+      </mat-tab>
+    }
+  </mat-tab-group>
+</section>

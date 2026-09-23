@@ -1,6 +1,6 @@
 <div class="invitation-shell">
   <header class="topbar">
-    <a class="brand" routerLink="/dashboard" aria-label="WorkHoraire, tableau de bord">
+    <a class="brand" routerLink="/" aria-label="WorkHoraire, accueil">
       <span class="brand-mark" aria-hidden="true">WH</span>
       <span class="brand-name">WorkHoraire</span>
     </a>
@@ -29,7 +29,7 @@
         <p>{{ error() }}</p>
         <div class="invitation-actions">
           <button mat-flat-button type="button" (click)="acceptInvitation()">Réessayer</button>
-          <a mat-button routerLink="/dashboard">Retour au dashboard</a>
+          <a mat-button routerLink="/">Retour à l’accueil</a>
         </div>
       }
     </mat-card>

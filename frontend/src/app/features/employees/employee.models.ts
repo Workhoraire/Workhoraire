@@ -7,6 +7,8 @@ export interface Employee {
   email: string | null;
   isActive: boolean;
   role: UserRole;
+  weeklyContractMinutes: number;
+  payrollId: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -16,6 +18,7 @@ export interface CreateEmployeeInvitationRequest {
   lastName: string;
   email: string;
   role: UserRole;
+  weeklyContractMinutes: number;
 }
 
 export interface UpdateEmployeeRequest {
@@ -24,6 +27,9 @@ export interface UpdateEmployeeRequest {
   email?: string;
   role?: UserRole;
   isActive?: boolean;
+  weeklyContractMinutes?: number;
+  /** An empty string removes the payroll number. */
+  payrollId?: string;
 }
 
 export interface EmployeeInvitation {
@@ -32,6 +38,7 @@ export interface EmployeeInvitation {
   firstName: string;
   lastName: string;
   role: UserRole;
+  weeklyContractMinutes: number;
   token: string;
   expiresAt: string;
 }

@@ -40,4 +40,19 @@ describe('Employee DTOs', () => {
     expect(await validate(invitation)).not.toHaveLength(0);
     expect(await validate(update)).not.toHaveLength(0);
   });
+
+  it('bounds the contractual weekly time between 1 and 48 hours', async () => {
+    const valid = plainToInstance(UpdateEmployeeDto, { weeklyContractMinutes: 1440 });
+    const tooLow = plainToInstance(UpdateEmployeeDto, { weeklyContractMinutes: 30 });
+    const tooHigh = plainToInstance(CreateEmployeeInvitationDto, {
+      firstName: 'Jean',
+      lastName: 'Dupont',
+      email: 'jean@example.com',
+      weeklyContractMinutes: 3000,
+    });
+
+    expect(await validate(valid)).toHaveLength(0);
+    expect(await validate(tooLow)).not.toHaveLength(0);
+    expect(await validate(tooHigh)).not.toHaveLength(0);
+  });
 });
