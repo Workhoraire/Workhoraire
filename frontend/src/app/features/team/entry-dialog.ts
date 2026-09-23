@@ -86,7 +86,6 @@ export interface EntryDialogResult {
     .context {
       margin-bottom: 1rem;
       color: var(--wh-muted);
-      text-transform: capitalize;
     }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,

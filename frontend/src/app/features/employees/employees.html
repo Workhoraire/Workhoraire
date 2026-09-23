@@ -73,9 +73,9 @@
                 </mat-select>
               </mat-form-field>
               <mat-form-field appearance="outline">
-                <mat-label>Heures par semaine</mat-label>
+                <mat-label>Heures / semaine</mat-label>
                 <input matInput type="number" min="1" max="48" step="0.5" formControlName="weeklyHours" />
-                <mat-hint>Au contrat (35 pour un temps plein)</mat-hint>
+                <mat-hint>35 h = temps plein</mat-hint>
                 @if (inviteForm.controls.weeklyHours.invalid) {
                   <mat-error>Entre 1 et 48 heures.</mat-error>
                 }
