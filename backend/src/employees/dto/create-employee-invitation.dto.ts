@@ -2,10 +2,13 @@ import { Transform } from 'class-transformer';
 import {
   IsEmail,
   IsEnum,
+  IsInt,
   IsNotEmpty,
   IsOptional,
   IsString,
+  Max,
   MaxLength,
+  Min,
 } from 'class-validator';
 import { UserRole } from '@prisma/client';
 
@@ -36,4 +39,11 @@ export class CreateEmployeeInvitationDto {
   @IsOptional()
   @IsEnum(UserRole)
   role?: UserRole;
+
+  /** Contractual weekly working time in minutes, from 1 h to 48 h. */
+  @IsOptional()
+  @IsInt()
+  @Min(60)
+  @Max(2880)
+  weeklyContractMinutes?: number;
 }

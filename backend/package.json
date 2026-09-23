@@ -13,7 +13,8 @@
     "prisma:migrate": "node --env-file=../.env node_modules/prisma/build/index.js migrate dev",
     "prisma:migrate:deploy": "node --env-file=../.env node_modules/prisma/build/index.js migrate deploy",
     "test": "jest --runInBand",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "test:e2e": "node --env-file=../.env node_modules/jest/bin/jest.js --config test/jest-e2e.config.cjs --runInBand"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",

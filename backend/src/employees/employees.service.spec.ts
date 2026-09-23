@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
+import { ConfigService } from '@nestjs/config';
 import { ApplicationUser, KeycloakUser } from '../auth/auth.types';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEmployeeInvitationDto } from './dto/create-employee-invitation.dto';
@@ -38,7 +39,16 @@ describe('EmployeesService', () => {
   const keycloakUser: KeycloakUser = {
     sub: 'employee-subject',
     email: 'employee@example.com',
+    email_verified: true,
   };
+
+  function configWith(requireVerifiedEmail: string): ConfigService {
+    return {
+      get: jest.fn((key: string, fallback: string) =>
+        key === 'KEYCLOAK_REQUIRE_VERIFIED_EMAIL' ? requireVerifiedEmail : fallback,
+      ),
+    } as unknown as ConfigService;
+  }
 
   beforeEach(() => {
     transaction = {
@@ -69,7 +79,7 @@ describe('EmployeesService', () => {
         callback(transaction),
     );
 
-    service = new EmployeesService(prisma);
+    service = new EmployeesService(prisma, configWith('true'));
   });
 
   it('lists only employees belonging to the authenticated admin company', async () => {
@@ -142,6 +152,7 @@ describe('EmployeesService', () => {
       email: 'jeanne@example.com',
       role: UserRole.MANAGER,
       isActive: false,
+      weeklyContractMinutes: 1440,
     });
 
     expect(prisma.user.update).toHaveBeenCalledWith({
@@ -152,6 +163,7 @@ describe('EmployeesService', () => {
         email: 'jeanne@example.com',
         role: UserRole.MANAGER,
         isActive: false,
+        weeklyContractMinutes: 1440,
       },
       select: expect.any(Object),
     });
@@ -197,10 +209,11 @@ describe('EmployeesService', () => {
       firstName: 'Jean',
       lastName: 'Dupont',
       role: UserRole.MANAGER,
+      weeklyContractMinutes: 1440,
       companyId: 'company-a',
       acceptedAt: null,
       expiresAt: new Date(Date.now() + 60_000),
-      company: { id: 'company-a', name: 'Acme' },
+      company: { id: 'company-a', name: 'Acme', timezone: 'Europe/Paris' },
     });
     transaction.employeeInvitation.updateMany.mockResolvedValue({ count: 1 });
     transaction.user.findUnique.mockResolvedValue(null);
@@ -212,6 +225,7 @@ describe('EmployeesService', () => {
       lastName: 'Dupont',
       isActive: true,
       role: UserRole.MANAGER,
+      weeklyContractMinutes: 1440,
     });
 
     const result = await service.acceptInvitation('a-valid-token', keycloakUser);
@@ -231,10 +245,16 @@ describe('EmployeesService', () => {
         keycloakSubject: 'employee-subject',
         companyId: 'company-a',
         role: UserRole.MANAGER,
+        weeklyContractMinutes: 1440,
         isActive: true,
       }),
     });
-    expect(result.company).toEqual({ id: 'company-a', name: 'Acme' });
+    expect(result.company).toEqual({
+      id: 'company-a',
+      name: 'Acme',
+      timezone: 'Europe/Paris',
+    });
+    expect(result.weeklyContractMinutes).toBe(1440);
   });
 
   it('rejects an invitation when another Keycloak email tries to accept it', async () => {
@@ -259,6 +279,21 @@ describe('EmployeesService', () => {
 
     expect(transaction.employeeInvitation.updateMany).not.toHaveBeenCalled();
     expect(transaction.user.create).not.toHaveBeenCalled();
+  });
+
+  it('requires a verified Keycloak email unless explicitly disabled for local development', async () => {
+    const unverified: KeycloakUser = { ...keycloakUser, email_verified: false };
+
+    await expect(service.acceptInvitation('a-valid-token', unverified)).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+    expect(transaction.employeeInvitation.findUnique).not.toHaveBeenCalled();
+
+    const localService = new EmployeesService(prisma, configWith('false'));
+    transaction.employeeInvitation.findUnique.mockResolvedValue(null);
+    await expect(localService.acceptInvitation('a-valid-token', unverified)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
   });
 
   it('rejects accepting an invitation for a Keycloak user already in a company', async () => {
