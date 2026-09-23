@@ -1,0 +1,255 @@
+:host {
+  display: block;
+}
+
+.clock-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding: clamp(1.5rem, 5vw, 2.75rem) 1.25rem;
+  border-radius: 1.75rem;
+  background: var(--wh-panel);
+  box-shadow: var(--wh-shadow);
+  text-align: center;
+
+  &.working {
+    background: var(--wh-ink);
+    color: #f8faf3;
+
+    .today-label,
+    .session,
+    .server-time-note {
+      color: #bbc6bd;
+    }
+
+    .state-dot {
+      background: var(--wh-lime);
+      box-shadow: 0 0 0 0.35rem rgba(200, 239, 115, 0.2);
+    }
+
+    .note-toggle {
+      color: #dfe6e0;
+    }
+  }
+}
+
+.clock-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.state-dot {
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  background: var(--wh-muted);
+}
+
+.today-total {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0.5rem;
+}
+
+.today-value {
+  font-size: clamp(3rem, 12vw, 4.5rem);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.06em;
+  line-height: 1;
+}
+
+.today-label,
+.session,
+.server-time-note {
+  color: var(--wh-muted);
+}
+
+.session {
+  margin-bottom: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.clock-button {
+  display: inline-flex;
+  width: min(100%, 22rem);
+  min-height: 4.25rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  margin: 1.5rem 0 0.75rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--wh-lime);
+  color: var(--wh-ink);
+  cursor: pointer;
+  font-size: 1.15rem;
+  font-weight: 800;
+  transition:
+    transform 120ms ease,
+    box-shadow 120ms ease;
+
+  &:hover:not(:disabled) {
+    box-shadow: 0 10px 30px rgba(200, 239, 115, 0.45);
+    transform: translateY(-1px);
+  }
+
+  &:focus-visible {
+    outline: 3px solid var(--wh-coral);
+    outline-offset: 3px;
+  }
+
+  &:disabled {
+    cursor: progress;
+    opacity: 0.75;
+  }
+
+  &.clock-out {
+    background: var(--wh-coral);
+  }
+}
+
+.note-field {
+  width: min(100%, 26rem);
+}
+
+.server-time-note {
+  margin: 0.5rem 0 0;
+  font-size: 0.75rem;
+}
+
+.forgotten {
+  margin-bottom: 1rem;
+  border-color: var(--wh-coral);
+
+  h2 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--wh-coral-ink);
+  }
+
+  p {
+    line-height: 1.5;
+  }
+}
+
+.details {
+  align-items: start;
+}
+
+.entries {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin: 0 0 0.75rem;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 0.75rem;
+    padding-bottom: 0.6rem;
+    border-bottom: 1px solid var(--wh-line);
+  }
+}
+
+.entry-times {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+
+  mat-icon {
+    width: 1rem;
+    height: 1rem;
+    color: var(--wh-muted);
+    font-size: 1rem;
+  }
+}
+
+.entry-duration {
+  color: var(--wh-muted);
+}
+
+.entry-note {
+  flex-basis: 100%;
+  color: var(--wh-muted);
+  font-size: 0.85rem;
+}
+
+.week-total {
+  margin-bottom: 0.5rem;
+  font-size: 1.1rem;
+
+  strong {
+    font-size: 1.6rem;
+    letter-spacing: -0.04em;
+  }
+}
+
+.bars {
+  display: grid;
+  gap: 0.35rem;
+  grid-template-columns: repeat(7, 1fr);
+  margin: 1rem 0;
+}
+
+.bar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.68rem;
+
+  &.today {
+    .bar-fill {
+      background: var(--wh-coral);
+    }
+
+    .bar-label {
+      color: var(--wh-ink);
+      font-weight: 800;
+    }
+  }
+}
+
+.bar-value {
+  min-height: 1rem;
+  color: var(--wh-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.bar-track {
+  position: relative;
+  display: block;
+  width: 100%;
+  max-width: 2.25rem;
+  height: 6rem;
+  overflow: hidden;
+  border-radius: 0.6rem;
+  background: var(--wh-paper);
+}
+
+.bar-fill {
+  position: absolute;
+  inset: auto 0 0;
+  border-radius: 0.6rem;
+  background: var(--wh-ink);
+}
+
+.bar-label {
+  color: var(--wh-muted);
+  text-transform: capitalize;
+}

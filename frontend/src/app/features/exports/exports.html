@@ -1,0 +1,115 @@
+<section class="wh-page">
+  <header class="wh-page-header">
+    <div>
+      <p class="wh-eyebrow">Paie</p>
+      <h1>Exports pour la paie</h1>
+      <p>
+        Transmettez les heures à votre gestionnaire de paie ou à votre expert-comptable. Les fichiers
+        CSV s’ouvrent directement dans Excel ou LibreOffice.
+      </p>
+    </div>
+  </header>
+
+  @if (error(); as message) {
+    <div class="wh-message wh-message-error" role="alert">
+      <mat-icon aria-hidden="true">error_outline</mat-icon>
+      <span>{{ message }}</span>
+    </div>
+  }
+
+  <div class="layout">
+    <section class="wh-card" aria-labelledby="period-title">
+      <h2 id="period-title">1. Choisir la période</h2>
+      <mat-button-toggle-group
+        [value]="mode()"
+        (change)="mode.set($event.value)"
+        aria-label="Type de période"
+        class="mode"
+      >
+        <mat-button-toggle value="month">Un mois</mat-button-toggle>
+        <mat-button-toggle value="range">Période libre</mat-button-toggle>
+      </mat-button-toggle-group>
+
+      <form class="wh-form" [formGroup]="form">
+        @if (mode() === 'month') {
+          <mat-form-field>
+            <mat-label>Mois</mat-label>
+            <input matInput type="month" formControlName="month" />
+          </mat-form-field>
+        } @else {
+          <div class="wh-form-row">
+            <mat-form-field>
+              <mat-label>Du</mat-label>
+              <input matInput type="date" formControlName="from" />
+            </mat-form-field>
+            <mat-form-field>
+              <mat-label>Au</mat-label>
+              <input matInput type="date" formControlName="to" />
+            </mat-form-field>
+          </div>
+        }
+      </form>
+      @if (periodLabel(); as label) {
+        <p class="wh-muted">Période sélectionnée : {{ label }}.</p>
+      }
+    </section>
+
+    <section class="wh-card" aria-labelledby="files-title">
+      <h2 id="files-title">2. Télécharger</h2>
+
+      <div class="export">
+        <div>
+          <h3>Synthèse hebdomadaire</h3>
+          <p>
+            Une ligne par salarié et par semaine civile : heures travaillées, heures supplémentaires
+            à +25 % et +50 %, heures complémentaires, jours d’absence par type et alertes. C’est le
+            fichier à transmettre pour la paie.
+          </p>
+        </div>
+        <button mat-flat-button type="button" [disabled]="!period() || downloading() !== null" (click)="download('week')">
+          @if (downloading() === 'week') {
+            <mat-spinner diameter="18" />
+          } @else {
+            <mat-icon aria-hidden="true">download</mat-icon>
+          }
+          Synthèse (CSV)
+        </button>
+      </div>
+
+      <div class="export">
+        <div>
+          <h3>Détail journalier</h3>
+          <p>
+            Une ligne par salarié et par jour travaillé ou absent : première entrée, dernière sortie,
+            pauses, heures travaillées. Utile en cas de contrôle ou de question d’un salarié.
+          </p>
+        </div>
+        <button mat-stroked-button type="button" [disabled]="!period() || downloading() !== null" (click)="download('day')">
+          @if (downloading() === 'day') {
+            <mat-spinner diameter="18" />
+          } @else {
+            <mat-icon aria-hidden="true">download</mat-icon>
+          }
+          Détail (CSV)
+        </button>
+      </div>
+    </section>
+  </div>
+
+  <section class="wh-card notes" aria-labelledby="notes-title">
+    <h2 id="notes-title">À savoir</h2>
+    <ul>
+      <li>
+        Les heures supplémentaires se calculent par semaine civile (du lundi au dimanche). Une
+        semaine à cheval sur deux mois apparaît en entier dans la synthèse : indiquez à votre
+        gestionnaire de paie sur quel mois la rattacher.
+      </li>
+      <li>
+        Les taux +25 % / +50 % et +10 % / +25 % sont les taux légaux par défaut. Votre convention ou
+        un accord d’entreprise peut prévoir d’autres taux.
+      </li>
+      <li>Les heures sont en décimales (7,50 = 7 h 30), les absences en jours ouvrés.</li>
+      <li>Un export couvre au plus 62 jours. Il ne contient que les salariés de votre entreprise.</li>
+    </ul>
+  </section>
+</section>

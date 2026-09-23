@@ -45,7 +45,7 @@ export class EmployeeInvitation {
     this.invitationService.acceptInvitation(this.token).subscribe({
       next: () => {
         this.state.set('success');
-        window.setTimeout(() => void this.router.navigateByUrl('/dashboard'), 700);
+        window.setTimeout(() => void this.router.navigateByUrl('/'), 700);
       },
       error: (response: HttpErrorResponse) => {
         this.state.set('error');
@@ -59,8 +59,14 @@ export class EmployeeInvitation {
   }
 
   private errorMessage(response: HttpErrorResponse): string {
+    if (
+      response.status === 403 &&
+      response.error?.message === 'The Keycloak email must be verified to accept this invitation'
+    ) {
+      return 'Confirmez d’abord votre adresse e-mail (lien reçu par e-mail), puis rouvrez l’invitation.';
+    }
     if (response.status === 403) {
-      return 'Cette invitation ne correspond pas à l’adresse e-mail de votre compte Keycloak.';
+      return 'Cette invitation ne correspond pas à l’adresse e-mail de votre compte.';
     }
     if (response.status === 404) {
       return 'Cette invitation est introuvable ou n’est plus valide.';

@@ -1,0 +1,94 @@
+<ol class="days">
+  @for (day of days(); track day.date) {
+    <li
+      class="day"
+      [class.weekend]="day.weekday >= 6"
+      [class.today]="day.date === today()"
+      [class.quiet]="isQuiet(day)"
+    >
+      <div class="day-head">
+        <h3 class="day-name">{{ formatDayLabel(day.date) }}</h3>
+        <div class="day-tags">
+          @if (day.publicHoliday; as holiday) {
+            <span class="wh-chip wh-chip-sky">{{ holiday }}</span>
+          }
+          @for (absence of day.absences; track absence.id) {
+            <span class="wh-chip wh-chip-lime">
+              {{ absenceLabels[absence.type] }}{{ absence.portion < 1 ? ' · ½ j' : '' }}
+            </span>
+          }
+          @if (day.alerts.length > 0) {
+            <span class="wh-chip wh-chip-coral">
+              <mat-icon aria-hidden="true">warning</mat-icon>
+              {{ day.alerts.length }} alerte{{ day.alerts.length > 1 ? 's' : '' }}
+            </span>
+          }
+        </div>
+        <span class="day-total" [class.wh-muted]="day.workedMinutes === 0">
+          {{ formatDuration(day.workedMinutes) }}
+        </span>
+      </div>
+
+      @if (day.entries.length > 0) {
+        <ul class="entries">
+          @for (entry of day.entries; track entry.id) {
+            <li class="entry">
+              <span class="entry-times">
+                {{ formatTime(entry.startAt, timezone()) }} –
+                {{ entry.isOpen ? 'en cours' : formatTime(entry.endAt, timezone()) }}
+              </span>
+              <span class="wh-muted">{{ formatDuration(entry.durationMinutes) }}</span>
+              @if (entry.source === 'MANUAL') {
+                <span class="wh-chip wh-chip-amber">Saisie manuelle</span>
+              } @else if (entry.isCorrected) {
+                <span class="wh-chip wh-chip-amber">Corrigé</span>
+              }
+              @if (entry.note) {
+                <span class="entry-note">« {{ entry.note }} »</span>
+              }
+              @if (editable()) {
+                <span class="entry-actions">
+                  <button
+                    mat-icon-button
+                    type="button"
+                    matTooltip="Corriger"
+                    aria-label="Corriger cette période"
+                    (click)="editEntry.emit({ day, entry })"
+                  >
+                    <mat-icon aria-hidden="true">edit</mat-icon>
+                  </button>
+                  <button
+                    mat-icon-button
+                    type="button"
+                    matTooltip="Supprimer"
+                    aria-label="Supprimer cette période"
+                    (click)="deleteEntry.emit({ day, entry })"
+                  >
+                    <mat-icon aria-hidden="true">delete_outline</mat-icon>
+                  </button>
+                </span>
+              }
+            </li>
+          }
+        </ul>
+        @if (day.breakMinutes > 0) {
+          <p class="day-meta">Pauses et coupures : {{ formatDuration(day.breakMinutes) }}</p>
+        }
+      }
+
+      @for (alert of day.alerts; track alert.code) {
+        <p class="day-alert">
+          <mat-icon aria-hidden="true">warning_amber</mat-icon>
+          {{ describeAlert(alert) }}
+        </p>
+      }
+
+      @if (editable()) {
+        <button mat-button type="button" class="add-button" (click)="addEntry.emit(day)">
+          <mat-icon aria-hidden="true">add</mat-icon>
+          Ajouter une période
+        </button>
+      }
+    </li>
+  }
+</ol>
