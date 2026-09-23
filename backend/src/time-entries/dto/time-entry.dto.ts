@@ -7,6 +7,7 @@ import {
   IsUUID,
   Matches,
   MaxLength,
+  ValidateIf,
 } from 'class-validator';
 import { PeriodQueryDto } from '../../common/dates/period';
 
@@ -63,20 +64,23 @@ export class CreateTimeEntryDto {
   reason!: string;
 }
 
+/** Optional, but never null: a null date would silently become 1 January 1970. */
+const whenProvided = ValidateIf((_object: unknown, value: unknown) => value !== undefined);
+
 export class UpdateTimeEntryDto {
-  @IsOptional()
+  @whenProvided
   @IsISO8601({ strict: true })
   @Matches(INSTANT_WITH_OFFSET, { message: `startAt ${INSTANT_MESSAGE}` })
   startAt?: string;
 
-  @IsOptional()
+  @whenProvided
   @IsISO8601({ strict: true })
   @Matches(INSTANT_WITH_OFFSET, { message: `endAt ${INSTANT_MESSAGE}` })
   endAt?: string;
 
   /** An empty note removes the existing one. */
   @Transform(trimString)
-  @IsOptional()
+  @whenProvided
   @IsString()
   @MaxLength(500)
   note?: string;

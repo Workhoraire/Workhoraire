@@ -7,7 +7,8 @@ export type ComplianceAlertCode =
   | 'INSUFFICIENT_DAILY_REST'
   | 'WEEKLY_MAX_EXCEEDED'
   | 'TOO_MANY_WORKING_DAYS'
-  | 'COMPLEMENTARY_HOURS_LIMIT';
+  | 'COMPLEMENTARY_HOURS_LIMIT'
+  | 'WORK_DURING_ABSENCE';
 
 export interface ComplianceAlert {
   code: ComplianceAlertCode;

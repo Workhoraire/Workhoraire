@@ -2,6 +2,7 @@ import { Transform } from 'class-transformer';
 import {
   IsBoolean,
   IsEnum,
+  IsNotEmpty,
   IsOptional,
   IsString,
   IsUUID,
@@ -45,6 +46,14 @@ export class ReviewAbsenceRequestDto {
   @IsString()
   @MaxLength(500)
   comment?: string;
+}
+
+export class RevokeAbsenceRequestDto {
+  @Transform(trimString)
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(500)
+  comment!: string;
 }
 
 export class ListAbsenceRequestsQueryDto {

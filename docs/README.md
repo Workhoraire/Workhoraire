@@ -28,6 +28,7 @@ Commencer par la **[synthèse](produit/00-synthese.md)**.
   - [0004 Inscription libre et e-mail vérifié](technique/adr/0004-inscription-libre-et-email-verifie.md)
   - [0005 Exports CSV avant l'intégration paie](technique/adr/0005-exports-csv-avant-integration-paie.md)
   - [0006 Confiance sans surveillance, mode kiosque à décider](technique/adr/0006-confiance-sans-surveillance.md)
+  - [0007 Historique des contrats, daté du lundi](technique/adr/0007-historique-des-contrats.md)
 
 ## Conventions
 

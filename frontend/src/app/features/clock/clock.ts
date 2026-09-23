@@ -113,9 +113,21 @@ export class Clock {
     );
   });
 
-  protected readonly todayMinutes = computed(
-    () => (this.status()?.today.workedMinutes ?? 0) + this.elapsedMinutes(),
-  );
+  /** Local day on which the running entry started: its minutes are counted on that day. */
+  private readonly openEntryDay = computed(() => {
+    const entry = this.openEntry();
+    return entry ? toDateKey(entry.startAt, this.timezone()) : null;
+  });
+  protected readonly openEntryDayLabel = computed(() => {
+    const day = this.openEntryDay();
+    return day ? formatDayLabel(day) : '';
+  });
+
+  protected readonly todayMinutes = computed(() => {
+    const today = this.status()?.today;
+    return today ? this.liveDayMinutes(today.date, today.workedMinutes) : 0;
+  });
+  /** The running minutes always fall in the current civil week. */
   protected readonly weekMinutes = computed(
     () => (this.status()?.week.workedMinutes ?? 0) + this.elapsedMinutes(),
   );
@@ -166,7 +178,9 @@ export class Clock {
     }
     const today = this.todayKey();
     const minutes = status.weekDays.map((day) =>
-      day.date === status.today.date ? this.todayMinutes() : day.workedMinutes,
+      day.date === status.today.date
+        ? this.todayMinutes()
+        : this.liveDayMinutes(day.date, day.workedMinutes),
     );
     const max = Math.max(8 * 60, ...minutes);
 
@@ -202,6 +216,11 @@ export class Clock {
   protected readonly formatDayLabel = formatDayLabel;
   protected readonly describeAlert = describeAlert;
   protected readonly absenceLabels = ABSENCE_TYPE_LABELS;
+
+  /** Minutes of a day, plus the running minutes if the open entry started that day. */
+  private liveDayMinutes(date: string, workedMinutes: number): number {
+    return workedMinutes + (date === this.openEntryDay() ? this.elapsedMinutes() : 0);
+  }
 
   /** Duration of an entry, including the minutes elapsed since the last refresh if it is running. */
   protected liveDuration(entry: TimesheetEntry): number {

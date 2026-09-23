@@ -102,7 +102,7 @@
           <p class="wh-muted">Aucune absence validée aujourd’hui.</p>
         } @else {
           <ul class="people">
-            @for (item of board.absentToday; track item.employee.id + item.type) {
+            @for (item of board.absentToday; track $index) {
               <li>
                 <span class="avatar muted" aria-hidden="true">{{ initials(item.employee) }}</span>
                 <span>{{ fullName(item.employee) }}</span>

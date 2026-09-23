@@ -21,6 +21,7 @@ import {
   CreateAbsenceRequestDto,
   ListAbsenceRequestsQueryDto,
   ReviewAbsenceRequestDto,
+  RevokeAbsenceRequestDto,
 } from './dto/absence.dto';
 
 @Controller('absences')
@@ -79,5 +80,15 @@ export class AbsencesController {
     @Body() dto: ReviewAbsenceRequestDto,
   ): Promise<AbsenceRequestResponse> {
     return this.absencesService.rejectRequest(user, requestId, dto);
+  }
+
+  @Post(':id/revoke')
+  @Roles(UserRole.ADMIN, UserRole.MANAGER)
+  revokeRequest(
+    @CurrentUser() user: ApplicationUser,
+    @Param('id', ParseUUIDPipe) requestId: string,
+    @Body() dto: RevokeAbsenceRequestDto,
+  ): Promise<AbsenceRequestResponse> {
+    return this.absencesService.revokeRequest(user, requestId, dto);
   }
 }

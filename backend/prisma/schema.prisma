@@ -20,6 +20,7 @@ model Company {
   timeEntries        TimeEntry[]
   timeEntryAuditLogs TimeEntryAuditLog[]
   absenceRequests    AbsenceRequest[]
+  contractPeriods    ContractPeriod[]
 }
 
 enum UserRole {
@@ -36,7 +37,8 @@ model User {
   lastName              String?              @db.VarChar(100)
   isActive              Boolean              @default(true)
   role                  UserRole             @default(EMPLOYEE)
-  /// Contractual weekly working time, in minutes (2100 = 35 h).
+  /// Contractual weekly working time in force today, in minutes (2100 = 35 h).
+  /// The dated history used by calculations is in ContractPeriod.
   weeklyContractMinutes Int                  @default(2100)
   /// Employee number in the payroll software (matricule), used in exports.
   payrollId             String?              @db.VarChar(50)
@@ -49,9 +51,29 @@ model User {
   timeEntryAuditActions TimeEntryAuditLog[]  @relation("TimeEntryAuditActors")
   absenceRequests       AbsenceRequest[]     @relation("EmployeeAbsenceRequests")
   reviewedAbsences      AbsenceRequest[]     @relation("AbsenceRequestReviewers")
+  contractPeriods       ContractPeriod[]
   createdAt             DateTime             @default(now())
   updatedAt             DateTime             @updatedAt
 
+  @@unique([companyId, payrollId])
+  @@index([companyId])
+}
+
+/// Contractual weekly working time applicable from a given week, so that a
+/// contract change never rewrites the hours of past weeks.
+model ContractPeriod {
+  id                    String   @id @default(uuid()) @db.Uuid
+  companyId             String   @db.Uuid
+  userId                String   @db.Uuid
+  /// Monday of the first civil week concerned.
+  effectiveFrom         DateTime @db.Date
+  weeklyContractMinutes Int
+  createdAt             DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, effectiveFrom])
   @@index([companyId])
 }
 

@@ -39,6 +39,7 @@ const ALERT_LABELS: Record<ComplianceAlertCode, string> = {
   WEEKLY_MAX_EXCEEDED: 'Plus de 48 h dans la semaine',
   TOO_MANY_WORKING_DAYS: 'Plus de 6 jours travaillés',
   COMPLEMENTARY_HOURS_LIMIT: 'Heures complémentaires > 1/10 du contrat',
+  WORK_DURING_ABSENCE: 'Travail pendant une absence',
 };
 
 const WEEKDAYS = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];

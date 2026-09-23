@@ -106,6 +106,21 @@ h1 {
   line-height: 1.5;
 }
 
+.invitation-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  max-width: 25rem;
+  margin-top: 1rem;
+  color: var(--wh-muted);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.invitation-note mat-icon {
+  flex: 0 0 auto;
+}
+
 .security-note mat-icon {
   flex: 0 0 auto;
   color: #8aa83f;

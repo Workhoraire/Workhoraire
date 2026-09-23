@@ -13,9 +13,16 @@ import {
   UserRole,
 } from '@prisma/client';
 import { ApplicationUser } from '../auth/auth.types';
-import { addDays, startOfLocalDay, startOfWeek, toDateKey } from '../common/dates/local-date';
+import {
+  addDays,
+  isSupportedInstant,
+  startOfLocalDay,
+  startOfWeek,
+  toDateKey,
+} from '../common/dates/local-date';
 import { assertValidPeriod } from '../common/dates/period';
 import { PrismaService } from '../prisma/prisma.service';
+import { LABOR_RULES } from '../timesheets/labor-rules';
 import { TimesheetsService } from '../timesheets/timesheets.service';
 import {
   ClockDto,
@@ -35,6 +42,8 @@ import {
 
 /** No single work period may exceed 24 hours. */
 const MAX_ENTRY_MS = 24 * 60 * 60 * 1000;
+/** Beyond this, a clock-out "now" would record a forgotten exit as worked time. */
+const MAX_CLOCK_OUT_MS = LABOR_RULES.forgottenClockOutMinutes * 60 * 1000;
 
 const personSelect = { id: true, firstName: true, lastName: true } as const;
 
@@ -116,9 +125,9 @@ export class TimeEntriesService {
       throw new ConflictException('The clock-out time must be after the clock-in time');
     }
 
-    if (now.getTime() - openEntry.startAt.getTime() > MAX_ENTRY_MS) {
+    if (now.getTime() - openEntry.startAt.getTime() > MAX_CLOCK_OUT_MS) {
       throw new ConflictException(
-        'This entry has been open for more than 24 hours: declare its end time',
+        'This entry has been open for more than 12 hours: declare its end time',
       );
     }
 
@@ -205,6 +214,7 @@ export class TimeEntriesService {
     this.assertValidInterval(startAt, endAt, now);
 
     return this.prisma.$transaction(async (transaction) => {
+      await this.lockEmployee(transaction, employee.id);
       await this.assertNoOverlap(transaction, employee.id, startAt, endAt, now);
 
       const entry = await transaction.timeEntry.create({
@@ -247,54 +257,72 @@ export class TimeEntriesService {
 
     const startAt = dto.startAt !== undefined ? new Date(dto.startAt) : existing.startAt;
     const endAt = dto.endAt !== undefined ? new Date(dto.endAt) : existing.endAt;
+    const timezone = actor.company.timezone;
+
+    // Moving a period to another day would file its trail under a week the
+    // employee is not looking at: delete it and create a new one instead.
+    if (toDateKey(startAt, timezone) !== toDateKey(existing.startAt, timezone)) {
+      throw new BadRequestException(
+        'An entry cannot be moved to another day: delete it and create a new one',
+      );
+    }
 
     if (endAt) {
       this.assertValidInterval(startAt, endAt, now);
-    } else if (startAt > now) {
-      throw new BadRequestException('An entry cannot start in the future');
+    } else {
+      this.assertValidOpenStart(startAt, now);
     }
 
-    return this.prisma.$transaction(async (transaction) => {
-      await this.assertNoOverlap(transaction, existing.userId, startAt, endAt ?? now, now, existing.id);
+    return this.guardConcurrentChange(() =>
+      this.prisma.$transaction(async (transaction) => {
+        await this.lockEmployee(transaction, existing.userId);
+        await this.assertNoOverlap(transaction, existing.userId, startAt, endAt ?? now, now, existing.id);
 
-      const entry = await transaction.timeEntry.update({
-        where: { id: existing.id },
-        data: {
-          startAt,
-          endAt,
-          openUserId: endAt ? null : existing.userId,
-          ...(dto.note !== undefined ? { note: dto.note || null } : {}),
-        },
-      });
+        // Only update the version that was checked: a concurrent clock-out or
+        // correction makes this update fail instead of overwriting it.
+        const entry = await transaction.timeEntry.update({
+          where: { id: existing.id, updatedAt: existing.updatedAt },
+          data: {
+            startAt,
+            endAt,
+            openUserId: endAt ? null : existing.userId,
+            ...(dto.note !== undefined ? { note: dto.note || null } : {}),
+          },
+        });
 
-      await this.writeAuditLog(transaction, {
-        actor,
-        entry,
-        action: TimeEntryAuditAction.UPDATED,
-        reason: dto.reason,
-        before: toEntrySnapshot(existing),
-        after: toEntrySnapshot(entry),
-      });
+        await this.writeAuditLog(transaction, {
+          actor,
+          entry,
+          action: TimeEntryAuditAction.UPDATED,
+          reason: dto.reason,
+          before: toEntrySnapshot(existing),
+          after: toEntrySnapshot(entry),
+        });
 
-      return toTimeEntryResponse(entry, now);
-    });
+        return toTimeEntryResponse(entry, now);
+      }),
+    );
   }
 
   async deleteEntry(actor: ApplicationUser, entryId: string, dto: DeleteTimeEntryDto): Promise<void> {
     const existing = await this.findCompanyEntry(actor, entryId);
     this.assertCanManageEntriesOf(actor, existing.userId);
 
-    await this.prisma.$transaction(async (transaction) => {
-      await transaction.timeEntry.delete({ where: { id: existing.id } });
-      await this.writeAuditLog(transaction, {
-        actor,
-        entry: existing,
-        action: TimeEntryAuditAction.DELETED,
-        reason: dto.reason,
-        before: toEntrySnapshot(existing),
-        after: null,
-      });
-    });
+    await this.guardConcurrentChange(() =>
+      this.prisma.$transaction(async (transaction) => {
+        await transaction.timeEntry.delete({
+          where: { id: existing.id, updatedAt: existing.updatedAt },
+        });
+        await this.writeAuditLog(transaction, {
+          actor,
+          entry: existing,
+          action: TimeEntryAuditAction.DELETED,
+          reason: dto.reason,
+          before: toEntrySnapshot(existing),
+          after: null,
+        });
+      }),
+    );
   }
 
   /**
@@ -360,7 +388,42 @@ export class TimeEntriesService {
     return entry;
   }
 
+  /** Turns "the row changed or disappeared meanwhile" into a 409 instead of a 500. */
+  private async guardConcurrentChange<T>(operation: () => Promise<T>): Promise<T> {
+    try {
+      return await operation();
+    } catch (error: unknown) {
+      if (isRecordNotFound(error)) {
+        throw new ConflictException('This time entry has changed, reload it and retry');
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Serialises the changes of one employee's entries (row lock on the user),
+   * so that two concurrent corrections cannot both pass the overlap check.
+   */
+  private async lockEmployee(transaction: Transaction, userId: string): Promise<void> {
+    await transaction.$queryRaw`SELECT "id" FROM "User" WHERE "id" = ${userId}::uuid FOR UPDATE`;
+  }
+
+  private assertValidOpenStart(startAt: Date, now: Date): void {
+    if (!isSupportedInstant(startAt)) {
+      throw new BadRequestException('The start time is not a valid date');
+    }
+    if (startAt > now) {
+      throw new BadRequestException('An entry cannot start in the future');
+    }
+    if (now.getTime() - startAt.getTime() > MAX_ENTRY_MS) {
+      throw new BadRequestException('An entry cannot last more than 24 hours');
+    }
+  }
+
   private assertValidInterval(startAt: Date, endAt: Date, now: Date): void {
+    if (!isSupportedInstant(startAt) || !isSupportedInstant(endAt)) {
+      throw new BadRequestException('The start and end times must be valid dates');
+    }
     if (endAt <= startAt) {
       throw new BadRequestException('The end time must be after the start time');
     }

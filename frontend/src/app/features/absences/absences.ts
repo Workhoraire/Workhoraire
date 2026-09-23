@@ -3,6 +3,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import {
   AbstractControl,
   FormBuilder,
+  FormGroupDirective,
   ReactiveFormsModule,
   ValidationErrors,
   Validators,
@@ -10,6 +11,7 @@ import {
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -17,6 +19,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTabsModule } from '@angular/material/tabs';
+import { forkJoin } from 'rxjs';
 
 import { CurrentUser, isManagerRole } from '../../core/auth/auth.models';
 import { apiErrorMessage } from '../../core/http/error-message';
@@ -29,6 +32,7 @@ import {
 import { formatShortDate, fullName, todayKey } from '../../core/time/time-format';
 import { CurrentUserService } from '../../core/user/current-user.service';
 import { AbsenceRequest, AbsencesService } from './absences.service';
+import { RevokeDialog, RevokeDialogData } from './revoke-dialog';
 
 function datesInOrder(group: AbstractControl): ValidationErrors | null {
   const start = group.get('startDate')?.value as string;
@@ -42,6 +46,7 @@ function datesInOrder(group: AbstractControl): ValidationErrors | null {
     MatButtonModule,
     MatButtonToggleModule,
     MatCheckboxModule,
+    MatDialogModule,
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
@@ -59,6 +64,7 @@ export class Absences {
   private readonly absencesService = inject(AbsencesService);
   private readonly currentUserService = inject(CurrentUserService);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly dialog = inject(MatDialog);
   private readonly formBuilder = inject(FormBuilder);
 
   protected readonly user = signal<CurrentUser | null>(null);
@@ -76,9 +82,8 @@ export class Absences {
   protected readonly error = signal<string | null>(null);
   protected readonly reviewComments = signal<Record<string, string | undefined>>({});
 
-  protected readonly pending = computed(() =>
-    this.team().filter((request) => request.status === 'PENDING'),
-  );
+  /** Loaded on its own: the history is capped, a pending request must never be missed. */
+  protected readonly pending = signal<AbsenceRequest[]>([]);
   protected readonly filteredTeam = computed(() => {
     const filter = this.teamFilter();
     return filter === 'ALL' ? this.team() : this.team().filter((request) => request.status === filter);
@@ -134,14 +139,21 @@ export class Absences {
     });
 
     if (this.isManager()) {
-      this.absencesService.listTeam().subscribe({
-        next: (requests) => this.team.set(requests),
+      forkJoin({
+        pending: this.absencesService.listTeam('PENDING'),
+        team: this.absencesService.listTeam(),
+      }).subscribe({
+        next: ({ pending, team }) => {
+          // Soonest first: these are the decisions to take.
+          this.pending.set([...pending].sort((a, b) => a.startDate.localeCompare(b.startDate)));
+          this.team.set(team);
+        },
         error: (response: HttpErrorResponse) => this.error.set(apiErrorMessage(response)),
       });
     }
   }
 
-  protected submit(): void {
+  protected submit(formDirective: FormGroupDirective): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
@@ -163,7 +175,8 @@ export class Absences {
       .subscribe({
         next: (request) => {
           this.saving.set(false);
-          this.form.reset();
+          // resetForm also clears the "submitted" state: no error on the emptied fields.
+          formDirective.resetForm();
           this.snackBar.open(
             `Demande envoyée : ${this.daysLabel(request.days)}. Votre responsable va la traiter.`,
             'OK',
@@ -198,6 +211,25 @@ export class Absences {
     );
   }
 
+  protected revoke(request: AbsenceRequest): void {
+    this.dialog
+      .open<RevokeDialog, RevokeDialogData, string>(RevokeDialog, {
+        data: { employeeName: fullName(request.employee), period: this.period(request) },
+        width: '28rem',
+        maxWidth: '95vw',
+      })
+      .afterClosed()
+      .subscribe((comment) => {
+        if (comment) {
+          this.runAction(
+            request.id,
+            this.absencesService.revoke(request.id, comment),
+            `Absence de ${fullName(request.employee)} annulée.`,
+          );
+        }
+      });
+  }
+
   protected setComment(id: string, comment: string): void {
     this.reviewComments.update((comments) => ({ ...comments, [id]: comment }));
   }
@@ -210,6 +242,25 @@ export class Absences {
   protected canReview(request: AbsenceRequest): boolean {
     const user = this.user();
     return user !== null && (user.role === 'ADMIN' || request.employee.id !== user.id);
+  }
+
+  /** Same rule as the API: a manager never decides on their own absences. */
+  protected canRevoke(request: AbsenceRequest): boolean {
+    return request.status === 'APPROVED' && this.canReview(request);
+  }
+
+  /** "Acceptée par Karim Benali : « Bonnes vacances »", or who cancelled it. */
+  protected decisionLabel(request: AbsenceRequest): string | null {
+    const reviewer = request.reviewedBy;
+    if (!reviewer || request.status === 'PENDING') {
+      return null;
+    }
+    if (request.status === 'CANCELLED' && reviewer.id === this.user()?.id) {
+      return 'Vous avez annulé cette demande.';
+    }
+    const verb = { APPROVED: 'Acceptée', REJECTED: 'Refusée', CANCELLED: 'Annulée' }[request.status];
+    const comment = request.reviewComment ? ` : « ${request.reviewComment} »` : '';
+    return `${verb} par ${fullName(reviewer)}${comment}`;
   }
 
   protected period(request: AbsenceRequest): string {

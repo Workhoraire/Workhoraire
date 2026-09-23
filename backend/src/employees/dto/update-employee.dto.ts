@@ -7,11 +7,13 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  Matches,
   Max,
   MaxLength,
   Min,
 } from 'class-validator';
 import { UserRole } from '@prisma/client';
+import { DATE_KEY_REGEX } from '../../common/dates/period';
 
 const trimString = ({ value }: { value: unknown }): unknown =>
   typeof value === 'string' ? value.trim() : value;
@@ -54,6 +56,11 @@ export class UpdateEmployeeDto {
   @Min(60)
   @Max(2880)
   weeklyContractMinutes?: number;
+
+  /** First day (rounded to its Monday) of the new contract; the current week by default. */
+  @IsOptional()
+  @Matches(DATE_KEY_REGEX, { message: 'contractEffectiveFrom must use the YYYY-MM-DD format' })
+  contractEffectiveFrom?: string;
 
   /** Payroll employee number (matricule); an empty string removes it. */
   @Transform(trimString)

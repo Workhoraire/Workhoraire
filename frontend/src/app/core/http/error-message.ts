@@ -6,8 +6,8 @@ const KNOWN_MESSAGES: Record<string, string> = {
   'You are not clocked in': 'Vous n’avez pas de pointage en cours.',
   'The clock-out time must be after the clock-in time':
     'L’heure de sortie doit être postérieure à l’heure d’arrivée.',
-  'This entry has been open for more than 24 hours: declare its end time':
-    'Ce pointage est ouvert depuis plus de 24 h : indiquez l’heure réelle de votre sortie.',
+  'This entry has been open for more than 12 hours: declare its end time':
+    'Ce pointage est ouvert depuis plus de 12 h : indiquez l’heure réelle de votre sortie.',
   'The end time must be after the start time': 'L’heure de fin doit être après l’heure de début.',
   'An entry cannot end in the future': 'Une période ne peut pas se terminer dans le futur.',
   'An entry cannot start in the future': 'Une période ne peut pas commencer dans le futur.',
@@ -17,6 +17,13 @@ const KNOWN_MESSAGES: Record<string, string> = {
   'A manager cannot modify their own time entries':
     'Un manager ne peut pas corriger ses propres heures : demandez-le à un administrateur.',
   'Time entry not found': 'Ce pointage n’existe plus. Actualisez la page.',
+  'An entry cannot be moved to another day: delete it and create a new one':
+    'Une période ne peut pas changer de jour : supprimez-la, puis ajoutez-la sur le bon jour.',
+  'This time entry has changed, reload it and retry':
+    'Ce pointage vient d’être modifié par quelqu’un d’autre. Actualisez la page puis recommencez.',
+  'The start and end times must be valid dates': 'Les heures de début et de fin sont invalides.',
+  'The start time is not a valid date': 'L’heure de début est invalide.',
+  'Dates must be valid calendar dates (YYYY-MM-DD)': 'Les dates saisies sont invalides.',
   'This period overlaps another absence request':
     'Cette période chevauche une autre demande d’absence.',
   'The request does not cover any working day': 'La demande ne couvre aucun jour ouvré.',
@@ -30,7 +37,20 @@ const KNOWN_MESSAGES: Record<string, string> = {
   'This absence request can no longer be cancelled': 'Cette demande ne peut plus être annulée.',
   'This absence request has changed, reload it and retry':
     'Cette demande a été modifiée entre-temps. Actualisez la page.',
+  'This absence request is already closed': 'Cette demande est déjà close (refusée ou annulée).',
+  'Absence request not found': 'Cette demande d’absence n’existe plus. Actualisez la page.',
   'Employee not found': 'Salarié introuvable.',
+  'This payroll number is already used by another employee':
+    'Ce matricule de paie est déjà attribué à un autre salarié.',
+  'An administrator cannot deactivate or demote their own account':
+    'Vous ne pouvez pas désactiver votre propre compte ni retirer votre rôle d’administrateur.',
+  'This email is already associated with an employee':
+    'Cette adresse e-mail est déjà utilisée par un salarié.',
+  'This invitation could not be created': 'L’invitation n’a pas pu être créée. Réessayez.',
+  'At least one employee field is required': 'Aucune modification à enregistrer.',
+  'contractEffectiveFrom must be a valid date (YYYY-MM-DD)':
+    'La date d’application du contrat est invalide.',
+  'The application user is inactive': 'Votre compte est désactivé. Contactez votre administrateur.',
 };
 
 export function apiErrorMessage(response: HttpErrorResponse, fallback?: string): string {

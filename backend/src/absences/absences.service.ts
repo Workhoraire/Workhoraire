@@ -21,6 +21,7 @@ import {
   CreateAbsenceRequestDto,
   ListAbsenceRequestsQueryDto,
   ReviewAbsenceRequestDto,
+  RevokeAbsenceRequestDto,
 } from './dto/absence.dto';
 
 const MAX_REQUEST_DAYS = 366;
@@ -32,11 +33,12 @@ const absenceInclude = {
 
 type AbsenceWithPeople = Prisma.AbsenceRequestGetPayload<{ include: typeof absenceInclude }>;
 type Span = Omit<CalculatorAbsence, 'id' | 'type'>;
+type Client = Prisma.TransactionClient | PrismaService;
 
 /** Half-day slots covered by a span (two slots per day), used to detect overlaps. */
 function halfDaySlots(span: Span): { first: number; last: number } {
-  const startDay = daysBetween('1970-01-01', span.startDate);
-  const endDay = daysBetween('1970-01-01', span.endDate);
+  const startDay = daysBetween('2000-01-01', span.startDate);
+  const endDay = daysBetween('2000-01-01', span.endDate);
 
   return {
     first: startDay * 2 + (span.startsAfternoon ? 1 : 0),
@@ -67,35 +69,26 @@ export class AbsencesService {
     };
     this.assertValidSpan(span);
 
-    const candidates = await this.prisma.absenceRequest.findMany({
-      where: {
-        companyId: user.companyId,
-        userId: user.id,
-        status: { in: [AbsenceStatus.PENDING, AbsenceStatus.APPROVED] },
-        startDate: { lte: dateKeyToDateColumn(span.endDate) },
-        endDate: { gte: dateKeyToDateColumn(span.startDate) },
-      },
+    return this.prisma.$transaction(async (transaction) => {
+      await this.lockEmployee(transaction, user.id);
+      await this.assertNoOverlap(transaction, user.companyId, user.id, span);
+
+      const request = await transaction.absenceRequest.create({
+        data: {
+          companyId: user.companyId,
+          userId: user.id,
+          type: dto.type,
+          startDate: dateKeyToDateColumn(span.startDate),
+          endDate: dateKeyToDateColumn(span.endDate),
+          startsAfternoon: span.startsAfternoon,
+          endsMorning: span.endsMorning,
+          comment: dto.comment || null,
+        },
+        include: absenceInclude,
+      });
+
+      return this.toResponse(request);
     });
-
-    if (candidates.some((candidate) => spansOverlap(this.toSpan(candidate), span))) {
-      throw new ConflictException('This period overlaps another absence request');
-    }
-
-    const request = await this.prisma.absenceRequest.create({
-      data: {
-        companyId: user.companyId,
-        userId: user.id,
-        type: dto.type,
-        startDate: dateKeyToDateColumn(span.startDate),
-        endDate: dateKeyToDateColumn(span.endDate),
-        startsAfternoon: span.startsAfternoon,
-        endsMorning: span.endsMorning,
-        comment: dto.comment || null,
-      },
-      include: absenceInclude,
-    });
-
-    return this.toResponse(request);
   }
 
   listOwnRequests(
@@ -135,7 +128,45 @@ export class AbsencesService {
       throw new ConflictException('This absence request can no longer be cancelled');
     }
 
-    return this.transition(request.id, request.status, { status: AbsenceStatus.CANCELLED });
+    // The review fields record the last decision on the request: here, the employee's own.
+    return this.transition(this.prisma, request.id, request.status, {
+      status: AbsenceStatus.CANCELLED,
+      reviewComment: null,
+      reviewedById: user.id,
+      reviewedAt: now,
+    });
+  }
+
+  /**
+   * A manager or an administrator cancels a request, including an approved
+   * one (plans changed, the employee came back to work). The reason is kept.
+   */
+  async revokeRequest(
+    actor: ApplicationUser,
+    requestId: string,
+    dto: RevokeAbsenceRequestDto,
+    now = new Date(),
+  ): Promise<AbsenceRequestResponse> {
+    const request = await this.prisma.absenceRequest.findFirst({
+      where: { id: requestId, companyId: actor.companyId },
+    });
+
+    if (!request) {
+      throw new NotFoundException('Absence request not found');
+    }
+
+    this.assertCanReview(actor, request.userId);
+
+    if (request.status !== AbsenceStatus.PENDING && request.status !== AbsenceStatus.APPROVED) {
+      throw new ConflictException('This absence request is already closed');
+    }
+
+    return this.transition(this.prisma, request.id, request.status, {
+      status: AbsenceStatus.CANCELLED,
+      reviewComment: dto.comment,
+      reviewedById: actor.id,
+      reviewedAt: now,
+    });
   }
 
   approveRequest(
@@ -171,30 +202,83 @@ export class AbsencesService {
       throw new NotFoundException('Absence request not found');
     }
 
-    if (actor.role === UserRole.MANAGER && request.userId === actor.id) {
-      throw new ForbiddenException('A manager cannot review their own absence request');
-    }
+    this.assertCanReview(actor, request.userId);
 
     if (request.status !== AbsenceStatus.PENDING) {
       throw new ConflictException('This absence request has already been reviewed');
     }
 
-    return this.transition(request.id, AbsenceStatus.PENDING, {
-      status: decision,
-      reviewComment: dto.comment || null,
-      reviewedById: actor.id,
-      reviewedAt: now,
+    return this.prisma.$transaction(async (transaction) => {
+      if (decision === AbsenceStatus.APPROVED) {
+        // Two overlapping requests may both be pending: only one may be approved.
+        await this.lockEmployee(transaction, request.userId);
+        await this.assertNoOverlap(
+          transaction,
+          actor.companyId,
+          request.userId,
+          this.toSpan(request),
+          request.id,
+          [AbsenceStatus.APPROVED],
+        );
+      }
+
+      return this.transition(transaction, request.id, AbsenceStatus.PENDING, {
+        status: decision,
+        reviewComment: dto.comment || null,
+        reviewedById: actor.id,
+        reviewedAt: now,
+      });
     });
+  }
+
+  /** A manager may not review their own absences; an administrator may. */
+  private assertCanReview(actor: ApplicationUser, employeeId: string): void {
+    if (actor.role === UserRole.MANAGER && employeeId === actor.id) {
+      throw new ForbiddenException('A manager cannot review their own absence request');
+    }
+  }
+
+  /**
+   * Serialises the absence changes of one employee (row lock on the user), so
+   * that two concurrent requests cannot both pass the overlap check.
+   */
+  private async lockEmployee(transaction: Prisma.TransactionClient, userId: string): Promise<void> {
+    await transaction.$queryRaw`SELECT "id" FROM "User" WHERE "id" = ${userId}::uuid FOR UPDATE`;
+  }
+
+  private async assertNoOverlap(
+    client: Client,
+    companyId: string,
+    userId: string,
+    span: Span,
+    excludedRequestId?: string,
+    statuses: AbsenceStatus[] = [AbsenceStatus.PENDING, AbsenceStatus.APPROVED],
+  ): Promise<void> {
+    const candidates = await client.absenceRequest.findMany({
+      where: {
+        companyId,
+        userId,
+        ...(excludedRequestId ? { id: { not: excludedRequestId } } : {}),
+        status: { in: statuses },
+        startDate: { lte: dateKeyToDateColumn(span.endDate) },
+        endDate: { gte: dateKeyToDateColumn(span.startDate) },
+      },
+    });
+
+    if (candidates.some((candidate) => spansOverlap(this.toSpan(candidate), span))) {
+      throw new ConflictException('This period overlaps another absence request');
+    }
   }
 
   /** Status change guarded by the current status, so that two reviewers cannot both win. */
   private async transition(
+    client: Client,
     requestId: string,
     expectedStatus: AbsenceStatus,
     data: Prisma.AbsenceRequestUncheckedUpdateInput,
   ): Promise<AbsenceRequestResponse> {
     try {
-      const updated = await this.prisma.absenceRequest.update({
+      const updated = await client.absenceRequest.update({
         where: { id: requestId, status: expectedStatus },
         data,
         include: absenceInclude,

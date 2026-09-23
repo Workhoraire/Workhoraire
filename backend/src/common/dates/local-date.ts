@@ -9,6 +9,10 @@ const DATE_KEY_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 const MINUTE_MS = 60_000;
 const DAY_MS = 24 * 60 * MINUTE_MS;
 
+/** Business dates outside this range are rejected as input errors. */
+export const MIN_YEAR = 2000;
+export const MAX_YEAR = 2100;
+
 const formatters = new Map<string, Intl.DateTimeFormat>();
 
 function formatterFor(timeZone: string): Intl.DateTimeFormat {
@@ -79,6 +83,10 @@ export function isValidDateKey(value: string): boolean {
   }
 
   const [, year, month, day] = match.map(Number);
+  if (year < MIN_YEAR || year > MAX_YEAR) {
+    return false;
+  }
+
   const date = new Date(Date.UTC(year, month - 1, day));
 
   return (
@@ -86,6 +94,12 @@ export function isValidDateKey(value: string): boolean {
     date.getUTCMonth() === month - 1 &&
     date.getUTCDate() === day
   );
+}
+
+/** True when an instant is within the supported business years. */
+export function isSupportedInstant(instant: Date): boolean {
+  const year = instant.getUTCFullYear();
+  return !Number.isNaN(instant.getTime()) && year >= MIN_YEAR && year <= MAX_YEAR;
 }
 
 function parseDateKey(dateKey: string): { year: number; month: number; day: number } {
@@ -115,7 +129,7 @@ export function timeZoneOffsetMinutes(instant: Date, timeZone: string): number {
 /** Local calendar date of an instant, e.g. "2026-09-23". */
 export function toDateKey(instant: Date, timeZone: string): string {
   const parts = localParts(instant, timeZone);
-  return `${parts.year}-${pad(parts.month)}-${pad(parts.day)}`;
+  return `${pad(parts.year, 4)}-${pad(parts.month)}-${pad(parts.day)}`;
 }
 
 /** Minutes elapsed since local midnight, e.g. 510 for 08:30. */
@@ -152,7 +166,7 @@ export function addDays(dateKey: string, days: number): string {
   const { year, month, day } = parseDateKey(dateKey);
   const date = new Date(Date.UTC(year, month - 1, day) + days * DAY_MS);
 
-  return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`;
+  return `${pad(date.getUTCFullYear(), 4)}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`;
 }
 
 /** Number of calendar days from one date to another (0 for the same day). */

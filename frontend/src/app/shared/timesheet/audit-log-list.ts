@@ -1,8 +1,13 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
-import { DatePipe } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 
-import { formatDayLabel, formatTime, fullName, toDateKey } from '../../core/time/time-format';
+import {
+  formatDayLabel,
+  formatShortDate,
+  formatTime,
+  fullName,
+  toDateKey,
+} from '../../core/time/time-format';
 import { EntrySnapshot, TimeEntryAuditLog } from '../../core/time/time.models';
 
 const ACTION_LABELS: Record<TimeEntryAuditLog['action'], string> = {
@@ -19,7 +24,7 @@ const ACTION_ICONS: Record<TimeEntryAuditLog['action'], string> = {
 
 @Component({
   selector: 'app-audit-log-list',
-  imports: [DatePipe, MatIconModule],
+  imports: [MatIconModule],
   template: `
     @if (logs().length === 0) {
       <p class="wh-muted">Aucune correction sur cette période.</p>
@@ -41,7 +46,7 @@ const ACTION_ICONS: Record<TimeEntryAuditLog['action'], string> = {
                 {{ describeSnapshot(log.after) }}
               </p>
               <p class="log-meta">
-                Par {{ name(log.actor) }} le {{ log.createdAt | date: 'd MMM y à HH:mm' }} · Motif :
+                Par {{ name(log.actor) }} le {{ when(log.createdAt) }} · Motif :
                 « {{ log.reason }} »
               </p>
             </div>
@@ -90,6 +95,11 @@ export class AuditLogList {
   protected readonly labels = ACTION_LABELS;
   protected readonly icons = ACTION_ICONS;
   protected readonly name = fullName;
+
+  /** "21 sept. 2026 à 14:05", in the company timezone like every other time. */
+  protected when(instant: string): string {
+    return `${formatShortDate(toDateKey(instant, this.timezone()))} à ${formatTime(instant, this.timezone())}`;
+  }
 
   protected describeSnapshot(snapshot: EntrySnapshot | null): string {
     if (!snapshot) {

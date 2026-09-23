@@ -34,21 +34,24 @@ Chaque module suit le schéma `Controller → Service → Prisma`. Les contrôle
 ## 2. Modèle de données
 
 ```text
-Company 1─* User (salarié : rôle, contrat hebdomadaire, matricule, actif)
+Company 1─* User (salarié : rôle, contrat en vigueur, matricule, actif)
+Company 1─* ContractPeriod (historique des contrats : durée hebdomadaire, date d'effet un lundi)
 Company 1─* EmployeeInvitation (jeton haché, rôle, contrat)
 Company 1─* TimeEntry (période de travail : startAt, endAt?, source CLOCK|MANUAL, note)
 Company 1─* TimeEntryAuditLog (action, motif, avant/après en JSON ; pas de clé étrangère vers TimeEntry)
 Company 1─* AbsenceRequest (type, statut, dates, demi-journées, validation)
 ```
 
-Garanties en base (migration `20260923100000_add_time_tracking_and_absences`) :
+Garanties en base (migrations `20260923100000_add_time_tracking_and_absences` et `20260923130000_add_contract_history`) :
 
 | Garantie | Mécanisme |
 |---|---|
 | Un seul pointage ouvert par salarié, même en cas de requêtes simultanées | `TimeEntry.openUserId` vaut `userId` tant que la période est ouverte, avec un index unique |
 | Cohérence d'une période | `CHECK (endAt > startAt)` ; `CHECK` liant `endAt` nul et `openUserId` renseigné |
 | Absences cohérentes | `CHECK (endDate >= startDate)` |
-| Contrat plausible | `CHECK (weeklyContractMinutes BETWEEN 60 AND 2880)` |
+| Contrat plausible | `CHECK (weeklyContractMinutes BETWEEN 60 AND 2880)`, sur `User` et `ContractPeriod` |
+| Historique de contrat cohérent | Date d'effet un lundi (`CHECK (EXTRACT(ISODOW FROM "effectiveFrom") = 1)`), une seule période par salarié et par date |
+| Matricule unique dans l'entreprise | Index unique `(companyId, payrollId)` |
 | La piste d'audit survit à la suppression d'une période | `timeEntryId` sans clé étrangère ; `entryStartAt` sert au filtrage par période |
 | Isolation par entreprise | `companyId` sur toutes les tables, repris de l'utilisateur authentifié, jamais du client |
 
@@ -89,7 +92,8 @@ Détail et checklist de production : [securite-et-rgpd.md](securite-et-rgpd.md).
 
 **Corriger**
 1. `PATCH /time-entries/:id` avec un motif.
-2. Dans une transaction : contrôle de chevauchement, mise à jour, écriture de `TimeEntryAuditLog` (avant/après).
+2. Dans une transaction : verrou de la ligne du salarié (`SELECT … FOR UPDATE`), contrôle de chevauchement, mise à jour conditionnée à la version lue (`updatedAt`, sinon 409), puis écriture de `TimeEntryAuditLog` (avant/après).
+3. Les demandes d'absence (création, validation) prennent le même verrou : deux demandes simultanées ne peuvent pas se chevaucher.
 
 **Exporter**
 1. `GET /exports/timesheets?granularity=week` calcule les feuilles de l'équipe sur des semaines complètes.

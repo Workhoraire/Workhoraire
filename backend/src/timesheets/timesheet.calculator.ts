@@ -3,6 +3,7 @@ import {
   addDays,
   eachDateKey,
   isoWeekday,
+  startOfLocalDay,
   startOfWeek,
   toDateKey,
 } from '../common/dates/local-date';
@@ -37,11 +38,20 @@ export interface CalculatorAbsence {
   endsMorning: boolean;
 }
 
+/** Contractual weekly time applicable from a given Monday. */
+export interface ContractSpan {
+  from: string;
+  minutes: number;
+}
+
 export interface TimesheetInput {
   from: string;
   to: string;
   timezone: string;
+  /** Contract in force today, used when no dated contract applies. */
   contractMinutes: number;
+  /** Dated contract history: each week uses the contract in force on its Monday. */
+  contracts?: ContractSpan[];
   /** Entries starting from the day before the Monday of the first week. */
   entries: CalculatorEntry[];
   /** Approved absences overlapping the computed weeks. */
@@ -60,6 +70,27 @@ function minutesBetween(start: Date, end: Date): number {
 /** The weeks to compute: complete civil weeks covering the period. */
 export function computedRange(from: string, to: string): { from: string; to: string } {
   return { from: startOfWeek(from), to: addDays(startOfWeek(to), 6) };
+}
+
+/** Contract in force during the week starting on `weekStart`. */
+export function contractMinutesAt(
+  contracts: ContractSpan[],
+  weekStart: string,
+  fallback: number,
+): number {
+  let applicable: ContractSpan | null = null;
+  let earliest: ContractSpan | null = null;
+
+  for (const contract of contracts) {
+    if (contract.from <= weekStart && (!applicable || contract.from > applicable.from)) {
+      applicable = contract;
+    }
+    if (!earliest || contract.from < earliest.from) {
+      earliest = contract;
+    }
+  }
+
+  return (applicable ?? earliest)?.minutes ?? fallback;
 }
 
 export function isWorkingDay(dateKey: string): boolean {
@@ -99,6 +130,15 @@ interface NormalizedEntry {
   dateKey: string;
   effectiveEnd: Date;
   durationMinutes: number;
+}
+
+function absenceTotal(day: TimesheetDay): number {
+  return day.absences.reduce((sum, absence) => sum + absence.portion, 0);
+}
+
+/** A full day of absence on which work was recorded is contradictory data. */
+function isWorkedFullDayAbsence(day: TimesheetDay): boolean {
+  return day.workedMinutes > 0 && absenceTotal(day) >= 1;
 }
 
 function buildDay(dateKey: string, entries: NormalizedEntry[], absences: CalculatorAbsence[], now: Date): TimesheetDay {
@@ -182,7 +222,7 @@ function buildDay(dateKey: string, entries: NormalizedEntry[], absences: Calcula
     null,
   );
 
-  return {
+  const day: TimesheetDay = {
     date: dateKey,
     weekday: isoWeekday(dateKey),
     publicHoliday: publicHolidayName(dateKey),
@@ -194,34 +234,73 @@ function buildDay(dateKey: string, entries: NormalizedEntry[], absences: Calcula
     absences: dayAbsences,
     alerts,
   };
+
+  if (isWorkedFullDayAbsence(day)) {
+    alerts.push({
+      code: 'WORK_DURING_ABSENCE',
+      date: dateKey,
+      scope: 'DAY',
+      value: workedMinutes,
+      limit: 0,
+    });
+  }
+
+  return day;
+}
+
+/**
+ * Worked minutes per civil week. Weeks run from Monday 0:00 to Sunday 24:00
+ * local time (L3121-35): a night shift crossing into Monday is split, even
+ * though the whole shift is displayed on the day it started.
+ */
+function workedMinutesByWeek(entries: NormalizedEntry[], timezone: string): Map<string, number> {
+  const totals = new Map<string, number>();
+
+  for (const entry of entries) {
+    let weekStart = startOfWeek(entry.dateKey);
+    let segmentStart = entry.source.startAt;
+
+    while (segmentStart < entry.effectiveEnd) {
+      const nextWeekStart = addDays(weekStart, 7);
+      const boundary = startOfLocalDay(nextWeekStart, timezone);
+      const segmentEnd = entry.effectiveEnd < boundary ? entry.effectiveEnd : boundary;
+
+      totals.set(weekStart, (totals.get(weekStart) ?? 0) + minutesBetween(segmentStart, segmentEnd));
+      segmentStart = segmentEnd;
+      weekStart = nextWeekStart;
+    }
+  }
+
+  return totals;
 }
 
 function buildWeek(
   weekStart: string,
   days: TimesheetDay[],
+  workedMinutes: number,
   contractMinutes: number,
   period: { from: string; to: string },
 ): TimesheetWeek {
   const weekEnd = addDays(weekStart, 6);
-  const workedMinutes = days.reduce((total, day) => total + day.workedMinutes, 0);
   const workingDays = days.filter((day) => day.workedMinutes > 0).length;
-  const absenceDays = days.reduce(
-    (total, day) => total + day.absences.reduce((sum, absence) => sum + absence.portion, 0),
-    0,
-  );
+  const absenceDays = days.reduce((total, day) => total + absenceTotal(day), 0);
   const alerts: ComplianceAlert[] = [];
 
   const isPartTime = contractMinutes < LABOR_RULES.legalWeeklyMinutes;
   const overtime = { tier25Minutes: 0, tier50Minutes: 0 };
   const complementary = { tier10Minutes: 0, tier25Minutes: 0 };
-  const paidLeaveDays = days.reduce(
-    (total, day) =>
-      total +
-      day.absences
-        .filter((absence) => absence.type === AbsenceType.PAID_LEAVE)
-        .reduce((sum, absence) => sum + absence.portion, 0),
-    0,
-  );
+  // A day of leave on which work was recorded is not credited: the leave was
+  // not really taken and crediting it would invent overtime.
+  const paidLeaveDays = days
+    .filter((day) => !isWorkedFullDayAbsence(day))
+    .reduce(
+      (total, day) =>
+        total +
+        day.absences
+          .filter((absence) => absence.type === AbsenceType.PAID_LEAVE)
+          .reduce((sum, absence) => sum + absence.portion, 0),
+      0,
+    );
   const paidLeaveCreditMinutes = isPartTime
     ? 0
     : Math.round((paidLeaveDays * contractMinutes) / LABOR_RULES.paidLeaveWorkingDaysPerWeek);
@@ -286,14 +365,15 @@ function buildWeek(
 }
 
 /**
- * Computes a timesheet: entries are attributed to the local day on which they
- * start, weekly totals use complete civil weeks (Monday to Sunday) and open
- * entries are counted until `now`.
+ * Computes a timesheet: entries are displayed on the local day on which they
+ * start, weekly totals use complete civil weeks (Monday to Sunday) with the
+ * contract in force each week, and open entries are counted until `now`.
  */
 export function calculateTimesheet(input: TimesheetInput): Timesheet {
   const range = computedRange(input.from, input.to);
   const dateKeys = eachDateKey(range.from, range.to);
   const entriesByDay = new Map<string, NormalizedEntry[]>(dateKeys.map((key) => [key, []]));
+  const contracts = input.contracts ?? [];
 
   const normalized: NormalizedEntry[] = input.entries
     .map((entry) => {
@@ -346,12 +426,21 @@ export function calculateTimesheet(input: TimesheetInput): Timesheet {
     }
   });
 
+  const weeklyWorked = workedMinutesByWeek(normalized, input.timezone);
   const weeks: TimesheetWeek[] = [];
   for (let weekStart = range.from; weekStart <= range.to; weekStart = addDays(weekStart, 7)) {
     const weekDays = eachDateKey(weekStart, addDays(weekStart, 6)).map(
       (dateKey) => days.get(dateKey)!,
     );
-    weeks.push(buildWeek(weekStart, weekDays, input.contractMinutes, input));
+    weeks.push(
+      buildWeek(
+        weekStart,
+        weekDays,
+        weeklyWorked.get(weekStart) ?? 0,
+        contractMinutesAt(contracts, weekStart, input.contractMinutes),
+        input,
+      ),
+    );
   }
 
   const periodDays = [...days.values()].filter(
@@ -365,16 +454,12 @@ export function calculateTimesheet(input: TimesheetInput): Timesheet {
     from: input.from,
     to: input.to,
     timezone: input.timezone,
-    contractMinutes: input.contractMinutes,
+    contractMinutes: contractMinutesAt(contracts, startOfWeek(input.to), input.contractMinutes),
     days: periodDays,
     weeks: periodWeeks,
     totals: {
       workedMinutes: periodDays.reduce((total, day) => total + day.workedMinutes, 0),
-      absenceDays: periodDays.reduce(
-        (total, day) =>
-          total + day.absences.reduce((sum, absence) => sum + absence.portion, 0),
-        0,
-      ),
+      absenceDays: periodDays.reduce((total, day) => total + absenceTotal(day), 0),
       alertCount:
         periodDays.reduce((total, day) => total + day.alerts.length, 0) +
         periodWeeks.reduce((total, week) => total + week.alerts.length, 0),

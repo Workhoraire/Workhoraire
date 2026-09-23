@@ -22,4 +22,6 @@ export interface EmployeeInvitationResponse {
   weeklyContractMinutes: number;
   token: string;
   expiresAt: Date;
+  /** True when this link replaces a previous one, which no longer works. */
+  replacesPrevious: boolean;
 }

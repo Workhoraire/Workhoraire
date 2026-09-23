@@ -1,18 +1,14 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 
-import {
-  addDays,
-  formatDayLabel,
-  localDateTimeToIso,
-  toTimeValue,
-} from '../../core/time/time-format';
+import { formatDayLabel, toTimeValue } from '../../core/time/time-format';
 import { TimesheetEntry } from '../../core/time/time.models';
+import { entryChanges, formInstants } from './entry-changes';
 
 export interface EntryDialogData {
   mode: 'create' | 'edit' | 'delete';
@@ -46,9 +42,12 @@ export interface EntryDialogResult {
             </mat-form-field>
             <mat-form-field>
               <mat-label>Fin</mat-label>
-              <input matInput type="time" formControlName="end" [required]="data.mode === 'create'" />
+              <input matInput type="time" formControlName="end" [required]="endRequired" />
               @if (endsNextDay()) {
                 <mat-hint>Se termine le lendemain</mat-hint>
+              }
+              @if (form.controls.end.touched && form.controls.end.invalid) {
+                <mat-error>Indiquez l’heure de fin.</mat-error>
               }
             </mat-form-field>
           </div>
@@ -56,6 +55,11 @@ export interface EntryDialogResult {
             <mat-label>Note visible par le salarié (facultative)</mat-label>
             <input matInput formControlName="note" maxlength="500" />
           </mat-form-field>
+          @if (nothingChanged()) {
+            <div class="wh-message wh-message-warning" role="alert">
+              <span>Aucune modification : changez une heure ou la note.</span>
+            </div>
+          }
         } @else {
           <p>
             Cette période sera supprimée des heures du salarié. La suppression reste inscrite dans
@@ -98,12 +102,15 @@ export class EntryDialog {
     delete: 'Supprimer une période',
   }[this.data.mode];
   protected readonly dayLabel = formatDayLabel(this.data.date);
+  /** Required to create a period, and to keep a closed period closed. */
+  protected readonly endRequired = this.data.mode === 'create' || Boolean(this.data.entry?.endAt);
+  protected readonly nothingChanged = signal(false);
 
   protected readonly form = this.formBuilder.nonNullable.group({
     start: [this.data.entry ? toTimeValue(this.data.entry.startAt, this.data.timezone) : '', this.data.mode === 'delete' ? [] : [Validators.required]],
     end: [
       this.data.entry?.endAt ? toTimeValue(this.data.entry.endAt, this.data.timezone) : '',
-      this.data.mode === 'create' ? [Validators.required] : [],
+      this.data.mode !== 'delete' && this.endRequired ? [Validators.required] : [],
     ],
     note: [this.data.entry?.note ?? ''],
     reason: ['', [Validators.required, Validators.maxLength(500)]],
@@ -115,7 +122,14 @@ export class EntryDialog {
     return Boolean(start && end && end <= start);
   });
 
+  constructor() {
+    this.form.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => this.nothingChanged.set(false));
+  }
+
   protected submit(): void {
+    if (!this.form.controls.reason.value.trim()) {
+      this.form.controls.reason.setValue('');
+    }
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
@@ -127,13 +141,18 @@ export class EntryDialog {
       return;
     }
 
-    const startAt = localDateTimeToIso(this.data.date, start, this.data.timezone);
-    const endDate = end && end <= start ? addDays(this.data.date, 1) : this.data.date;
-    const endAt = end ? localDateTimeToIso(endDate, end, this.data.timezone) : undefined;
+    if (this.data.mode === 'edit' && this.data.entry) {
+      const changes = entryChanges(this.data.date, this.data.entry, { start, end, note }, this.data.timezone);
+      if (Object.keys(changes).length === 0) {
+        this.nothingChanged.set(true);
+        return;
+      }
+      this.dialogRef.close({ ...changes, reason: reason.trim() });
+      return;
+    }
 
     this.dialogRef.close({
-      startAt,
-      endAt,
+      ...formInstants(this.data.date, { start, end }, this.data.timezone),
       note: note.trim(),
       reason: reason.trim(),
     });

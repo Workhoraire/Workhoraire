@@ -31,6 +31,7 @@ describe('AbsencesService', () => {
   } as ApplicationUser;
 
   let service: AbsencesService;
+  let lockQuery: jest.Mock;
   let absenceRequest: {
     create: jest.Mock;
     findFirst: jest.Mock;
@@ -68,7 +69,14 @@ describe('AbsencesService', () => {
       findMany: jest.fn().mockResolvedValue([]),
       update: jest.fn(),
     };
-    service = new AbsencesService({ absenceRequest } as unknown as PrismaService);
+    lockQuery = jest.fn().mockResolvedValue([]);
+    const transaction = { absenceRequest, $queryRaw: lockQuery };
+    service = new AbsencesService({
+      absenceRequest,
+      $transaction: jest.fn((callback: (client: unknown) => Promise<unknown>) =>
+        callback(transaction),
+      ),
+    } as unknown as PrismaService);
   });
 
   it('detects overlaps with half-day precision', () => {
@@ -112,6 +120,10 @@ describe('AbsencesService', () => {
       }),
     );
     expect(result).toMatchObject({ status: AbsenceStatus.PENDING, days: 5 });
+    // The employee row is locked before the overlap check (concurrent requests).
+    expect(lockQuery.mock.invocationCallOrder[0]).toBeLessThan(
+      absenceRequest.findMany.mock.invocationCallOrder[0],
+    );
   });
 
   it('rejects requests covering no working day, inverted dates or overlapping another request', async () => {
@@ -166,6 +178,56 @@ describe('AbsencesService', () => {
     );
   });
 
+  it('refuses to approve a request overlapping an absence already approved', async () => {
+    absenceRequest.findFirst.mockResolvedValue(stored());
+    absenceRequest.findMany.mockResolvedValue([
+      stored({ id: 'absence-2', status: AbsenceStatus.APPROVED }),
+    ]);
+
+    await expect(service.approveRequest(admin, 'absence-1', {})).rejects.toThrow(
+      'This period overlaps another absence request',
+    );
+    expect(absenceRequest.findMany).toHaveBeenCalledWith({
+      where: expect.objectContaining({
+        userId: 'employee-1',
+        id: { not: 'absence-1' },
+        status: { in: [AbsenceStatus.APPROVED] },
+      }),
+    });
+    expect(absenceRequest.update).not.toHaveBeenCalled();
+  });
+
+  it('lets a manager revoke an approved absence with a reason, except their own', async () => {
+    const now = new Date('2026-10-08T09:00:00.000Z');
+    absenceRequest.findFirst.mockResolvedValue(stored({ status: AbsenceStatus.APPROVED }));
+    absenceRequest.update.mockImplementation(({ data }) => Promise.resolve(stored({ ...data })));
+
+    await expect(
+      service.revokeRequest(manager, 'absence-1', { comment: 'Retour anticipé jeudi' }, now),
+    ).resolves.toMatchObject({ status: AbsenceStatus.CANCELLED });
+    expect(absenceRequest.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'absence-1', status: AbsenceStatus.APPROVED },
+        data: {
+          status: AbsenceStatus.CANCELLED,
+          reviewComment: 'Retour anticipé jeudi',
+          reviewedById: 'manager-1',
+          reviewedAt: now,
+        },
+      }),
+    );
+
+    absenceRequest.findFirst.mockResolvedValue(stored({ userId: 'manager-1' }));
+    await expect(
+      service.revokeRequest(manager, 'absence-1', { comment: 'Moi-même' }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+
+    absenceRequest.findFirst.mockResolvedValue(stored({ status: AbsenceStatus.CANCELLED }));
+    await expect(
+      service.revokeRequest(admin, 'absence-1', { comment: 'Déjà annulée' }),
+    ).rejects.toBeInstanceOf(ConflictException);
+  });
+
   it('forbids a manager from reviewing their own request, but not an administrator', async () => {
     absenceRequest.findFirst.mockResolvedValue(stored({ userId: 'manager-1' }));
     await expect(service.approveRequest(manager, 'absence-1', {})).rejects.toBeInstanceOf(
@@ -198,6 +260,17 @@ describe('AbsencesService', () => {
     await expect(service.cancelOwnRequest(employee, 'absence-1', now)).resolves.toMatchObject({
       status: AbsenceStatus.CANCELLED,
     });
+    // The employee is recorded as the author of the last decision.
+    expect(absenceRequest.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: {
+          status: AbsenceStatus.CANCELLED,
+          reviewComment: null,
+          reviewedById: 'employee-1',
+          reviewedAt: now,
+        },
+      }),
+    );
 
     absenceRequest.findFirst.mockResolvedValue(stored({ status: AbsenceStatus.APPROVED }));
     await expect(service.cancelOwnRequest(employee, 'absence-1', now)).rejects.toBeInstanceOf(

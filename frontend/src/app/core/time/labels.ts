@@ -63,6 +63,10 @@ export const ALERT_DESCRIPTIONS: Record<ComplianceAlertCode, AlertDescription> =
     title: 'Heures complémentaires au-delà de 1/10 du contrat',
     reference: 'Limite légale sans accord collectif (temps partiel)',
   },
+  WORK_DURING_ABSENCE: {
+    title: 'Heures pointées pendant une absence validée',
+    reference: 'Absence et travail le même jour : l’absence n’est pas décomptée, à régulariser',
+  },
 };
 
 /** "Plus de 10 h de travail dans la journée : 11 h 05 (max. 10 h)" */
@@ -80,6 +84,8 @@ export function describeAlert(alert: ComplianceAlert): string {
       return `${title} (${alert.value} jours)`;
     case 'OPEN_ENTRY_TOO_LONG':
       return `${title} (ouvert depuis ${formatDuration(alert.value)})`;
+    case 'WORK_DURING_ABSENCE':
+      return `${title} (${formatDuration(alert.value)})`;
     default:
       return `${title} : ${formatDuration(alert.value)} (max. ${formatDuration(alert.limit)})`;
   }

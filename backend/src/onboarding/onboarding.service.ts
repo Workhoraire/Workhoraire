@@ -9,6 +9,7 @@ import {
   KeycloakUser,
   toApplicationUserResponse,
 } from '../auth/auth.types';
+import { initialContractPeriod } from '../employees/contract-periods';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCompanyDto } from './dto/create-company.dto';
 
@@ -58,6 +59,10 @@ export class OnboardingService {
             role: UserRole.ADMIN,
             companyId: company.id,
           },
+        });
+
+        await transaction.contractPeriod.create({
+          data: initialContractPeriod(company.id, user.id, user.weeklyContractMinutes),
         });
 
         return toApplicationUserResponse(user, company);

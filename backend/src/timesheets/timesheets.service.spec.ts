@@ -23,6 +23,7 @@ describe('TimesheetsService', () => {
     timeEntry: { findMany: jest.Mock };
     absenceRequest: { findMany: jest.Mock };
     timeEntryAuditLog: { findMany: jest.Mock };
+    contractPeriod: { findMany: jest.Mock };
   };
 
   beforeEach(() => {
@@ -31,6 +32,7 @@ describe('TimesheetsService', () => {
       timeEntry: { findMany: jest.fn().mockResolvedValue([]) },
       absenceRequest: { findMany: jest.fn().mockResolvedValue([]) },
       timeEntryAuditLog: { findMany: jest.fn().mockResolvedValue([]) },
+      contractPeriod: { findMany: jest.fn().mockResolvedValue([]) },
     };
     service = new TimesheetsService(prisma as unknown as PrismaService);
   });
@@ -80,6 +82,24 @@ describe('TimesheetsService', () => {
     expect(timesheet.days[1].workedMinutes).toBe(240);
   });
 
+  it('applies the contract in force each week instead of the current one', async () => {
+    prisma.contractPeriod.findMany.mockResolvedValue([
+      { userId: 'manager-1', effectiveFrom: new Date('2000-01-03T00:00:00Z'), weeklyContractMinutes: 2100 },
+      { userId: 'manager-1', effectiveFrom: new Date('2026-09-28T00:00:00Z'), weeklyContractMinutes: 1680 },
+    ]);
+
+    const timesheet = await service.getOwnTimesheet(
+      { ...manager, weeklyContractMinutes: 1680 } as ApplicationUser,
+      '2026-09-21',
+      '2026-10-04',
+    );
+
+    expect(prisma.contractPeriod.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { companyId: 'company-a', userId: 'manager-1' } }),
+    );
+    expect(timesheet.weeks.map((week) => week.contractMinutes)).toEqual([2100, 1680]);
+  });
+
   it('does not expose the timesheet of an employee of another company', async () => {
     prisma.user.findFirst.mockResolvedValue(null);
 
@@ -110,6 +130,15 @@ describe('TimesheetsService', () => {
 
     expect(prisma.user.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ where: expect.objectContaining({ companyId: 'company-a' }) }),
+    );
+    // Inactive employees stay in the team (and exports) when they have work or absences.
+    const where = prisma.user.findMany.mock.calls[0][0].where;
+    expect(where.OR).toEqual(
+      expect.arrayContaining([
+        { isActive: true },
+        expect.objectContaining({ timeEntries: expect.any(Object) }),
+        expect.objectContaining({ absenceRequests: expect.any(Object) }),
+      ]),
     );
     expect(team.rows).toHaveLength(1);
     expect(team.rows[0].days).toHaveLength(7);

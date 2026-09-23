@@ -20,12 +20,12 @@ Les **1,5 million d'entreprises employeuses de 0 à 49 salariés** (8,2 millions
 | Pointer en un geste depuis le téléphone, avec l'heure du serveur | Tableau de bord : présents, sorties oubliées, absents, alertes | Export CSV hebdomadaire : heures sup +25/+50, heures complémentaires +10/+25, absences par type, matricule |
 | Sa journée, sa semaine, ses heures sup | Heures de l'équipe par jour et par semaine | Export CSV journalier (preuve, contrôle) |
 | Déclarer une sortie oubliée (tracée) | Corriger avec motif obligatoire, historique complet | Fichier lisible dans Excel en français, protégé contre l'injection |
-| Voir chaque correction faite sur ses heures | Valider ou refuser les absences | – |
+| Voir chaque correction faite sur ses heures | Valider, refuser ou annuler les absences | – |
 | Demander des congés (demi-journées, jours ouvrés, fériés exclus) | Alertes légales : 10 h, 48 h, pause, repos de 11 h, 6 jours, temps partiel | – |
 
 **Qualité** :
-- 74 tests unitaires et 10 tests d'intégration sur une vraie base PostgreSQL (dont la concurrence et l’isolation entre entreprises), plus 11 tests frontend ;
-- recette visuelle sur mobile avec des données réalistes ; 3 défauts trouvés et corrigés avant livraison.
+- 87 tests unitaires et 15 tests d'intégration sur une vraie base PostgreSQL (dont la concurrence et l’isolation entre entreprises), plus 20 tests frontend ;
+- recette visuelle sur mobile avec des données réalistes, puis revue de code complète et recette avec de vrais comptes : défauts trouvés et corrigés avant livraison ([détail](../technique/tests-et-qualite.md)).
 
 ## Décisions à prendre par l'équipe
 

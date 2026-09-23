@@ -13,6 +13,9 @@ interface TransactionMock {
     create: jest.Mock;
     findUnique: jest.Mock;
   };
+  contractPeriod: {
+    create: jest.Mock;
+  };
 }
 
 describe('OnboardingService', () => {
@@ -47,7 +50,11 @@ describe('OnboardingService', () => {
           lastName: keycloakUser.family_name,
           isActive: true,
           role: UserRole.ADMIN,
+          weeklyContractMinutes: 2100,
         }),
+      },
+      contractPeriod: {
+        create: jest.fn(),
       },
     };
 
@@ -92,6 +99,10 @@ describe('OnboardingService', () => {
       role: UserRole.ADMIN,
       subject: keycloakUser.sub,
       company: { id: 'company-1', name: 'Acme' },
+    });
+    // The administrator starts with a contract history like every employee.
+    expect(transaction.contractPeriod.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ companyId: 'company-1', userId: 'user-1' }),
     });
   });
 

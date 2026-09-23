@@ -6,8 +6,8 @@
  * `x-test-subject` header. Everything else (Keycloak guard, validation,
  * application guards, services, Prisma, SQL constraints) is production code.
  *
- * The database is wiped: DATABASE_URL must point to a database whose name ends
- * with `_e2e`. See docs/technique/tests.md.
+ * The database is wiped: E2E_DATABASE_URL must point to a database whose name
+ * ends with `_e2e`. See docs/technique/tests-et-qualite.md.
  */
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
@@ -24,7 +24,11 @@ function testIdentityMiddleware(request: KeycloakRequest, _response: Response, n
 
   if (typeof subject === 'string') {
     request.kauth = {
-      grant: { access_token: { content: { sub: subject, email: `${subject}@example.com` } } },
+      grant: {
+        access_token: {
+          content: { sub: subject, email: `${subject}@example.com`, email_verified: true },
+        },
+      },
     };
   }
 
@@ -67,6 +71,11 @@ describe('WorkHoraire API (e2e)', () => {
     if (!databaseUrl) {
       throw new Error('E2E_DATABASE_URL must be set (see .env.example)');
     }
+    // Checked before anything touches the database, migrations included.
+    const databaseName = decodeURIComponent(new URL(databaseUrl).pathname.slice(1));
+    if (!databaseName.endsWith('_e2e')) {
+      throw new Error(`Refusing to use "${databaseName}": E2E_DATABASE_URL must end with _e2e`);
+    }
     process.env['DATABASE_URL'] = databaseUrl;
 
     const backendRoot = resolve(__dirname, '..');
@@ -93,7 +102,7 @@ describe('WorkHoraire API (e2e)', () => {
     }
 
     await prisma.$executeRawUnsafe(
-      'TRUNCATE "TimeEntryAuditLog", "TimeEntry", "AbsenceRequest", "EmployeeInvitation", "User", "Company" CASCADE',
+      'TRUNCATE "TimeEntryAuditLog", "TimeEntry", "AbsenceRequest", "ContractPeriod", "EmployeeInvitation", "User", "Company" CASCADE',
     );
 
     const companyA = await prisma.company.create({ data: { name: 'Boulangerie Martin' } });
@@ -264,6 +273,37 @@ describe('WorkHoraire API (e2e)', () => {
     expect(employeeTeam.status).toBe(403);
   });
 
+  it('keeps corrections on their day and rejects null values', async () => {
+    const entry = await call('sub-admin', 'POST', '/time-entries', {
+      userId: ids.employee,
+      startAt: '2026-09-18T08:00:00+02:00',
+      endAt: '2026-09-18T09:00:00+02:00',
+      reason: 'Réunion',
+    });
+    expect(entry.status).toBe(201);
+
+    const moved = await call('sub-admin', 'PATCH', `/time-entries/${entry.body.id}`, {
+      startAt: '2026-09-17T08:00:00+02:00',
+      endAt: '2026-09-17T09:00:00+02:00',
+      reason: 'Mauvais jour',
+    });
+    expect(moved.status).toBe(400);
+    expect(moved.body.message).toBe(
+      'An entry cannot be moved to another day: delete it and create a new one',
+    );
+
+    const nullEnd = await call('sub-admin', 'PATCH', `/time-entries/${entry.body.id}`, {
+      endAt: null,
+      reason: 'Réouverture',
+    });
+    expect(nullEnd.status).toBe(400);
+
+    const deleted = await call('sub-admin', 'DELETE', `/time-entries/${entry.body.id}`, {
+      reason: 'Saisie de test',
+    });
+    expect(deleted.status).toBe(204);
+  });
+
   it('validates inputs strictly', async () => {
     const noOffset = await call('sub-manager', 'POST', '/time-entries', {
       userId: ids.employee,
@@ -333,6 +373,61 @@ describe('WorkHoraire API (e2e)', () => {
     expect(timesheet.body.totals.absenceDays).toBe(2.5);
   });
 
+  it('lets a manager revoke an approved absence, with a reason the employee can read', async () => {
+    const [approved] = (await call('sub-manager', 'GET', '/absences?status=APPROVED')).body;
+
+    const byEmployee = await call('sub-employee', 'POST', `/absences/${approved.id}/revoke`, {
+      comment: 'Je reviens plus tôt',
+    });
+    expect(byEmployee.status).toBe(403);
+
+    const withoutReason = await call('sub-manager', 'POST', `/absences/${approved.id}/revoke`, {});
+    expect(withoutReason.status).toBe(400);
+
+    const revoked = await call('sub-manager', 'POST', `/absences/${approved.id}/revoke`, {
+      comment: 'Retour anticipé',
+    });
+    expect(revoked.status).toBe(201);
+    expect(revoked.body).toMatchObject({
+      status: 'CANCELLED',
+      reviewComment: 'Retour anticipé',
+      reviewedBy: { id: ids.manager },
+    });
+
+    const again = await call('sub-admin', 'POST', `/absences/${approved.id}/revoke`, {
+      comment: 'Encore',
+    });
+    expect(again.status).toBe(409);
+
+    const mine = await call('sub-employee', 'GET', '/absences/me');
+    expect(mine.body.find((request: { id: string }) => request.id === approved.id)).toMatchObject({
+      status: 'CANCELLED',
+      reviewComment: 'Retour anticipé',
+    });
+
+    // The pending afternoon is not counted: the week no longer has any absence.
+    const timesheet = await call('sub-employee', 'GET', '/timesheets/me?from=2026-10-05&to=2026-10-11');
+    expect(timesheet.body.totals.absenceDays).toBe(0);
+  });
+
+  it('accepts only one of several identical absence requests sent at the same time', async () => {
+    const attempts = await Promise.all(
+      Array.from({ length: 3 }, () =>
+        call('sub-partTime', 'POST', '/absences', {
+          type: 'RTT',
+          startDate: '2026-11-02',
+          endDate: '2026-11-03',
+        }),
+      ),
+    );
+    expect(attempts.map((attempt) => attempt.status).sort()).toEqual([201, 409, 409]);
+
+    const created = attempts.find((attempt) => attempt.status === 201)!;
+    const cancelled = await call('sub-partTime', 'POST', `/absences/${created.body.id}/cancel`, {});
+    expect(cancelled.status).toBe(201);
+    expect(cancelled.body).toMatchObject({ status: 'CANCELLED', reviewedBy: { id: ids.partTime } });
+  });
+
   it('exports a payroll CSV readable by French spreadsheets', async () => {
     const payroll = await call('sub-admin', 'PATCH', `/employees/${ids.employee}`, { payrollId: 'E-042' });
     expect(payroll.status).toBe(200);
@@ -359,6 +454,41 @@ describe('WorkHoraire API (e2e)', () => {
     expect(byEmployee.status).toBe(403);
   });
 
+  it('applies a contract change from the Monday of the chosen week only', async () => {
+    const withoutContract = await call('sub-admin', 'PATCH', `/employees/${ids.partTime}`, {
+      contractEffectiveFrom: '2026-10-01',
+    });
+    expect(withoutContract.status).toBe(400);
+
+    // 24 h, then 28 h from Thursday 1 October 2026, i.e. from Monday 28 September.
+    const changed = await call('sub-admin', 'PATCH', `/employees/${ids.partTime}`, {
+      weeklyContractMinutes: 28 * 60,
+      contractEffectiveFrom: '2026-10-01',
+    });
+    expect(changed.status).toBe(200);
+
+    const timesheet = await call(
+      'sub-admin',
+      'GET',
+      `/timesheets/employees/${ids.partTime}?from=2026-09-21&to=2026-10-04`,
+    );
+    expect(timesheet.status).toBe(200);
+    expect(
+      timesheet.body.weeks.map((week: { weekStart: string; contractMinutes: number }) => [
+        week.weekStart,
+        week.contractMinutes,
+      ]),
+    ).toEqual([
+      ['2026-09-21', 24 * 60],
+      ['2026-09-28', 28 * 60],
+    ]);
+
+    const duplicatePayroll = await call('sub-admin', 'PATCH', `/employees/${ids.partTime}`, {
+      payrollId: 'E-042',
+    });
+    expect(duplicatePayroll.status).toBe(409);
+  });
+
   it('builds the team dashboard', async () => {
     await call('sub-partTime', 'POST', '/time-clock/clock-in', {});
 
@@ -370,6 +500,34 @@ describe('WorkHoraire API (e2e)', () => {
       expect.objectContaining({ employee: expect.objectContaining({ id: ids.partTime }), isOverdue: false }),
     ]);
     expect(response.body.pendingAbsenceRequests).toBe(1);
+  });
+
+  it('invites an employee, a new link replacing a lost one', async () => {
+    const invitation = { firstName: 'Nina', lastName: 'Test', email: 'sub-nina@example.com' };
+
+    const first = await call('sub-admin', 'POST', '/employees/invitations', invitation);
+    expect(first.status).toBe(201);
+    expect(first.body.replacesPrevious).toBe(false);
+
+    const second = await call('sub-admin', 'POST', '/employees/invitations', invitation);
+    expect(second.status).toBe(201);
+    expect(second.body.replacesPrevious).toBe(true);
+
+    const lostLink = await call('sub-nina', 'POST', `/employee-invitations/${first.body.token}/accept`);
+    expect(lostLink.status).toBe(410);
+
+    const otherEmail = await call('sub-intruder', 'POST', `/employee-invitations/${second.body.token}/accept`);
+    expect(otherEmail.status).toBe(403);
+
+    const accepted = await call('sub-nina', 'POST', `/employee-invitations/${second.body.token}/accept`);
+    expect(accepted.status).toBe(201);
+
+    const me = await call('sub-nina', 'GET', '/me');
+    expect(me.body).toMatchObject({
+      role: 'EMPLOYEE',
+      weeklyContractMinutes: 2100,
+      company: { name: 'Boulangerie Martin' },
+    });
   });
 
   it('is protected by database constraints as well', async () => {

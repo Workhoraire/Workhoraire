@@ -61,6 +61,13 @@ export class AbsencesService {
     );
   }
 
+  /** Manager or administrator: cancels an approved (or pending) request, with a reason. */
+  revoke(id: string, comment: string): Observable<AbsenceRequest> {
+    return this.http.post<AbsenceRequest>(`${this.api}/${encodeURIComponent(id)}/revoke`, {
+      comment,
+    });
+  }
+
   reject(id: string, comment?: string): Observable<AbsenceRequest> {
     return this.http.post<AbsenceRequest>(
       `${this.api}/${encodeURIComponent(id)}/reject`,
