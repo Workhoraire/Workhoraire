@@ -37,7 +37,17 @@ export class Onboarding {
   protected readonly success = signal(false);
   protected readonly error = signal<string | null>(null);
 
+  private readonly knownNames = this.authService.names();
+
   protected readonly form = this.formBuilder.nonNullable.group({
+    firstName: [
+      this.knownNames.firstName ?? '',
+      [Validators.required, Validators.pattern(/\S/), Validators.maxLength(100)],
+    ],
+    lastName: [
+      this.knownNames.lastName ?? '',
+      [Validators.required, Validators.pattern(/\S/), Validators.maxLength(100)],
+    ],
     name: [
       '',
       [Validators.required, Validators.pattern(/\S/), Validators.minLength(2), Validators.maxLength(120)],
@@ -52,12 +62,14 @@ export class Onboarding {
       return;
     }
 
-    const { name, siret, timezone } = this.form.getRawValue();
+    const { firstName, lastName, name, siret, timezone } = this.form.getRawValue();
     this.submitting.set(true);
     this.error.set(null);
 
     this.onboardingService
       .createCompany({
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
         name: name.trim(),
         siret: siret || undefined,
         timezone: timezone.trim(),

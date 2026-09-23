@@ -12,7 +12,8 @@ Colonne « Rôles » : **Tous** = ADMIN, MANAGER et EMPLOYEE ; **Équipe** = ADM
 | Méthode et route | Rôles | Description |
 |---|---|---|
 | `GET /me` | Tous | Profil : rôle, contrat, entreprise (dont le fuseau) |
-| `POST /onboarding/company` | Keycloak seul | Crée l'entreprise et son ADMIN |
+| `POST /onboarding/company` | Keycloak seul | Crée l'entreprise et son ADMIN (`name`, `siret?`, `timezone?`, `firstName?`, `lastName?` : le nom de l'administrateur est saisi dans le formulaire, Keycloak ne le demande plus) |
+| `GET /employee-invitations/:token` | **Public** (le lien suffit) | Aperçu de l'invitation pour la page d'accueil : prénom, nom, e-mail, rôle, entreprise, expiration. 404 si le lien est inconnu, 409 s'il a déjà servi, 410 s'il a expiré ou a été remplacé |
 | `POST /employee-invitations/:token/accept` | Keycloak seul | Accepte une invitation. Exige l'e-mail invité (403 sinon), vérifié si `KEYCLOAK_REQUIRE_VERIFIED_EMAIL=true` ; 410 si le lien a expiré ou a été remplacé |
 
 ## Salariés (ADMIN)

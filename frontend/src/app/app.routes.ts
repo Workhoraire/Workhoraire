@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 
+import { accountDisabledGuard } from './core/auth/account-disabled.guard';
 import { adminGuard } from './core/auth/admin.guard';
 import { authGuard } from './core/auth/auth.guard';
 import { companyGuard } from './core/auth/company.guard';
@@ -14,8 +15,17 @@ export const routes: Routes = [
       import('./features/onboarding/onboarding').then(({ Onboarding }) => Onboarding),
   },
   {
+    path: 'account-disabled',
+    title: 'Compte désactivé · WorkHoraire',
+    canActivate: [authGuard, accountDisabledGuard],
+    loadComponent: () =>
+      import('./features/account-disabled/account-disabled').then(
+        ({ AccountDisabled }) => AccountDisabled,
+      ),
+  },
+  {
+    // No guard: the page welcomes the invited person before they have an account.
     path: 'employee-invitations/:token',
-    canActivate: [authGuard],
     loadComponent: () =>
       import('./features/employees/employee-invitation').then(
         ({ EmployeeInvitation }) => EmployeeInvitation,

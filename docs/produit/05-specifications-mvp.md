@@ -6,21 +6,23 @@
 ## Epic A. Compte et entreprise (existant, complété)
 
 **A1. Créer mon entreprise** : en tant que dirigeant, je crée mon espace et deviens ADMIN.
-- Nom (2 à 120 caractères), SIRET facultatif (14 chiffres), fuseau horaire IANA (Europe/Paris par défaut).
+- Prénom et nom de l'administrateur, nom de l'entreprise (2 à 120 caractères), SIRET facultatif (14 chiffres), fuseau horaire IANA (Europe/Paris par défaut).
 - La création de l'entreprise et de l'administrateur est atomique ; un compte déjà rattaché est refusé.
 - La page avertit les salariés invités : ils ne doivent pas créer d'entreprise, mais ouvrir le lien reçu et s'inscrire avec l'adresse exacte de l'invitation.
 
 **A2. Inviter un salarié**, avec son rôle et sa **durée contractuelle hebdomadaire** (1 à 48 h, 35 h par défaut).
+- Le lien ouvre une page d'accueil : « Bonjour Nora, Boulangerie Martin vous invite… ». Le bouton « Créer mon mot de passe » ouvre l'inscription avec l'adresse déjà remplie : **seuls le mot de passe et sa confirmation sont demandés**. Au retour, la personne arrive directement dans l'entreprise. « J'ai déjà un compte » permet de se connecter.
 - Le lien d'invitation expire au bout de 7 jours et n'est utilisable qu'une fois ; le jeton est stocké haché.
 - L'acceptation exige l'adresse e-mail invitée et, par défaut, une adresse **vérifiée** par Keycloak (ADR 0004).
 - La durée contractuelle de l'invitation est reprise sur le compte créé.
 - Une nouvelle invitation pour la même adresse remplace la précédente, dont le lien ne fonctionne plus : un lien perdu ne bloque pas l'adresse.
+- Ouvert avec un autre compte, le lien nomme le compte utilisé et propose « Changer de compte » : après la déconnexion, on revient sur le lien pour se connecter ou s'inscrire avec la bonne adresse. La page ne propose jamais de créer une entreprise.
 
 **A3. Gérer les salariés** (ADMIN) : nom, e-mail, rôle, durée contractuelle, **matricule paie**, activation.
 - Un administrateur ne peut ni se désactiver ni se rétrograder.
 - Un changement de durée contractuelle est **daté** : il s'applique à partir du lundi de la semaine choisie (la semaine en cours par défaut), et les semaines précédentes gardent l'ancien contrat (ADR 0007).
 - Le matricule paie est unique dans l'entreprise.
-- Un salarié désactivé ne peut plus se connecter à l'application, mais son historique reste dans les feuilles de temps et les exports.
+- Un salarié désactivé ne peut plus se connecter à l'application : une page le lui explique. Son historique reste dans les feuilles de temps et les exports.
 
 ## Epic B. Pointage
 

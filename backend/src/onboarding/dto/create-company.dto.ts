@@ -35,4 +35,17 @@ export class CreateCompanyDto {
   @IsNotEmpty()
   @MaxLength(64)
   timezone?: string;
+
+  /** The administrator's name: the sign-up page only asks for an e-mail and a password. */
+  @Transform(trimString)
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  firstName?: string;
+
+  @Transform(trimString)
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  lastName?: string;
 }

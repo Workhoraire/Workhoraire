@@ -54,8 +54,8 @@ export class OnboardingService {
           data: {
             keycloakSubject: keycloakUser.sub,
             email: keycloakUser.email ?? null,
-            firstName: keycloakUser.given_name ?? null,
-            lastName: keycloakUser.family_name ?? null,
+            firstName: dto.firstName?.trim() || keycloakUser.given_name || null,
+            lastName: dto.lastName?.trim() || keycloakUser.family_name || null,
             role: UserRole.ADMIN,
             companyId: company.id,
           },

@@ -95,6 +95,11 @@ Détail et checklist de production : [securite-et-rgpd.md](securite-et-rgpd.md).
 2. Dans une transaction : verrou de la ligne du salarié (`SELECT … FOR UPDATE`), contrôle de chevauchement, mise à jour conditionnée à la version lue (`updatedAt`, sinon 409), puis écriture de `TimeEntryAuditLog` (avant/après).
 3. Les demandes d'absence (création, validation) prennent le même verrou : deux demandes simultanées ne peuvent pas se chevaucher.
 
+**Inviter**
+1. L'ADMIN crée l'invitation (`POST /employees/invitations`) et transmet le lien.
+2. Le lien ouvre une page d'accueil sans connexion (Keycloak en mode `check-sso` sur ces URL), qui lit l'aperçu public de l'invitation.
+3. « Créer mon mot de passe » ouvre l'inscription Keycloak, adresse préremplie. Au retour, `POST /employee-invitations/:token/accept` rattache le compte à l'entreprise.
+
 **Exporter**
 1. `GET /exports/timesheets?granularity=week` calcule les feuilles de l'équipe sur des semaines complètes.
 2. Le CSV est produit en UTF-8 avec BOM, séparé par `;`, protégé contre l'injection de formules.
@@ -102,5 +107,6 @@ Détail et checklist de production : [securite-et-rgpd.md](securite-et-rgpd.md).
 ## 6. Environnement local
 
 - `docker compose up -d postgres keycloak`. Le realm est importé à la **première** création de la base Keycloak.
+- Sur un Keycloak déjà créé, il faut reporter le profil utilisateur du realm, pour que l'inscription ne demande plus le prénom ni le nom. Lancer `node infrastructure/keycloak/apply-user-profile.mjs` (option `--dry-run` pour un essai à blanc). Le script lit le compte administrateur dans `.env` et envoie le profil du fichier de realm à l'API d'administration Keycloak.
 - La base `workhoraire_e2e`, dédiée aux tests e2e, est créée par `infrastructure/postgres/init/02-e2e-database.sql`, mais seulement pour un volume neuf.
 - Le `.env` à la racine est la source unique de configuration (voir `.env.example`). Si le port 5432 est déjà pris, changez `POSTGRES_PORT` et `DATABASE_URL`.

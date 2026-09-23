@@ -515,6 +515,7 @@ describe('WorkHoraire API (e2e)', () => {
 
     const lostLink = await call('sub-nina', 'POST', `/employee-invitations/${first.body.token}/accept`);
     expect(lostLink.status).toBe(410);
+    expect((await fetch(`${baseUrl}/employee-invitations/${first.body.token}`)).status).toBe(410);
 
     const otherEmail = await call('sub-intruder', 'POST', `/employee-invitations/${second.body.token}/accept`);
     expect(otherEmail.status).toBe(403);
@@ -528,6 +529,129 @@ describe('WorkHoraire API (e2e)', () => {
       weeklyContractMinutes: 2100,
       company: { name: 'Boulangerie Martin' },
     });
+  });
+
+  it('runs the whole chain of adding an employee, from the invitation to deactivation', async () => {
+    // Only an administrator invites.
+    const byManager = await call('sub-manager', 'POST', '/employees/invitations', {
+      firstName: 'Léo',
+      lastName: 'Chaîne',
+      email: 'sub-leo@example.com',
+    });
+    expect(byManager.status).toBe(403);
+
+    const invitation = await call('sub-admin', 'POST', '/employees/invitations', {
+      firstName: 'Léo',
+      lastName: 'Chaîne',
+      email: 'Sub-Leo@Example.com',
+      role: 'EMPLOYEE',
+      weeklyContractMinutes: 24 * 60,
+    });
+    expect(invitation.status).toBe(201);
+    expect(invitation.body).toMatchObject({ email: 'sub-leo@example.com', weeklyContractMinutes: 1440 });
+
+    // The link alone, without any account, tells who invites the person: the
+    // sign-up page is then pre-filled with the invited address.
+    const preview = await fetch(`${baseUrl}/employee-invitations/${invitation.body.token}`);
+    expect(preview.status).toBe(200);
+    expect(await preview.json()).toMatchObject({
+      firstName: 'Léo',
+      email: 'sub-leo@example.com',
+      role: 'EMPLOYEE',
+      companyName: 'Boulangerie Martin',
+    });
+    expect((await fetch(`${baseUrl}/employee-invitations/not-a-token`)).status).toBe(404);
+
+    // Before accepting, the new Keycloak account belongs to no company.
+    const beforeAccept = await call('sub-leo', 'GET', '/me');
+    expect(beforeAccept.status).toBe(403);
+    expect(beforeAccept.body.message).toBe('The Keycloak user is not associated with a company');
+
+    const unknownLink = await call('sub-leo', 'POST', '/employee-invitations/not-a-token/accept');
+    expect(unknownLink.status).toBe(404);
+
+    const wrongAccount = await call('sub-intruder', 'POST', `/employee-invitations/${invitation.body.token}/accept`);
+    expect(wrongAccount.status).toBe(403);
+
+    // The invited person accepts: role, contract and company come from the invitation.
+    const accepted = await call('sub-leo', 'POST', `/employee-invitations/${invitation.body.token}/accept`);
+    expect(accepted.status).toBe(201);
+    expect(accepted.body).toMatchObject({
+      role: 'EMPLOYEE',
+      weeklyContractMinutes: 1440,
+      firstName: 'Léo',
+      company: { id: ids.companyA },
+    });
+    const leoId: string = accepted.body.id;
+
+    const twice = await call('sub-leo', 'POST', `/employee-invitations/${invitation.body.token}/accept`);
+    expect(twice.status).toBe(409);
+    expect((await fetch(`${baseUrl}/employee-invitations/${invitation.body.token}`)).status).toBe(409);
+
+    // The administrator sees the new employee, with the contract of the invitation.
+    const employees = await call('sub-admin', 'GET', '/employees');
+    expect(employees.body.find((employee: { id: string }) => employee.id === leoId)).toMatchObject({
+      email: 'sub-leo@example.com',
+      role: 'EMPLOYEE',
+      isActive: true,
+      weeklyContractMinutes: 1440,
+    });
+
+    // First day: the employee clocks in, and the team views show it.
+    expect((await call('sub-leo', 'POST', '/time-clock/clock-in', {})).status).toBe(201);
+    const dashboard = await call('sub-admin', 'GET', '/dashboard/team');
+    expect(
+      dashboard.body.presentNow.map((item: { employee: { id: string } }) => item.employee.id),
+    ).toContain(leoId);
+    const today = (await call('sub-leo', 'GET', '/time-clock/status')).body.today.date as string;
+    const team = await call('sub-admin', 'GET', `/timesheets/team?from=${today}&to=${today}`);
+    expect(team.body.rows.map((row: { employee: { id: string } }) => row.employee.id)).toContain(leoId);
+    expect((await call('sub-leo', 'POST', '/time-clock/clock-out', {})).status).toBe(201);
+
+    // Promoted to manager, he gets access to the team.
+    expect((await call('sub-leo', 'GET', `/timesheets/team?from=${today}&to=${today}`)).status).toBe(403);
+    const promoted = await call('sub-admin', 'PATCH', `/employees/${leoId}`, { role: 'MANAGER' });
+    expect(promoted.status).toBe(200);
+    expect((await call('sub-leo', 'GET', `/timesheets/team?from=${today}&to=${today}`)).status).toBe(200);
+
+    // Deactivated: no more access, but the history stays with the administrator.
+    const deactivated = await call('sub-admin', 'PATCH', `/employees/${leoId}`, { isActive: false });
+    expect(deactivated.status).toBe(200);
+    const blocked = await call('sub-leo', 'GET', '/me');
+    expect(blocked.status).toBe(403);
+    expect(blocked.body.message).toBe('The application user is inactive');
+    expect((await call('sub-leo', 'POST', '/time-clock/clock-in', {})).status).toBe(403);
+    expect(
+      (await call('sub-admin', 'GET', '/employees')).body.find(
+        (employee: { id: string }) => employee.id === leoId,
+      ),
+    ).toMatchObject({ isActive: false });
+
+    const reactivated = await call('sub-admin', 'PATCH', `/employees/${leoId}`, { isActive: true });
+    expect(reactivated.status).toBe(200);
+    expect((await call('sub-leo', 'GET', '/me')).body).toMatchObject({ role: 'MANAGER', isActive: true });
+
+    // The same address cannot be invited twice in the company.
+    const again = await call('sub-admin', 'POST', '/employees/invitations', {
+      firstName: 'Léo',
+      lastName: 'Chaîne',
+      email: 'sub-leo@example.com',
+    });
+    expect(again.status).toBe(409);
+
+    // Someone who already belongs to another company cannot join a second one,
+    // and the refused attempt does not consume the invitation.
+    const crossCompany = await call('sub-admin', 'POST', '/employees/invitations', {
+      firstName: 'Olga',
+      lastName: 'Test',
+      email: 'sub-outsider@example.com',
+    });
+    expect(crossCompany.status).toBe(201);
+    const refused = await call('sub-outsider', 'POST', `/employee-invitations/${crossCompany.body.token}/accept`);
+    expect(refused.status).toBe(409);
+    expect(refused.body.message).toBe('The Keycloak user is already associated with a company');
+    const stillOpen = await prisma.employeeInvitation.findUnique({ where: { id: crossCompany.body.id } });
+    expect(stillOpen?.acceptedAt).toBeNull();
   });
 
   it('is protected by database constraints as well', async () => {

@@ -4,10 +4,12 @@
       <span class="brand-mark" aria-hidden="true">WH</span>
       <span class="brand-name">WorkHoraire</span>
     </a>
-    <button mat-button type="button" (click)="logout()">
-      <mat-icon aria-hidden="true">logout</mat-icon>
-      Se déconnecter
-    </button>
+    @if (authenticated()) {
+      <button mat-button type="button" (click)="switchAccount()">
+        <mat-icon aria-hidden="true">switch_account</mat-icon>
+        Changer de compte
+      </button>
+    }
   </header>
 
   <main class="invitation-content">
@@ -16,20 +18,46 @@
         <mat-spinner diameter="42"></mat-spinner>
         <p class="eyebrow">INVITATION</p>
         <h1>Vérification en cours.</h1>
-        <p>Nous rattachons votre compte Keycloak à l’entreprise.</p>
+        <p>Nous préparons votre accès à l’entreprise.</p>
+      } @else if (state() === 'welcome') {
+        @if (preview(); as invitation) {
+          <div class="state-icon success-icon"><mat-icon aria-hidden="true">waving_hand</mat-icon></div>
+          <p class="eyebrow">INVITATION</p>
+          <h1>Bonjour {{ invitation.firstName }}.</h1>
+          <p>
+            <strong>{{ invitation.companyName }}</strong> vous invite à pointer vos heures sur
+            WorkHoraire. Il ne reste qu’à choisir votre mot de passe : votre adresse
+            <strong>{{ invitation.email }}</strong> est déjà renseignée.
+          </p>
+          <div class="invitation-actions">
+            <button mat-flat-button type="button" (click)="createPassword()">Créer mon mot de passe</button>
+            <button mat-button type="button" (click)="signIn()">J’ai déjà un compte</button>
+          </div>
+        }
       } @else if (state() === 'success') {
         <div class="state-icon success-icon"><mat-icon aria-hidden="true">check</mat-icon></div>
         <p class="eyebrow">BIENVENUE DANS L’ÉQUIPE</p>
         <h1>Votre accès est prêt.</h1>
         <p>Votre compte a été rattaché. Redirection vers votre espace...</p>
-      } @else {
+      } @else if (problem(); as issue) {
         <div class="state-icon error-icon"><mat-icon aria-hidden="true">link_off</mat-icon></div>
         <p class="eyebrow">INVITATION</p>
         <h1>Le lien n’a pas fonctionné.</h1>
-        <p>{{ error() }}</p>
+        <p>{{ issue.message }}</p>
         <div class="invitation-actions">
-          <button mat-flat-button type="button" (click)="acceptInvitation()">Réessayer</button>
-          <a mat-button routerLink="/">Retour à l’accueil</a>
+          @if (issue.canSwitchAccount) {
+            @if (authenticated()) {
+              <button mat-flat-button type="button" (click)="switchAccount()">Changer de compte</button>
+            } @else {
+              <button mat-flat-button type="button" (click)="signIn()">Me connecter</button>
+            }
+          }
+          @if (issue.canRetry) {
+            <button mat-stroked-button type="button" (click)="retry()">Réessayer</button>
+          }
+          @if (homeCompany(); as company) {
+            <a mat-button routerLink="/">Aller à mon espace ({{ company }})</a>
+          }
         </div>
       }
     </mat-card>

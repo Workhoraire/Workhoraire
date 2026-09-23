@@ -25,3 +25,13 @@ export interface EmployeeInvitationResponse {
   /** True when this link replaces a previous one, which no longer works. */
   replacesPrevious: boolean;
 }
+
+/** What an invitation link shows before the invited person signs in. */
+export interface EmployeeInvitationPreview {
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: UserRole;
+  companyName: string;
+  expiresAt: Date;
+}

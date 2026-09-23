@@ -7,11 +7,11 @@ Conformément à AGENTS.md, les tests portent sur les comportements métier crit
 | Niveau | Outil | Contenu | Commande |
 |---|---|---|---|
 | Unitaires backend | Jest | Moteur de calcul (fuseaux, heures sup, congés dans le seuil, congé travaillé, nuit du dimanche au lundi, contrat par semaine, heures complémentaires, alertes, jours fériés), services (isolation, rôles, conflits d'intérêts, audit, verrous, absences, contrats, invitations), DTO, CSV | `cd backend && npm test` |
-| Intégration (e2e) backend | Jest + vraie base PostgreSQL | API HTTP complète : validation, gardes, SQL, contraintes, concurrence (5 pointages simultanés : 1 seul accepté ; 3 demandes d'absence simultanées : 1 seule acceptée), annulation d'absence par le manager, historique de contrat, invitation remplacée, exports | `cd backend && npm run test:e2e` |
-| Unitaires frontend | Karma + Jasmine (Chrome headless) | Formatage des durées et des dates, conversions de fuseau, libellés d’alertes, traduction des erreurs de l'API, champs réellement modifiés dans une correction, navigation selon le rôle, composant racine | `cd frontend && npx ng test --watch=false --browsers=ChromeHeadless` |
+| Intégration (e2e) backend | Jest + vraie base PostgreSQL | API HTTP complète : validation, gardes, SQL, contraintes, concurrence (5 pointages simultanés : 1 seul accepté ; 3 demandes d'absence simultanées : 1 seule acceptée), annulation d'absence par le manager, historique de contrat, invitation remplacée, **chaîne complète d'ajout d'un salarié** (invitation, acceptation, premier pointage, visibilité chez l'admin, rôle, désactivation, réactivation, cas refusés), exports | `cd backend && npm run test:e2e` |
+| Unitaires frontend | Karma + Jasmine (Chrome headless) | Formatage des durées et des dates, conversions de fuseau, libellés d’alertes, traduction des erreurs de l'API, champs réellement modifiés dans une correction, page d'invitation (accueil sans compte, création du mot de passe, liens expirés) et ses messages, gardes de compte (sans entreprise, désactivé), navigation selon le rôle, composant racine | `cd frontend && npx ng test --watch=false --browsers=ChromeHeadless` |
 | Build | Angular CLI et Nest CLI | Compilation stricte (templates compris), budgets de taille | `npm run build` dans chaque dossier |
 
-**Résultats au 23/09/2026** : 87 tests unitaires backend, 15 tests e2e et 20 tests frontend, tous au vert. Builds OK : bundle initial de 457 kB, pour un budget de 500 kB.
+**Résultats au 23/09/2026** : 89 tests unitaires backend, 16 tests e2e et 31 tests frontend, tous au vert. Builds OK : bundle initial de 458 kB, pour un budget de 500 kB.
 
 ## 2. Lancer les tests e2e
 
@@ -61,11 +61,15 @@ Une revue complète du code, puis une recette faite avec de vrais comptes Keyclo
 | Recette : formulaires d'invitation et d'absence en erreur juste après un envoi réussi | L'état « envoyé » est réinitialisé |
 | Recette : un lien d'invitation perdu bloquait l'adresse pendant 7 jours | Un nouveau lien remplace l'ancien |
 | Recette : un salarié inscrit avec une autre adresse que celle de l'invitation a créé sa propre entreprise | Avertissement sur la page de création d'entreprise |
+| Recette : ouvert avec le mauvais compte, le lien d'invitation ne proposait que « Retour à l'accueil » ou « Se déconnecter », qui menaient tous deux à la création d'une entreprise | Bouton « Changer de compte », qui revient au lien après la déconnexion ; le compte utilisé est nommé ; « Aller à mon espace » seulement si ce compte a déjà une entreprise |
+| Recette : un seul message pour « invitation déjà utilisée » et « compte déjà rattaché à une autre entreprise » | Deux messages distincts, avec la marche à suivre |
+| Recette : un salarié désactivé voyait l'application, avec une erreur sur chaque page | Page dédiée « Compte désactivé » |
+| Recette : pour accepter une invitation, il fallait trouver « Enregistrement », puis retaper son adresse (une faute de frappe créait un compte sans lien avec l'invitation), son prénom et son nom | Page d'accueil de l'invitation, puis inscription avec l'adresse préremplie : seul le mot de passe est demandé (ADR 0004) |
 
 ## 5. Scénario de recette manuelle (avant chaque mise en production)
 
-1. **Inscription** : sur la page de connexion, choisir « Enregistrement », créer l'entreprise et vérifier l'arrivée sur le tableau de bord.
-2. **Invitation** : dans Salariés, inviter un employé à 24 h/semaine avec un matricule. Ouvrir le lien dans une **fenêtre de navigation privée** et s'inscrire avec **exactement** l'adresse invitée : il arrive sur « Pointer ». Générer une seconde invitation pour la même adresse : l'ancien lien est refusé.
+1. **Inscription** : sur la page de connexion, choisir « Enregistrement » (seuls l'adresse et le mot de passe sont demandés). Créer l'entreprise avec son prénom et son nom, puis vérifier l'arrivée sur le tableau de bord.
+2. **Invitation** : dans Salariés, inviter un employé à 24 h/semaine avec un matricule. Ouvrir le lien dans une **fenêtre de navigation privée** : la page d'accueil nomme l'entreprise. « Créer mon mot de passe » ouvre l'inscription avec l'adresse préremplie ; après le mot de passe, le salarié arrive sur « Pointer ». Générer une seconde invitation pour la même adresse : l'ancien lien est refusé. Ouvrir un lien avec un autre compte : la page nomme ce compte et propose « Changer de compte ».
 3. **Pointage** : pointer l'arrivée. Le bouton devient orange et le chronomètre tourne. Pointer la sortie : le total de la journée s'incrémente.
 4. **Sortie oubliée** : laisser un pointage ouvert plus de 12 h, ou en créer un par l'API de test. La page « Pointer » demande l'heure de sortie ; le tableau de bord l'affiche en « Sorties non pointées ».
 5. **Correction** : en manager, corriger une période avec un motif. Le salarié voit « Corrigé » et le motif dans « Mes heures ».

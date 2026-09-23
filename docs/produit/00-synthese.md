@@ -24,7 +24,7 @@ Les **1,5 million d'entreprises employeuses de 0 à 49 salariés** (8,2 millions
 | Demander des congés (demi-journées, jours ouvrés, fériés exclus) | Alertes légales : 10 h, 48 h, pause, repos de 11 h, 6 jours, temps partiel | – |
 
 **Qualité** :
-- 87 tests unitaires et 15 tests d'intégration sur une vraie base PostgreSQL (dont la concurrence et l’isolation entre entreprises), plus 20 tests frontend ;
+- 89 tests unitaires et 16 tests d'intégration sur une vraie base PostgreSQL (dont la concurrence, l’isolation entre entreprises et la chaîne complète d'ajout d'un salarié), plus 31 tests frontend ;
 - recette visuelle sur mobile avec des données réalistes, puis revue de code complète et recette avec de vrais comptes : défauts trouvés et corrigés avant livraison ([détail](../technique/tests-et-qualite.md)).
 
 ## Décisions à prendre par l'équipe

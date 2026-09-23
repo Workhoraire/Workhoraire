@@ -55,7 +55,7 @@ Complément technique de [../produit/02-cadre-legal-et-rgpd.md](../produit/02-ca
 | Un manager efface des heures pour réduire la paie | Motif obligatoire, piste d'audit visible par le salarié | Notification du salarié à chaque correction |
 | Accès aux données d'une autre entreprise | Filtrage systématique par `companyId`, tests | Revue de code sur chaque nouvelle route |
 | Vol de compte administrateur | Anti-brute-force Keycloak | MFA obligatoire pour les ADMIN, journal des connexions |
-| Invitation détournée (lien transmis à un tiers) | Jeton aléatoire de 256 bits, haché, usage unique, expiration à 7 jours, e-mail identique et **vérifié** exigé ; un nouveau lien pour la même adresse annule le précédent | Envoi de l'invitation par e-mail depuis la plateforme ; liste des invitations en attente, révocables |
+| Invitation détournée (lien transmis à un tiers) | Jeton aléatoire de 256 bits, haché, usage unique, expiration à 7 jours, e-mail identique et **vérifié** exigé ; un nouveau lien pour la même adresse annule le précédent ; l'aperçu public du lien ne montre que l'invitation elle-même (prénom, nom, adresse, entreprise) ; le mot de passe est saisi dans Keycloak, jamais dans WorkHoraire | Envoi de l'invitation par e-mail depuis la plateforme ; liste des invitations en attente, révocables |
 | Injection de formule dans l'export | Neutralisation des préfixes dangereux | – |
 | Déni de service par requêtes lourdes | Périodes bornées | Limitation de débit (rate limiting), pagination des listes (plafonnées à 500 lignes aujourd'hui) |
 

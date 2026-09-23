@@ -26,6 +26,7 @@ import { CONTRACT_HISTORY_START, initialContractPeriod } from './contract-period
 import { CreateEmployeeInvitationDto } from './dto/create-employee-invitation.dto';
 import { UpdateEmployeeDto } from './dto/update-employee.dto';
 import {
+  EmployeeInvitationPreview,
   EmployeeInvitationResponse,
   EmployeeResponse,
 } from './employee.types';
@@ -312,6 +313,36 @@ export class EmployeesService {
 
       throw error;
     }
+  }
+
+  /**
+   * Shown by the invitation link before the person signs in, so that the
+   * sign-up page can be pre-filled: only the holder of the link sees it.
+   */
+  async getInvitationPreview(token: string): Promise<EmployeeInvitationPreview> {
+    const invitation = await this.prisma.employeeInvitation.findUnique({
+      where: { tokenHash: this.hashToken(token) },
+      include: { company: { select: { name: true } } },
+    });
+
+    if (!invitation) {
+      throw new NotFoundException('Invitation not found');
+    }
+    if (invitation.acceptedAt) {
+      throw new ConflictException('This invitation has already been used');
+    }
+    if (invitation.expiresAt <= new Date()) {
+      throw new GoneException('This invitation has expired');
+    }
+
+    return {
+      firstName: invitation.firstName,
+      lastName: invitation.lastName,
+      email: invitation.email,
+      role: invitation.role,
+      companyName: invitation.company.name,
+      expiresAt: invitation.expiresAt,
+    };
   }
 
   async acceptInvitation(

@@ -1,6 +1,7 @@
 import {
   ConflictException,
   ForbiddenException,
+  GoneException,
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma, UserRole } from '@prisma/client';
@@ -85,6 +86,9 @@ describe('EmployeesService', () => {
         findMany: jest.fn(),
         findFirst: jest.fn(),
         update: jest.fn(),
+      },
+      employeeInvitation: {
+        findUnique: jest.fn(),
       },
       $transaction: jest.fn(),
     } as unknown as PrismaService;
@@ -323,6 +327,41 @@ describe('EmployeesService', () => {
     });
     expect(transaction.employeeInvitation.create).toHaveBeenCalled();
     expect(result.replacesPrevious).toBe(true);
+  });
+
+  it('shows who invites the person, but only for a link that can still be used', async () => {
+    const findUnique = prisma.employeeInvitation.findUnique as jest.Mock;
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const invitation = {
+      firstName: 'Nora',
+      lastName: 'Test',
+      email: 'nora@example.com',
+      role: UserRole.EMPLOYEE,
+      acceptedAt: null,
+      expiresAt,
+      company: { name: 'Acme' },
+    };
+    findUnique.mockResolvedValue(invitation);
+
+    await expect(service.getInvitationPreview('a-valid-token')).resolves.toEqual({
+      firstName: 'Nora',
+      lastName: 'Test',
+      email: 'nora@example.com',
+      role: UserRole.EMPLOYEE,
+      companyName: 'Acme',
+      expiresAt,
+    });
+    // The token is looked up by its hash: it is never stored in clear.
+    expect(findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { tokenHash: expect.stringMatching(/^[0-9a-f]{64}$/) } }),
+    );
+
+    findUnique.mockResolvedValue({ ...invitation, acceptedAt: new Date() });
+    await expect(service.getInvitationPreview('used')).rejects.toBeInstanceOf(ConflictException);
+    findUnique.mockResolvedValue({ ...invitation, expiresAt: new Date(Date.now() - 1000) });
+    await expect(service.getInvitationPreview('expired')).rejects.toBeInstanceOf(GoneException);
+    findUnique.mockResolvedValue(null);
+    await expect(service.getInvitationPreview('unknown')).rejects.toBeInstanceOf(NotFoundException);
   });
 
   it('accepts an invitation only for the matching Keycloak email and company', async () => {

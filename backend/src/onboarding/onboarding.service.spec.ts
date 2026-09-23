@@ -106,6 +106,17 @@ describe('OnboardingService', () => {
     });
   });
 
+  it('uses the name typed in the form, the sign-up page no longer asking for it', async () => {
+    await service.createCompanyForUser(
+      { sub: 'new-admin', email: 'claire@example.com' },
+      { name: 'Atelier Durand', firstName: ' Claire ', lastName: 'Durand' },
+    );
+
+    expect(transaction.user.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ firstName: 'Claire', lastName: 'Durand' }),
+    });
+  });
+
   it('rejects a user who already belongs to a company', async () => {
     transaction.user.findUnique.mockResolvedValue({ id: 'existing-user' });
 
