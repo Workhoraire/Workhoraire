@@ -1,7 +1,7 @@
 # Application image: the Angular build, served by Caddy. The same image runs
 # in every environment: `/config.json` (API and Keycloak URLs) is written at
 # start-up from the container variables, see docker/entrypoint.sh.
-FROM node:24-slim AS build
+FROM node:25-slim AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
