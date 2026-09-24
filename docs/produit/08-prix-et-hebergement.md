@@ -9,7 +9,7 @@
   1. **Pilotes** : un VPS OVHcloud de 8 Go, pour environ 7 €/mois.
   2. **Lancement commercial** : un serveur Scaleway et une base PostgreSQL gérée, pour environ 33 €/mois.
   3. **Croissance** : ajout de la haute disponibilité quand le chiffre d'affaires la justifie.
-- **Rentabilité de l'infrastructure** : 15 salariés payants couvrent l'hébergement de l'étape 2, par exemple deux entreprises de 8 salariés.
+- **Rentabilité de l'infrastructure** : 15 à 17 salariés payants couvrent les 45 à 50 € par mois de l'étape 2 (§ 3.4), par exemple deux entreprises de 8 salariés.
 - **À prévoir** : facturation électronique obligatoire pour les PME et micro-entreprises à partir du **1er septembre 2027**.
 
 ## 2. Prix
@@ -20,9 +20,9 @@ Pointeo, cité dans l'étude de marché (doc 01), publie sa grille complète :
 
 | Offre Pointeo | Prix HT | Contenu |
 |---|---|---|
-| Gratuit | 0 € | Jusqu'à 3 employés, 1 site, 1 administrateur |
-| Pro | 19 €/mois en annuel, 23 €/mois en mensuel, 3 employés inclus, puis **2,90 € par employé supplémentaire** | Employés et sites illimités, exports préformatés (Sage, Silae, ADP, Cegid, URSSAF) |
-| Business | 49 €/mois en annuel, 59 €/mois en mensuel, 3 employés inclus, puis 2,90 € par employé | Administrateurs illimités, historique d'export de 5 ans |
+| Gratuit | 0 € | Jusqu'à 3 salariés, 1 site, 1 administrateur |
+| Pro | 19 €/mois en annuel, 23 €/mois en mensuel, 3 salariés inclus, puis **2,90 € par salarié supplémentaire** | Salariés et sites illimités, exports préformatés (Sage, Silae, ADP, Cegid, URSSAF) |
+| Business | 49 €/mois en annuel, 59 €/mois en mensuel, 3 salariés inclus, puis 2,90 € par salarié | Administrateurs illimités, historique d'export de 5 ans |
 
 Pointeo propose aussi une remise annuelle de 17 %, sans engagement, et un essai de 14 jours. Les offres facturées par établissement sont plus chères : Skello dès 59 €/mois, Combo dès 70 €/mois (doc 01).
 
@@ -32,14 +32,14 @@ Pointeo propose aussi une remise annuelle de 17 %, sans engagement, et un essai 
 |---|---|---|
 | **Découverte** | 0 € jusqu'à 3 salariés actifs | Toutes les fonctions : pointage, feuilles de temps, alertes légales, absences, corrections tracées, exports |
 | **Essentiel** | **3 € par salarié actif et par mois**, sans base ni minimum, sans engagement | Idem, sans limite de salariés, support par e-mail |
-| Essentiel annuel | 2,50 € par salarié et par mois (30 € par an), soit 17 % de remise | Idem |
+| Essentiel annuel (**non proposé** pour l'instant, voir § 1) | 2,50 € par salarié et par mois (30 € par an), soit 17 % de remise | Idem |
 | **Pro** (plus tard) | Environ 5 € | Quand existeront les exports préformatés (Silae, Sage), le planning et la tablette de pointage |
 
-**Un salarié actif** est un salarié qui a pointé ou posé une absence dans le mois. Les commerces et restaurants à saisonniers ne paient donc que les mois travaillés. C'est simple à expliquer et à vérifier dans la base, et c'est un argument de vente.
+**Un salarié actif** est un salarié qui a pointé, ou qui a eu une absence validée, dans le mois. Les commerces et restaurants à saisonniers ne paient donc que les mois travaillés. C'est simple à expliquer et à vérifier dans la base, et c'est un argument de vente.
 
 ### 2.3 Comparaison, prix mensuels HT sans engagement
 
-| Équipe | WorkHoraire | Pointeo Pro (23 € + 2,90 € par employé au-delà de 3) |
+| Équipe | WorkHoraire | Pointeo Pro (23 € + 2,90 € par salarié au-delà de 3) |
 |---|---|---|
 | 3 salariés | 0 € | 0 € (offre gratuite) |
 | 5 salariés | 15 € | 28,80 € |
@@ -115,7 +115,7 @@ Le nom de domaine et le stockage externe des sauvegardes s'ajoutent ; leurs prix
 
 ### 3.5 Seuil de rentabilité de l'infrastructure
 
-À 3 € par salarié actif, 50 € par mois d'infrastructure sont couverts par environ 17 salariés payants, par exemple deux ou trois petites entreprises. Les frais de paiement (2 à 3 %) ne changent pas l'ordre de grandeur. Le vrai seuil de rentabilité dépend surtout du temps de l'équipe : 100 entreprises de 8 salariés rapportent 2 400 € HT par mois.
+À 3 € par salarié actif, les 45 à 50 € par mois d'infrastructure du lancement (§ 3.4) sont couverts par 15 à 17 salariés payants, par exemple deux ou trois petites entreprises. Les frais de paiement (2 à 3 %) ne changent pas l'ordre de grandeur. Le vrai seuil de rentabilité dépend surtout du temps de l'équipe : 100 entreprises de 8 salariés rapportent 2 400 € HT par mois.
 
 ## 4. Décisions à prendre par l'équipe
 

@@ -13,7 +13,7 @@
 | Expert-comptable ou gestionnaire de paie | Externe (export) | Un fichier propre, avec matricules, à date fixe, sans ressaisie |
 
 **Secteurs où le besoin est le plus documenté** :
-- **Hôtels, cafés, restaurants** : plus de 4 salariés sur 5 travaillent dans des établissements de moins de 50 personnes, environ 60 % des recrutements sont saisonniers, et le travail le week-end est majoritaire.
+- **Hôtels, cafés, restaurants** : plus de 4 salariés sur 5 travaillent dans des établissements de moins de 50 personnes, environ 60 % des recrutements sont saisonniers, et le travail le week-end est majoritaire (données 2016 et 2017).
 - **Ensuite** : commerce, propreté (temps partiel massif), BTP, santé privée.
 
 Sources et chiffres : § 2.4 de l'annexe.
@@ -38,7 +38,7 @@ Sources et chiffres : § 2.4 de l'annexe.
 | **Nadia**, restauratrice (ADMIN) | 9 salariés, 1 site, paie chez l'expert-comptable, feuilles papier recopiées dans Excel | Envoyer des heures justes au cabinet du premier coup | Reconstituer les heures en fin de mois ; options payantes pour l'export |
 | **Julien**, gérant de 3 boutiques (ADMIN/MANAGER) | 35 salariés, un responsable par site | Voir en temps réel qui est là et les heures sup qui arrivent | Prix par établissement ; responsables qui ne valident pas |
 | **Sandrine**, cheffe d'équipe propreté/BTP (MANAGER) | 12 agents sur plusieurs sites, temps partiels | Valider en quelques minutes sur mobile, régler les oublis sans conflit | Fiches rendues en retard ; refus de « fliquer » par géolocalisation |
-| **Mehdi**, employé étudiant à temps partiel (EMPLOYEE) | Smartphone personnel, pas d'e-mail pro | Pointer en quelques secondes et **voir ses heures de la semaine** | Ne pas voir ses heures ni l'historique ; peur d'être surveillé |
+| **Mehdi**, salarié étudiant à temps partiel (EMPLOYEE) | Smartphone personnel, pas d'e-mail pro | Pointer en quelques secondes et **voir ses heures de la semaine** | Ne pas voir ses heures ni l'historique ; peur d'être surveillé |
 | **Claire**, gestionnaire de paie en cabinet (externe) | Des dizaines de clients TPE sous Silae | Recevoir à date fixe un fichier avec matricules et codes | Relances, fichiers Excel hétérogènes, matricules manquants |
 
 ## 4. Jobs-to-be-done et réponse du MVP

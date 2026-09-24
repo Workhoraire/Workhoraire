@@ -212,7 +212,7 @@ Aide à domicile et transport sont à écarter au lancement.
 - **Jurisprudence.**
   - Cass. soc. 18/03/2020, n° 18-10.919 : le salarié présente des éléments suffisamment précis ; l'employeur, qui assure le contrôle des heures, y répond avec ses propres éléments ([Village Justice](https://www.village-justice.com/articles/paiement-des-heures-supplementaires-nouvel-amenagement-charge-preuve-favorable,34532.html)).
   - Cass. soc. 27/01/2021, n° 17-31.046 : l'employeur ne peut pas écarter une demande au motif que le salarié ne détaille pas ses pauses ; c'est à lui de prouver qu'elles ont été prises ([CFDT](https://www.cfdt.fr/mes-droits/actualites-juridiques/duree-et-organisation-du-travail/heures-supplementaires-la-charge-de-la-preuve-ne-repose-pas-sur-le-seul-salarie)).
-  - Cass. 11/05/2023 : le seul dépassement de la durée maximale de travail ouvre droit à réparation ([Force Ouvrière](https://www.force-ouvriere.fr/temps-de-travail-l-employeur-doit-le-mesurer)).
+  - Cass. 11/05/2023 (chambre et n° de pourvoi à compléter) : le seul dépassement de la durée maximale de travail ouvre droit à réparation ([Force Ouvrière](https://www.force-ouvriere.fr/temps-de-travail-l-employeur-doit-le-mesurer)).
 - **Statistiques des prud'hommes.**
   - 84 051 affaires nouvelles au fond en 2022, contre 146 576 en 2012 ; 81,5 % contestent le motif de la rupture.
   - Les demandes de créances salariales représentent environ 10 % des affaires (8,6 % sans contestation de la rupture, 2,5 % sans rupture).
@@ -437,7 +437,7 @@ Notes relevées le 23/09/2026. Elles ne sont pas représentatives.
 
 - **Silae.**
   - 7,5 millions de bulletins par mois et environ 80 % de part de marché auprès des experts-comptables ([RH Matin, 31/10/2024](https://www.rhmatin.com/paie/logiciels-paie/logiciels-de-paie-silae-sous-pression-revise-les-tarifs-visant-les-experts-comptables.html)).
-  - La profession compte 22 000 professionnels et 170 000 collaborateurs. Silae a annoncé un effort tarifaire en 2025 pour les entreprises de moins de 10 salariés.
+  - La profession compte 22 000 professionnels et 170 000 collaborateurs. Silae a annoncé un effort tarifaire en 2025 pour les entreprises de moins de 10 salariés (source à compléter).
   - Chiffres plus récents, communiqués par l'éditeur : 8 millions de bulletins par mois et environ 80 % des cabinets ([Compta Online, 20/07/2026](https://www.compta-online.com/paie-silae-payfit-ao8818)).
 - **PayFit** : 22 000 clients en France, au Royaume-Uni et en Espagne ([Compta Online](https://www.compta-online.com/paie-silae-payfit-ao8818)) ; plus de 250 000 bulletins par mois ([PayFit, 09/07/2026](https://payfit.com/fr/fiches-pratiques/logiciels-de-paie-les-plus-utilises-par-les-pme-en-france/)).
 - **Autres logiciels.** PayFit cite aussi Silae, Sage, Cegid, ADP et Nibelis parmi les plus utilisés par les PME. Il rapporte 2,4 millions de DSN déposées chaque mois pour 2,2 millions d'entreprises (source net-entreprises) ([PayFit](https://payfit.com/fr/fiches-pratiques/logiciels-de-paie-les-plus-utilises-par-les-pme-en-france/)).

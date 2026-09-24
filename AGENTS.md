@@ -16,6 +16,7 @@ The main features will include:
 * Role-based access control
 
 The project is currently being developed as an MVP.
+
 ---
 
 ## 2. Technical Stack
@@ -62,12 +63,17 @@ The project is currently being developed as an MVP.
 
 ```text
 workhoraire/
-├── frontend/          # Angular application
-├── backend/           # NestJS application
-├── infrastructure/    # Docker and infrastructure configuration
-├── docs/              # Documentation
+├── frontend/                        # Angular application
+├── backend/                         # NestJS application
+├── site/                            # Angular marketing site, pre-rendered to static HTML
+├── infrastructure/                  # Docker and infrastructure configuration
+├── docs/                            # Documentation
+├── .github/                         # CI and deployment workflows, Dependabot
 ├── docker-compose.yml
+├── docker-compose.prod.yml          # Production stack
+├── docker-compose.prod.local.yml    # Local rehearsal of the production stack
 ├── .env.example
+├── .env.production.example
 ├── .gitignore
 ├── AGENTS.md
 └── CLAUDE.md

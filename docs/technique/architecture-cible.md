@@ -1,6 +1,6 @@
 # Architecture cible : site vitrine, inscription, facturation et production
 
-> Proposition du 24/09/2026. Elle complète [architecture.md](architecture.md), qui décrit l'application actuelle, et s'appuie sur les prix et les étapes d'hébergement de [../produit/08-prix-et-hebergement.md](../produit/08-prix-et-hebergement.md). Elle respecte AGENTS.md : Angular, NestJS, PostgreSQL, Keycloak, Docker, et une application organisée en modules, sans microservices. Décision détaillée : [ADR 0008](adr/0008-architecture-de-production.md).
+> Proposition du 24/09/2026, recentrée le même jour sur **ce qui reste à construire**. Ce qui est construit (site vitrine, inscription, facturation Stripe, e-mails, production sur un serveur) est décrit dans [architecture.md](architecture.md), et l'état daté du produit, fait et à faire, dans la [roadmap](../produit/06-roadmap.md). Ce document s'appuie sur les prix et les étapes d'hébergement de [../produit/08-prix-et-hebergement.md](../produit/08-prix-et-hebergement.md). Il respecte AGENTS.md : Angular, NestJS, PostgreSQL, Keycloak, Docker, et une application organisée en modules, sans microservices. Décision détaillée : [ADR 0008](adr/0008-architecture-de-production.md).
 
 ## 1. Objectifs
 
@@ -36,81 +36,32 @@ flowchart LR
 
 ## 3. Le parcours client, du site à la facture
 
-```mermaid
-sequenceDiagram
-  actor D as Dirigeant
-  participant S as Site vitrine
-  participant K as Keycloak
-  participant A as Application + API
-  participant P as Stripe
-  D->>S: Consulte Tarifs, clique « Commencer gratuitement » ou « Choisir Essentiel »
-  S->>K: Inscription (e-mail + mot de passe), offre choisie transmise dans l'adresse
-  K->>D: E-mail de vérification (production)
-  K->>A: Retour connecté
-  A->>A: Création de l'entreprise (nom du dirigeant, SIRET, fuseau), offre Découverte par défaut
-  D->>A: Invite ses salariés (envoi du lien par e-mail)
-  Note over A: Plus de 3 salariés actifs, ou Essentiel choisi
-  A->>P: Stripe Checkout : prélèvement SEPA ou carte, sans paiement immédiat
-  P-->>A: Webhook : abonnement actif
-  loop Chaque mois
-    A->>P: Nombre de salariés actifs du mois écoulé
-    P->>D: Facture et prélèvement
-  end
-  D->>P: Espace client Stripe : factures, moyen de paiement, résiliation
-```
-
-Les règles métier du parcours :
-- **Sans carte bancaire** pour commencer. L'offre Découverte est gratuite jusqu'à 3 salariés actifs, un salarié actif étant un salarié qui a pointé ou posé une absence dans le mois.
-- **Passage à Essentiel** : dès le 4e salarié actif, l'administrateur est invité à ajouter un moyen de paiement, avec 30 jours pour le faire. Rien n'est bloqué pendant ce délai.
-- **Impayé** : relances par Stripe, puis **lecture seule** au bout de 30 jours. Les heures restent consultables et exportables, car l'employeur doit pouvoir produire ses relevés. Aucune donnée n'est supprimée.
-- **Prix** : une facturation à l'usage, avec un compteur Stripe (somme) et un prix de 3 € par unité. WorkHoraire applique lui-même le seuil gratuit : il ne déclare jamais un mois de 3 salariés actifs ou moins. Un prix « par niveaux » en mode volume aurait aussi convenu. Nous l'avons écarté pour qu'un éventuel cumul de deux mois sur une même période Stripe reste juste. Mise en œuvre et réglages : [exploitation.md](exploitation.md#4-paiement-en-ligne-stripe).
+Construit. Le parcours est décrit dans [architecture.md](architecture.md) (§ 5, « S'abonner, du site à la facture »), et ses règles (salarié actif, délai de 30 jours, lecture seule, déclaration mensuelle) dans [exploitation.md](exploitation.md#4-paiement-en-ligne-stripe).
 
 ## 4. Composants
 
-### 4.1 Site vitrine (nouveau dossier `site/`)
+### 4.1 Site vitrine
 
-- **Angular prérendu** : les pages sont générées en HTML statique au moment du build. Le référencement est bon, le site est rapide, il n'y a pas de serveur à maintenir et c'est la même technologie que l'application.
-- **Pages** :
-  - accueil ;
-  - fonctionnalités par métier (restauration, commerce, artisans) ;
-  - **tarifs**, avec un simulateur « combien pour N salariés » ;
-  - sécurité et RGPD (hébergement en France, contrat de sous-traitance) ;
-  - guides, pour le référencement (« calcul des heures supplémentaires », « feuille d'heures », « sortir d'Excel ») ;
-  - contact ;
-  - pages légales : mentions légales, CGV, confidentialité, contrat de sous-traitance.
-- **Aucun cookie ni traceur tiers**, donc pas de bandeau cookies. La mesure d'audience se fait sans cookie et est hébergée dans l'UE (doc 04).
-- **Boutons d'action** vers `app.workhoraire.fr/inscription?offre=decouverte` ou `?offre=essentiel`.
+Construit dans `site/` : voir [architecture.md](architecture.md), § 7. Pas encore construits :
+- des pages de fonctionnalités par métier (restauration, commerce, artisans) ;
+- une page de contact ;
+- une mesure d'audience sans cookie, hébergée dans l'UE (doc 04).
 
-### 4.2 Application et API (existantes, complétées)
+### 4.2 Application et API
 
-L'application reste organisée en modules NestJS, dans un seul programme. Trois nouveaux modules :
-
-| Module | Rôle |
-|---|---|
-| `billing` | Client et abonnement Stripe par entreprise ; webhooks signés et traités une seule fois ; comptage mensuel des salariés actifs ; limites de l'offre gratuite ; lecture seule en cas d'impayé |
-| `notifications` | Envoi des e-mails via Brevo : invitation (le lien part par e-mail au lieu d'être copié), correction faite sur mes heures, rappel de sortie oubliée |
-| `jobs` | Tâches planifiées (comptage mensuel, purge des données au-delà de la durée de conservation, rappels). Un verrou PostgreSQL garantit qu'une seule instance les exécute, même avec plusieurs instances |
-
-Nouvelles tables :
-- `Subscription` : entreprise, identifiants Stripe, offre, statut, fin de période ;
-- `BillingUsage` : entreprise, mois, nombre de salariés actifs, date d'envoi à Stripe ;
-- `ProcessedWebhook` : garantit qu'un webhook n'est traité qu'une fois.
-
-**Envoyer l'invitation par e-mail** simplifie le parcours, et prouve en plus que la personne possède bien l'adresse.
+Construits : les modules `billing`, `notifications` et `privacy`, et les tables `Subscription`, `BillingUsage` et `ProcessedWebhook` (voir [architecture.md](architecture.md), § 1 et 2). Restent :
+- la **purge automatique** des données au-delà de la durée de conservation, par une tâche planifiée ;
+- un **verrou consultatif PostgreSQL** sur les tâches planifiées, obligatoire avant de lancer une seconde instance de l'API ([ADR 0008](adr/0008-architecture-de-production.md)).
 
 ### 4.3 Keycloak
 
-- Thème de connexion aux couleurs de WorkHoraire.
-- SMTP configuré, vérification des e-mails active.
-- **MFA obligatoire pour les administrateurs**.
-- Profil utilisateur réduit (e-mail et mot de passe), déjà en place.
-- À l'étape croissance : 2 instances en cluster.
+Construits : thème de connexion aux couleurs de WorkHoraire, SMTP et vérification des e-mails, profil utilisateur réduit (e-mail et mot de passe). Restent :
+- la **MFA obligatoire pour les administrateurs** ;
+- 2 instances en cluster, à l'étape croissance.
 
 ### 4.4 Données
 
-- PostgreSQL 16, avec un schéma pour WorkHoraire et un pour Keycloak.
-- L'application se connecte avec un utilisateur **sans droit de modifier le schéma**. Les migrations Prisma utilisent un autre utilisateur, dans la chaîne de déploiement.
-- Migrations compatibles avec la version précédente de l'application (on ajoute, puis on retire), pour déployer sans interruption.
+Construits : PostgreSQL 16, avec un schéma pour WorkHoraire et un pour Keycloak ; l'application se connecte avec un rôle **sans droit de modifier le schéma**, et les migrations Prisma passent par le propriétaire de la base (voir [architecture.md](architecture.md), § 7). Reste une règle pour déployer sans interruption : des migrations compatibles avec la version précédente de l'application (on ajoute, puis on retire).
 
 ## 5. Environnements et déploiement
 
@@ -120,7 +71,9 @@ Nouvelles tables :
 | Préproduction | Copie de la production, plus petite | Données fictives, jamais de données clients |
 | Production | Selon l'étape (§ 1) | Clients |
 
-**Intégration et déploiement continus avec GitHub Actions** :
+Aujourd'hui, la CI GitHub Actions lance les tests et construit les images sur chaque pull request et sur `main`, sans les publier. La production se déploie à la main, par `deploy.sh` ou depuis GitHub ([exploitation.md](exploitation.md#6-mises-à-jour-et-retour-arrière)). La préproduction n'existe pas encore.
+
+**Cible (lot 4)** :
 1. À chaque pull request : tests unitaires, tests e2e sur un PostgreSQL de test, build, vérification des dépendances.
 2. Après la fusion dans `main` : images Docker (API, application, site), déploiement automatique en préproduction.
 3. Pour la production, sur validation manuelle : sauvegarde, `prisma migrate deploy`, puis bascule vers les nouvelles images. **Retour arrière** : redéploiement des images précédentes.
@@ -154,7 +107,7 @@ Nouvelles tables :
 |---|---|---|
 | 0. Production pilote | Dockerfiles, `docker-compose.prod.yml` avec Caddy (HTTPS), noms de domaine, SMTP Brevo et vérification des e-mails, sauvegardes et test de restauration, sonde de disponibilité, GitHub Actions (tests et build) | 1 semaine |
 | 1. Site vitrine | `site/` en Angular prérendu : accueil, tarifs et simulateur, fonctionnalités, sécurité, pages légales, plan du site pour le référencement | 1 à 2 semaines |
-| 2. Facturation | Module `billing`, prix Stripe au volume, Checkout, espace client, webhooks, comptage mensuel, limites de l'offre gratuite, lecture seule, page « Abonnement », CGV | 2 semaines |
+| 2. Facturation | Module `billing`, prix Stripe à l'usage (compteur, somme), Checkout, espace client, webhooks, comptage mensuel, limites de l'offre gratuite, lecture seule, page « Abonnement », CGV | 2 semaines |
 | 3. E-mails | Module `notifications` : invitations envoyées par la plateforme, notifications de correction, rappels de sortie oubliée | 1 semaine |
 | 4. Lancement | Passage à Scaleway (base gérée), préproduction, déploiement continu, journaux, métriques, alertes et page de statut | 1 semaine |
 | 5. Obligations | Facture électronique via une plateforme agréée, **avant le 1er septembre 2027** | À planifier |
@@ -162,11 +115,4 @@ Nouvelles tables :
 
 Les efforts sont des estimations de l'équipe pour un ou deux développeurs. Elles sont à affiner au découpage des tâches.
 
-**Avancement au 24/09/2026.** Tout ce qui ne demande ni serveur ni compte externe est fait et testé :
-
-- **Lot 0** : images Docker, `docker-compose.prod.yml` avec Caddy, sauvegardes chiffrées avec test de restauration, GitHub Actions et Dependabot. La pile complète a été répétée en local en HTTPS.
-- **Lot 1** : site vitrine dans `site/`.
-- **Lot 2** : module `billing`, page « Abonnement », parcours `/inscription?offre=…`. Le paiement est prêt, mais coupé tant que les clés Stripe ne sont pas renseignées.
-- **Lot 3** : e-mails d'invitation, de correction et de dépassement de l'offre gratuite.
-
-**Reste à faire** : les noms de domaine, le serveur, les comptes Brevo et Stripe, et la validation de Stripe en mode test. Il faut aussi les textes légaux (champs « [À compléter] » du site), la copie des sauvegardes hors du serveur, le rappel de sortie oubliée, l'offre annuelle et le lot 4. La marche à suivre est dans [exploitation.md](exploitation.md).
+Les lots 0 à 3 sont construits : voir [architecture.md](architecture.md). Ce qui reste de leur périmètre (noms de domaine, compte Brevo, sonde de disponibilité) relève de la mise en ligne. L'avancement daté est tenu dans la [roadmap](../produit/06-roadmap.md) ; l'ordre et le budget de la mise en ligne sont dans le [plan de lancement](../produit/09-plan-de-lancement.md), et la marche technique dans [exploitation.md](exploitation.md).

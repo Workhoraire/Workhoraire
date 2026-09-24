@@ -421,6 +421,7 @@ Légende : ✓ = confirmé par la source ; ✗ = explicitement non proposé ; �
 - Conformité : « Hébergé en France », conservation des données 5 ans ([easypointage.fr](https://easypointage.fr/)).
 - Éditeur, SIREN et date de création non identifiés sur la page : existence commerciale et taille **n.v.**
 - **Analyse :** concurrent le plus proche du positionnement envisagé pour WorkHoraire. À auditer en priorité (essai, mentions légales, grille au-delà de 19 €).
+- **Mise à jour du 24/09/2026** : la grille complète a été relevée sur [easypointage.fr/tarifs](https://easypointage.fr/tarifs) ; elle est reprise dans le [doc 08](../08-prix-et-hebergement.md), § 2.1.
 
 **20. Silae (badgeuse Silae RH) et Nibelis**
 - Silae RH : badgeuse dans le navigateur (« Commencer ma journée », pause, « Terminer ma journée »). Les heures sup ou complémentaires sont détectées par rapport au contrat après validation. Activation via le support, aucun prix affiché ([silae-rh.zendesk.com – Badgeuse](https://silae-rh.zendesk.com/hc/fr/articles/18904979890578--Badgeuse)).
@@ -482,6 +483,8 @@ Légende : ✓ = confirmé par la source ; ✗ = explicitement non proposé ; �
 | Jibble Free | 0 | 0 | 0 | 0 | 0 |
 | Pointeo | Gratuit jusqu'à 3 ; dès 19 € | ≥ 19 € | ≥ 3,8 € | n.d. (grille non publiée) | – |
 | Sesame Essential | 3,75 $ × salariés, minimum 15 | non applicable (sous le minimum) | – | 75 $ | 3,75 $ |
+
+Mise à jour du 24/09/2026 : la grille de Pointeo a depuis été relevée ([doc 08](../08-prix-et-hebergement.md), § 2.1). En mensuel, Pointeo Pro coûte 28,80 € pour 5 salariés et 72,30 € pour 20 salariés (23 € avec 3 salariés inclus, puis 2,90 € par salarié ; calcul de l'équipe).
 
 **Lecture (Analyse) :**
 - Pour la **TPE moyenne de 2,9 salariés** (§ 1.2), le coût par salarié et par mois est d'environ :

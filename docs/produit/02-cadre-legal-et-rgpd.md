@@ -27,15 +27,16 @@
 
 Légende : ✅ couvert · 🟡 partiel · ⬜ à faire (roadmap) · ➖ hors périmètre.
 Nature de l'exigence : **OL** obligation légale, **JP** jurisprudence, **RC** recommandation CNIL, **BP** bonne pratique. Pour beaucoup de lignes, l'obligation pèse sur le client employeur : WorkHoraire fournit l'outil qui permet de la respecter.
+Statuts au 24/09/2026. L'ordre de réalisation des lignes à faire est suivi dans la [roadmap](06-roadmap.md).
 
 | # | Exigence | Nature | Statut | Dans WorkHoraire |
 |---|---|---|---|---|
 | 1 | Décompte quotidien + récapitulatif hebdomadaire | OL | ✅ | Pointage entrée/sortie ; feuille de temps par semaine civile ; export hebdomadaire |
 | 2 | Mesure réelle pour tous les salariés | BP | ✅ | Tous les rôles pointent, y compris sous horaire collectif |
 | 3 | Horodatage serveur, pas de modification silencieuse | OL | 🟡 | Heure du serveur (jamais celle de l'appareil) ; contraintes SQL. Une suppression est tracée avec la valeur d'origine, mais la ligne est effacée : une suppression logique et un chaînage par empreinte sont à étudier |
-| 4 | Piste d'audit des corrections (auteur, date, avant/après, **motif obligatoire**), visible par le salarié | OL/BP | 🟡 | Journal en ajout seul, visible dans « Mes heures ». Il manque la **notification** au salarié et la contestation |
+| 4 | Piste d'audit des corrections (auteur, date, avant/après, **motif obligatoire**), visible par le salarié | OL/BP | 🟡 | Journal en ajout seul, visible dans « Mes heures » ; chaque correction faite par un autre est notifiée au salarié par e-mail, avec son motif. Il manque la **contestation** |
 | 5 | Validation hebdomadaire et verrouillage après la clôture de paie | BP | ⬜ | Roadmap « Next » |
-| 6 | Espace salarié : consultation et export de ses données | OL | 🟡 | Consultation jour et semaine ✅ ; export personnel ⬜ |
+| 6 | Espace salarié : consultation et export de ses données | OL | 🟡 | Consultation jour et semaine ✅ ; export de toutes ses données au format JSON depuis « Mes heures » ✅ ; export PDF ou CSV ⬜ |
 | 7 | Horaire collectif daté et affiché, registre des équipes | OL | ⬜ | Avec le module planning |
 | 8 | Alertes : 10 h/jour, 48 h/semaine, 44 h sur 12 semaines, nuit | OL | 🟡 | 10 h ✅, 48 h ✅ ; 44 h sur 12 semaines et travail de nuit ⬜ |
 | 9 | Repos : 11 h quotidien, 6 jours maximum, 35 h hebdomadaire, dimanche | OL | 🟡 | 11 h ✅, 6 jours ✅ ; repos hebdomadaire de 35 h et dimanche ⬜ |
@@ -66,12 +67,13 @@ Nature de l'exigence : **OL** obligation légale, **JP** jurisprudence, **RC** r
 | 34 | Aucune surveillance de l'activité (inactivité, captures d'écran) | OL/RC | ✅ | Par conception |
 | 35 | Kit d'information des salariés et note au CSE | OL (client) | ✅ | [07-kit-conformite-client.md](07-kit-conformite-client.md) |
 | 36 | Documentation pour l'AIPD du client | OL | 🟡 | [../technique/securite-et-rgpd.md](../technique/securite-et-rgpd.md) |
-| 37 | Contrat de sous-traitance (art. 28), registre, violations | OL | ⬜ | Hors code : à rédiger avec un juriste avant le premier client |
+| 37 | Contrat de sous-traitance (art. 28), registre, violations | OL | 🟡 | Contrat publié sur le site (`/sous-traitance`), avec la liste des sous-traitants ultérieurs, et accepté avec les CGV à la création de l'entreprise. Restent l'identité de l'éditeur, la relecture par un juriste, le registre du sous-traitant et la procédure de gestion des violations |
 | 38 | Aucune réutilisation des données clients pour l'éditeur | OL | ✅ | Principe inscrit dans la stratégie produit |
 | 39 | Sécurité : comptes nominatifs, habilitations, journalisation, chiffrement | OL/RC | 🟡 | Comptes Keycloak individuels, rôles, isolation par entreprise, protection anti-brute-force ✅ ; MFA administrateurs, journal d'accès, chiffrement au repos ⬜ |
-| 40 | Hébergement dans l'UE | OL/BP | ⬜ | Décision de déploiement |
-| 41 | Traitement des demandes d'accès et de rectification | OL | 🟡 | L'espace salarié couvre l'essentiel de l'accès |
+| 40 | Hébergement dans l'UE | OL/BP | 🟡 | Choix fait : serveur OVHcloud en France pour les pilotes (doc 08) ; mise en ligne à faire (doc 09) |
+| 41 | Traitement des demandes d'accès et de rectification | OL | 🟡 | L'espace salarié couvre l'essentiel de l'accès, et l'export JSON l'accès et la portabilité |
 | 42 | Évaluer la nécessité d'un DPO | OL | ⬜ | |
+| 43 | Plages sans notification (droit à la déconnexion) | BP | ⬜ | |
 | 44–47 | Préréglages sectoriels (HCR, BTP, Mobilic, aide à domicile) | OL | ⬜ | Après validation du segment prioritaire |
 | 48 | Règles versionnées avec date d'effet | BP | ⬜ | Nécessaire dès que les seuils deviennent paramétrables |
 
@@ -90,9 +92,9 @@ Fondée sur D3171-16, L3245-1 et le référentiel CNIL RH du 02/04/2026 (§ 5.6 
 - **Base active** : jusqu'à la clôture de la paie de la période et la fin de la fenêtre de correction.
 - **Archivage intermédiaire séparé** (accès restreint) : **3 ans** par défaut, pour couvrir la prescription des salaires ; 1 an au minimum, 5 ans au maximum. Paramétrable par client.
 - **Purge automatique** en fin de durée, y compris dans le journal d'audit.
-- **Journaux techniques d'accès** : 3 mois.
+- **Journal d'accès du service** (proxy, sécurité) : **6 mois**, durée annoncée dans la politique de confidentialité du site et appliquée par le proxy ([exploitation, § 7](../technique/exploitation.md#7-pages-légales-et-cgv)). Les 3 mois du référentiel CNIL visent les journaux de contrôle d'accès aux locaux (§ 5.6 de l'annexe juridique).
 
-Ce mécanisme n'est pas encore implémenté (ligne 30 de la matrice).
+Ce mécanisme n'est pas encore implémenté (ligne 30 de la matrice), sauf la rotation du journal d'accès.
 
 ## 5. Points de vigilance juridique
 

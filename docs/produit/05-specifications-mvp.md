@@ -8,18 +8,23 @@
 **A1. Créer mon entreprise** : en tant que dirigeant, je crée mon espace et deviens ADMIN.
 - Prénom et nom de l'administrateur, nom de l'entreprise (2 à 120 caractères), SIRET facultatif (14 chiffres), fuseau horaire IANA (Europe/Paris par défaut).
 - La création de l'entreprise et de l'administrateur est atomique ; un compte déjà rattaché est refusé.
+- Par défaut, l'adresse du compte doit être vérifiée par Keycloak (403 sinon) : les e-mails de l'entreprise y partent.
+- Les CGV et le contrat de sous-traitance sont acceptés par une case à cocher obligatoire ; l'API enregistre la date et la version acceptées.
+- L'offre choisie sur le site (`/inscription?offre=…`) est gardée jusqu'à la création de l'entreprise ; avec Essentiel, la page « Abonnement » s'ouvre ensuite.
 - La page avertit les salariés invités : ils ne doivent pas créer d'entreprise, mais ouvrir le lien reçu et s'inscrire avec l'adresse exacte de l'invitation.
 
 **A2. Inviter un salarié**, avec son rôle et sa **durée contractuelle hebdomadaire** (1 à 48 h, 35 h par défaut).
 - Le lien ouvre une page d'accueil : « Bonjour Nora, Boulangerie Martin vous invite… ». Le bouton « Créer mon mot de passe » ouvre l'inscription avec l'adresse déjà remplie : **seuls le mot de passe et sa confirmation sont demandés**. Au retour, la personne arrive directement dans l'entreprise. « J'ai déjà un compte » permet de se connecter.
 - Le lien d'invitation expire au bout de 7 jours et n'est utilisable qu'une fois ; le jeton est stocké haché.
+- Le lien part aussi par e-mail à l'adresse invitée quand un serveur SMTP est configuré ; il peut toujours être copié. Une entreprise envoie au plus 100 invitations par 24 h.
 - L'acceptation exige l'adresse e-mail invitée et, par défaut, une adresse **vérifiée** par Keycloak (ADR 0004).
 - La durée contractuelle de l'invitation est reprise sur le compte créé.
 - Une nouvelle invitation pour la même adresse remplace la précédente, dont le lien ne fonctionne plus : un lien perdu ne bloque pas l'adresse.
 - Ouvert avec un autre compte, le lien nomme le compte utilisé et propose « Changer de compte » : après la déconnexion, on revient sur le lien pour se connecter ou s'inscrire avec la bonne adresse. La page ne propose jamais de créer une entreprise.
 
-**A3. Gérer les salariés** (ADMIN) : nom, e-mail, rôle, durée contractuelle, **matricule paie**, activation.
-- Un administrateur ne peut ni se désactiver ni se rétrograder.
+**A3. Gérer les salariés** (ADMIN) : nom, rôle, durée contractuelle, **matricule paie**, activation.
+- L'adresse e-mail est celle du compte de connexion : seul le salarié peut la changer, et WorkHoraire reprend l'adresse vérifiée par Keycloak.
+- Un administrateur ne peut ni se désactiver ni se rétrograder. Un administrateur qui perd ce rôle ou son accès voit expirer les invitations qu'il avait envoyées.
 - Un changement de durée contractuelle est **daté** : il s'applique à partir du lundi de la semaine choisie (la semaine en cours par défaut), et les semaines précédentes gardent l'ancien contrat (ADR 0007).
 - Le matricule paie est unique dans l'entreprise.
 - Un salarié désactivé ne peut plus se connecter à l'application : une page le lui explique. Son historique reste dans les feuilles de temps et les exports.
@@ -39,6 +44,7 @@
 - Le salarié déclare l'heure réelle de fin, avec un motif. La fin doit être après le début, pas dans le futur, et la période ne peut dépasser 24 h.
 - La déclaration est inscrite dans la piste d'audit, avec le salarié comme auteur.
 - Pointer la sortie « maintenant » est refusé au-delà de 12 h d'ouverture : le salarié déclare alors l'heure réelle.
+- Un e-mail de rappel part une seule fois, peu après les 12 h (vérification toutes les 15 minutes).
 
 ## Epic C. Corrections et traçabilité (MANAGER, ADMIN)
 
@@ -59,6 +65,8 @@
 - Le manager voit les corrections de l'équipe ; le salarié voit les siennes dans « Mes heures ».
 
 **Règle de conflit d'intérêts** : un MANAGER ne peut corriger ni ses propres heures ni ses propres congés (403) ; un ADMIN le peut.
+
+**Notification** : chaque correction faite par un autre que le salarié lui est envoyée par e-mail, avec le motif (Epic J).
 
 ## Epic D. Feuilles de temps et alertes
 
@@ -120,6 +128,29 @@
 - Protection contre l'injection de formules (valeurs commençant par `=`, `+`, `-` ou `@`).
 - 62 jours au plus par export.
 
+## Epic H. Abonnement (ADMIN)
+
+**H1. Voir mon abonnement** : la page « Abonnement » affiche l'offre, les salariés actifs du mois en cours et du mois précédent, et le montant estimé HT.
+- Un salarié actif a pointé, ou a eu une absence validée, dans le mois (fuseau de l'entreprise).
+- Découverte : gratuite jusqu'à 3 salariés actifs. Essentiel : 3 € HT par salarié actif, tous comptés ([doc 08](08-prix-et-hebergement.md)).
+
+**H2. Souscrire et gérer** : « Choisir l'offre Essentiel » ouvre une page de paiement Stripe (prélèvement SEPA ou carte). « Factures et moyen de paiement » ouvre l'espace client Stripe : factures, moyen de paiement, résiliation.
+
+**H3. Dépassement et impayé** : au premier dépassement de l'offre gratuite sans abonnement, les administrateurs reçoivent un e-mail et disposent de 30 jours. Passé ce délai, ou 30 jours après un impayé, l'entreprise passe en lecture seule (402) : le pointage, la consultation, les exports et le paiement restent possibles, et aucune donnée n'est supprimée.
+- Sans clés Stripe, le paiement est coupé : la page affiche l'usage, et aucune entreprise ne passe en lecture seule.
+
+## Epic I. Données personnelles
+
+**I1. Télécharger mes données** (tous les rôles) : depuis « Mes heures », un fichier JSON contient le profil, les contrats, les pointages, les absences et les corrections de la personne connectée : ses données, et seulement les siennes (articles 15 et 20 du RGPD).
+
+## Epic J. E-mails
+
+Envoyés par le serveur SMTP configuré (Brevo en production, Mailpit en local). Sans `SMTP_HOST`, rien n'est envoyé et le lien d'invitation reste à copier.
+- **Invitation** : le lien part à l'adresse invitée.
+- **Correction** : le salarié est prévenu de chaque correction de ses heures faite par un autre, avec le motif.
+- **Rappel de sortie oubliée** : un seul e-mail par pointage resté ouvert plus de 12 h.
+- **Abonnement** (administrateurs) : dépassement de l'offre gratuite, échec de paiement.
+
 ## Exigences non fonctionnelles
 
 | Domaine | Exigence | État |
@@ -127,12 +158,12 @@
 | Sécurité | Isolation stricte par entreprise : `companyId` jamais lu depuis le client, vérifié à chaque requête | ✅ testé (unitaires et e2e) |
 | Sécurité | Validation stricte des entrées (liste blanche, champs inconnus refusés, dates ISO avec fuseau) | ✅ |
 | Intégrité | Contraintes SQL : fin > début, un seul pointage ouvert, dates d'absence cohérentes, durée contractuelle de 1 à 48 h, contrats datés d'un lundi, matricule unique ; verrous contre les écritures simultanées | ✅ testé (e2e) |
-| Accessibilité | Libellés ARIA, contrastes, navigation au clavier, `lang="fr"` | 🟡 à auditer (RGAA) |
+| Accessibilité | Libellés ARIA, contrastes, navigation au clavier, `lang="fr"` | 🟡 audit du 24/09/2026 (WCAG 2.2 AA, RGAA 4.1) : site audité, application relue sur ses gabarits ([détail](../technique/tests-et-qualite.md#5-bis-audit-daccessibilité-du-24092026)) |
 | Mobile | Mise en page mobile d'abord, barre de navigation basse, bouton de pointage large | ✅ vérifié visuellement |
 | Performance | Bundle initial < 500 kB (457 kB) ; pages chargées à la demande | ✅ |
 | Vie privée | Polices auto-hébergées (aucun appel à Google Fonts) ; pas de traceur | ✅ |
 | Fuseaux | Calculs dans le fuseau de l'entreprise, heure d'été incluse | ✅ testé |
 
-## Hors périmètre du MVP
+## Hors périmètre
 
-Planning et comparaison planifié/réalisé, validation hebdomadaire et clôture de paie, compteurs de congés, mode kiosque sur tablette à code PIN, hors-ligne, notifications (e-mail, push), conventions collectives, travail de nuit, contingent annuel, format Silae natif, multi-sites. Voir la [roadmap](06-roadmap.md).
+Ce qui n'est pas encore fait est suivi dans la [roadmap](06-roadmap.md), seule source datée de l'état du produit.
