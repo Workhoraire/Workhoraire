@@ -24,6 +24,12 @@ export const routes: Routes = [
       ),
   },
   {
+    // No guard: the website's sign-up links land here before any account exists.
+    path: 'inscription',
+    title: 'Inscription · WorkHoraire',
+    loadComponent: () => import('./features/sign-up/sign-up').then(({ SignUp }) => SignUp),
+  },
+  {
     // No guard: the page welcomes the invited person before they have an account.
     path: 'employee-invitations/:token',
     loadComponent: () =>
@@ -92,6 +98,12 @@ export const routes: Routes = [
         canActivate: [adminGuard],
         loadComponent: () =>
           import('./features/employees/employees').then(({ Employees }) => Employees),
+      },
+      {
+        path: 'abonnement',
+        title: 'Abonnement · WorkHoraire',
+        canActivate: [adminGuard],
+        loadComponent: () => import('./features/billing/billing').then(({ Billing }) => Billing),
       },
     ],
   },

@@ -2,6 +2,7 @@ import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
 import { ApplicationUserGuard } from '../auth/application-user.guard';
 import { ApplicationUser } from '../auth/auth.types';
 import { CurrentUser } from '../auth/current-user.decorator';
+import { AllowedWhenReadOnly } from '../billing/allowed-when-read-only.decorator';
 import { KeycloakAuthGuard } from '../auth/keycloak-auth.guard';
 import { PeriodQueryDto } from '../common/dates/period';
 import { ClockDto, CloseOpenEntryDto } from './dto/time-entry.dto';
@@ -12,8 +13,12 @@ import {
 } from './time-entry.types';
 import { TimeEntriesService } from './time-entries.service';
 
-/** Clocking endpoints of the authenticated employee, whatever their role. */
+/**
+ * Clocking endpoints of the authenticated employee, whatever their role.
+ * Clocking never stops, even when the subscription is unpaid.
+ */
 @Controller('time-clock')
+@AllowedWhenReadOnly()
 @UseGuards(KeycloakAuthGuard, ApplicationUserGuard)
 export class TimeClockController {
   constructor(private readonly timeEntriesService: TimeEntriesService) {}

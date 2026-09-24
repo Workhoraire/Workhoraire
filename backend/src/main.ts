@@ -2,11 +2,18 @@ import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { CustomOrigin } from '@nestjs/common/interfaces/external/cors-options.interface';
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 import { KeycloakService } from './auth/keycloak.service';
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule);
+  // The raw body is kept for the signature of Stripe webhooks.
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { rawBody: true });
+  // Behind the HTTPS proxy: the client IP (rate limiting) comes from X-Forwarded-For.
+  const trustProxy = process.env.TRUST_PROXY;
+  if (trustProxy) {
+    app.set('trust proxy', Number.isNaN(Number(trustProxy)) ? trustProxy : Number(trustProxy));
+  }
   app.useGlobalPipes(
     new ValidationPipe({
       forbidNonWhitelisted: true,

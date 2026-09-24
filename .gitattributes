@@ -1,0 +1,4 @@
+# Files executed inside Linux containers keep LF line endings on every OS.
+*.sh text eol=lf
+Caddyfile text eol=lf
+Dockerfile text eol=lf

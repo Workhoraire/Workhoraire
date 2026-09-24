@@ -7,6 +7,7 @@ import {
 import { Prisma, UserRole } from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
 import { ApplicationUser, KeycloakUser } from '../auth/auth.types';
+import { MailService } from '../notifications/mail.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEmployeeInvitationDto } from './dto/create-employee-invitation.dto';
 import { UpdateEmployeeDto } from './dto/update-employee.dto';
@@ -37,6 +38,7 @@ describe('EmployeesService', () => {
   let service: EmployeesService;
   let prisma: PrismaService;
   let transaction: TransactionMock;
+  let mail: { send: jest.Mock; enabled: boolean } & MailService;
 
   const admin = {
     id: 'admin-1',
@@ -60,6 +62,7 @@ describe('EmployeesService', () => {
   }
 
   beforeEach(() => {
+    mail = { send: jest.fn().mockResolvedValue(true), enabled: true } as unknown as typeof mail;
     transaction = {
       employeeInvitation: {
         create: jest.fn(),
@@ -98,7 +101,7 @@ describe('EmployeesService', () => {
         callback(transaction),
     );
 
-    service = new EmployeesService(prisma, configWith('true'));
+    service = new EmployeesService(prisma, configWith('true'), mail);
   });
 
   it('lists only employees belonging to the authenticated admin company', async () => {
@@ -257,7 +260,7 @@ describe('EmployeesService', () => {
       ),
     } as unknown as ConfigService;
 
-    expect(() => new EmployeesService(prisma, productionConfig)).toThrow(
+    expect(() => new EmployeesService(prisma, productionConfig, mail)).toThrow(
       'KEYCLOAK_REQUIRE_VERIFIED_EMAIL=false is only allowed in local development',
     );
   });
@@ -294,6 +297,15 @@ describe('EmployeesService', () => {
     ).toHaveLength(64);
     expect(result.token).toHaveLength(43);
     expect(result.replacesPrevious).toBe(false);
+    // The personal link is also sent to the invited address.
+    expect(mail.send).toHaveBeenCalledWith(
+      'employee@example.com',
+      expect.objectContaining({
+        subject: 'Acme vous invite sur WorkHoraire',
+        text: expect.stringContaining(`http://localhost:4200/employee-invitations/${result.token}`),
+      }),
+    );
+    expect(result.emailSent).toBe(true);
   });
 
   it('replaces a pending invitation for the same email with a new link', async () => {
@@ -458,7 +470,7 @@ describe('EmployeesService', () => {
     );
     expect(transaction.employeeInvitation.findUnique).not.toHaveBeenCalled();
 
-    const localService = new EmployeesService(prisma, configWith('false'));
+    const localService = new EmployeesService(prisma, configWith('false'), mail);
     transaction.employeeInvitation.findUnique.mockResolvedValue(null);
     await expect(localService.acceptInvitation('a-valid-token', unverified)).rejects.toBeInstanceOf(
       NotFoundException,

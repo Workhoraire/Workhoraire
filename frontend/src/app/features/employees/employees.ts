@@ -117,11 +117,14 @@ export class Employees {
           `${window.location.origin}/employee-invitations/${encodeURIComponent(invitation.token)}`,
         );
         this.copied.set(false);
-        this.notice.set(
-          invitation.replacesPrevious
-            ? `Nouveau lien créé pour ${invitation.firstName} ${invitation.lastName} : l’ancien lien ne fonctionne plus.`
-            : `Invitation créée pour ${invitation.firstName} ${invitation.lastName}.`,
-        );
+        const who = `${invitation.firstName} ${invitation.lastName}`;
+        const created = invitation.replacesPrevious
+          ? `Nouveau lien créé pour ${who} : l’ancien lien ne fonctionne plus.`
+          : `Invitation créée pour ${who}.`;
+        const delivery = invitation.emailSent
+          ? ` Le lien lui a été envoyé par e-mail (${invitation.email}).`
+          : ' Transmettez-lui le lien ci-dessous.';
+        this.notice.set(created + delivery);
         // resetForm also clears the "submitted" state: no error on the emptied fields.
         formDirective.resetForm({
           firstName: '',

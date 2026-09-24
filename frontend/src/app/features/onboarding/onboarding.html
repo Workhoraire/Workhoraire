@@ -98,6 +98,25 @@
             }
           </mat-form-field>
 
+          <div class="terms">
+            <mat-checkbox formControlName="acceptTerms">
+              J’accepte les
+              <a [href]="legalLinks.terms" target="_blank" rel="noopener">conditions générales de vente</a>
+              et le
+              <a [href]="legalLinks.processing" target="_blank" rel="noopener">contrat de sous-traitance</a>
+              (données de vos salariés).
+            </mat-checkbox>
+            @if (form.controls.acceptTerms.touched && form.controls.acceptTerms.invalid) {
+              <p class="terms-error" role="alert">
+                Acceptez les conditions générales de vente pour créer votre entreprise.
+              </p>
+            }
+            <p class="terms-note">
+              Vos données personnelles sont traitées selon notre
+              <a [href]="legalLinks.privacy" target="_blank" rel="noopener">politique de confidentialité</a>.
+            </p>
+          </div>
+
           @if (error(); as errorMessage) {
             <div class="form-error" role="alert">
               <mat-icon aria-hidden="true">error_outline</mat-icon>

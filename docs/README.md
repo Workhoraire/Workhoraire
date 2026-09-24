@@ -12,15 +12,18 @@ Commencer par la **[synthèse](produit/00-synthese.md)**.
 6. [05 Spécifications du MVP](produit/05-specifications-mvp.md)
 7. [06 Roadmap](produit/06-roadmap.md)
 8. [07 Kit de conformité client](produit/07-kit-conformite-client.md)
-9. Études sourcées complètes (`produit/recherche/`) : [marché](produit/recherche/etude-de-marche-complete.md), [cadre juridique](produit/recherche/cadre-juridique-complet.md), [besoins utilisateurs](produit/recherche/besoins-utilisateurs-complet.md)
+9. [08 Prix et hébergement](produit/08-prix-et-hebergement.md)
+10. Études sourcées complètes (`produit/recherche/`) : [marché](produit/recherche/etude-de-marche-complete.md), [cadre juridique](produit/recherche/cadre-juridique-complet.md), [besoins utilisateurs](produit/recherche/besoins-utilisateurs-complet.md)
 
 ## Technique (`technique/`)
 
 - [Architecture](technique/architecture.md)
+- [Architecture cible](technique/architecture-cible.md) : site vitrine, inscription, facturation Stripe, production robuste par étapes
 - [API REST](technique/api.md)
 - [Moteur de calcul des heures](technique/moteur-de-calcul.md)
 - [Sécurité et RGPD](technique/securite-et-rgpd.md), avec la checklist de mise en production
 - [Tests et qualité](technique/tests-et-qualite.md), avec le scénario de recette
+- [Exploitation](technique/exploitation.md) : mise en ligne, Keycloak, Stripe, sauvegardes, mises à jour, surveillance
 - Décisions d'architecture (ADR) :
   - [0001 Pointages en périodes et piste d'audit](technique/adr/0001-pointages-en-periodes-et-piste-d-audit.md)
   - [0002 Calculs à la volée et seuils légaux par défaut](technique/adr/0002-calculs-a-la-volee-et-seuils-legaux-par-defaut.md)
@@ -29,6 +32,7 @@ Commencer par la **[synthèse](produit/00-synthese.md)**.
   - [0005 Exports CSV avant l'intégration paie](technique/adr/0005-exports-csv-avant-integration-paie.md)
   - [0006 Confiance sans surveillance, mode kiosque à décider](technique/adr/0006-confiance-sans-surveillance.md)
   - [0007 Historique des contrats, daté du lundi](technique/adr/0007-historique-des-contrats.md)
+  - [0008 Architecture de production](technique/adr/0008-architecture-de-production.md) (proposé)
 
 ## Conventions
 

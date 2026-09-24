@@ -48,4 +48,6 @@ export interface EmployeeInvitation {
   expiresAt: string;
   /** True when this link replaces a previous one, which no longer works. */
   replacesPrevious: boolean;
+  /** True when the link was also sent by e-mail to the invited address. */
+  emailSent: boolean;
 }

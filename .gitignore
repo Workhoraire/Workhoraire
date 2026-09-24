@@ -4,6 +4,7 @@ coverage/
 .env
 .env.*
 !.env.example
+!.env.production.example
 
 # Keycloak exports may contain users or credentials
 infrastructure/keycloak/exports/
@@ -13,3 +14,6 @@ infrastructure/keycloak/exports/
 
 # Local development
 .DS_Store
+
+# Database dumps of the production stack (copied off the server, never committed)
+backups/

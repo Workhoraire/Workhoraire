@@ -52,5 +52,6 @@ Les **1,5 million d'entreprises employeuses de 0 à 49 salariés** (8,2 millions
 | [05 Spécifications du MVP](05-specifications-mvp.md) | Récits utilisateurs et critères d'acceptation |
 | [06 Roadmap](06-roadmap.md) | Maintenant, ensuite, plus tard, dette technique |
 | [07 Kit de conformité client](07-kit-conformite-client.md) | Note d'information des salariés, note au CSE, checklist |
+| [08 Prix et hébergement](08-prix-et-hebergement.md) | Grille de prix comparée à Pointeo, frais de paiement, facture électronique, hébergement en France par étape et budget |
 | [Technique](../technique/) | Architecture, API, moteur de calcul, sécurité, tests, ADR |
 | [Recherche](recherche/) | Les trois études complètes et sourcées (marché, droit, besoins) |

@@ -60,10 +60,10 @@
       "directAccessGrantsEnabled": false,
       "serviceAccountsEnabled": false,
       "redirectUris": [
-        "http://localhost:4200/*"
+        "${WORKHORAIRE_APP_URL}/*"
       ],
       "webOrigins": [
-        "http://localhost:4200"
+        "${WORKHORAIRE_APP_URL}"
       ],
       "attributes": {
         "pkce.code.challenge.method": "S256"

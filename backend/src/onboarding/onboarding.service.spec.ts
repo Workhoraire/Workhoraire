@@ -4,6 +4,7 @@ import { UserRole } from '@prisma/client';
 import { KeycloakUser } from '../auth/auth.types';
 import { CreateCompanyDto } from './dto/create-company.dto';
 import { OnboardingService } from './onboarding.service';
+import { CURRENT_TERMS_VERSION } from './terms';
 
 interface TransactionMock {
   company: {
@@ -73,6 +74,7 @@ describe('OnboardingService', () => {
   it('creates a company and attaches the authenticated user as ADMIN atomically', async () => {
     const dto: CreateCompanyDto = {
       name: '  Acme  ',
+      acceptTerms: true,
     };
 
     const result = await service.createCompanyForUser(keycloakUser, dto);
@@ -83,6 +85,9 @@ describe('OnboardingService', () => {
         name: 'Acme',
         siret: null,
         timezone: 'Europe/Paris',
+        // Proof of the acceptance of the terms of sale and of the processing agreement.
+        termsAcceptedAt: expect.any(Date),
+        termsVersion: CURRENT_TERMS_VERSION,
       },
     });
     expect(transaction.user.create).toHaveBeenCalledWith({
@@ -109,7 +114,7 @@ describe('OnboardingService', () => {
   it('uses the name typed in the form, the sign-up page no longer asking for it', async () => {
     await service.createCompanyForUser(
       { sub: 'new-admin', email: 'claire@example.com' },
-      { name: 'Atelier Durand', firstName: ' Claire ', lastName: 'Durand' },
+      { name: 'Atelier Durand', firstName: ' Claire ', lastName: 'Durand', acceptTerms: true },
     );
 
     expect(transaction.user.create).toHaveBeenCalledWith({
@@ -121,7 +126,7 @@ describe('OnboardingService', () => {
     transaction.user.findUnique.mockResolvedValue({ id: 'existing-user' });
 
     await expect(
-      service.createCompanyForUser(keycloakUser, { name: 'Another company' }),
+      service.createCompanyForUser(keycloakUser, { name: 'Another company', acceptTerms: true }),
     ).rejects.toBeInstanceOf(ConflictException);
 
     expect(transaction.company.create).not.toHaveBeenCalled();
@@ -130,18 +135,20 @@ describe('OnboardingService', () => {
 
   it('validates the company name, SIRET and timezone before opening a transaction', async () => {
     await expect(
-      service.createCompanyForUser(keycloakUser, { name: 'A' }),
+      service.createCompanyForUser(keycloakUser, { name: 'A', acceptTerms: true }),
     ).rejects.toBeInstanceOf(BadRequestException);
     await expect(
       service.createCompanyForUser(keycloakUser, {
         name: 'Acme',
         siret: '123',
+        acceptTerms: true,
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
     await expect(
       service.createCompanyForUser(keycloakUser, {
         name: 'Acme',
         timezone: 'Not/A-Timezone',
+        acceptTerms: true,
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
 

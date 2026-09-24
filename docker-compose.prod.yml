@@ -1,0 +1,171 @@
+# Production on a single server: the "pilots" stage of
+# docs/produit/08-prix-et-hebergement.md. Operations: docs/technique/exploitation.md.
+#
+#   docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
+#
+# Only the proxy is published on the internet (80/443). Keycloak's
+# administration listens on 127.0.0.1 only, for an SSH tunnel.
+# A distinct project name: its containers and volumes never mix with another
+# project (the development stack is "workhoraire-app").
+name: workhoraire-prod
+
+x-database-url: &database-url postgresql://${POSTGRES_USER:?POSTGRES_USER must be set}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB must be set}?schema=public
+
+services:
+  proxy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    environment:
+      ACME_EMAIL: ${ACME_EMAIL:?ACME_EMAIL must be set}
+      CADDY_EXTRA_GLOBAL: ${CADDY_EXTRA_GLOBAL:-}
+      SITE_HOST: ${SITE_HOST:?SITE_HOST must be set}
+      APP_HOST: ${APP_HOST:?APP_HOST must be set}
+      API_HOST: ${API_HOST:?API_HOST must be set}
+      AUTH_HOST: ${AUTH_HOST:?AUTH_HOST must be set}
+    volumes:
+      - ./infrastructure/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      default:
+        # The API reaches Keycloak through its public URL (the token issuer),
+        # without leaving the server.
+        aliases:
+          - ${AUTH_HOST}
+          - ${API_HOST}
+    depends_on:
+      - site
+      - app
+      - api
+      - keycloak
+
+  site:
+    build:
+      context: ./site
+      # Pre-rendered pages: the public addresses are fixed at build time.
+      args:
+        SITE_URL: https://${SITE_HOST}
+        APP_URL: https://${APP_HOST}
+    restart: unless-stopped
+
+  app:
+    build: ./frontend
+    restart: unless-stopped
+    environment:
+      API_URL: https://${API_HOST}
+      KEYCLOAK_URL: https://${AUTH_HOST}
+      SITE_URL: https://${SITE_HOST}
+
+  api:
+    build:
+      context: ./backend
+      target: runtime
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      TRUST_PROXY: "1"
+      DATABASE_URL: *database-url
+      FRONTEND_URL: https://${APP_HOST}
+      KEYCLOAK_AUTH_SERVER_URL: https://${AUTH_HOST}
+      KEYCLOAK_REALM: workhoraire
+      KEYCLOAK_CLIENT_ID: workhoraire-api
+      KEYCLOAK_SSL_REQUIRED: external
+      KEYCLOAK_REQUIRE_VERIFIED_EMAIL: "true"
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+      # Online payment: disabled while STRIPE_SECRET_KEY or STRIPE_PRICE_ID is empty.
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_PRICE_ID: ${STRIPE_PRICE_ID:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      STRIPE_METER_EVENT: ${STRIPE_METER_EVENT:-active_employees}
+      STRIPE_TAX_RATE_ID: ${STRIPE_TAX_RATE_ID:-}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  migrate:
+    build:
+      context: ./backend
+      target: migrate
+    restart: "no"
+    environment:
+      DATABASE_URL: *database-url
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  keycloak:
+    build: ./infrastructure/keycloak
+    restart: unless-stopped
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:?KEYCLOAK_ADMIN must be set}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?KEYCLOAK_ADMIN_PASSWORD must be set}
+      KC_DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      KC_DB_USERNAME: ${POSTGRES_USER}
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD}
+      KC_DB_SCHEMA: keycloak
+      KC_HOSTNAME: https://${AUTH_HOST}
+      KC_HOSTNAME_ADMIN: http://localhost:${KEYCLOAK_ADMIN_PORT:-8180}
+      KC_HTTP_ENABLED: "true"
+      KC_PROXY_HEADERS: xforwarded
+      # Read by the realm file on its first import (redirect URIs of the application).
+      WORKHORAIRE_APP_URL: https://${APP_HOST}
+    ports:
+      - "127.0.0.1:${KEYCLOAK_ADMIN_PORT:-8180}:8080"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && grep -q UP <&3",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infrastructure/postgres/init/01-keycloak-schema.sql:/docker-entrypoint-initdb.d/01-keycloak-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backup:
+    build: ./infrastructure/backup
+    restart: unless-stopped
+    environment:
+      PGHOST: postgres
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB}
+      BACKUP_PASSPHRASE: ${BACKUP_PASSPHRASE:?BACKUP_PASSPHRASE must be set}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
+    volumes:
+      - ${BACKUP_DIR:-./backups}:/backups
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  caddy_data:
+  caddy_config:

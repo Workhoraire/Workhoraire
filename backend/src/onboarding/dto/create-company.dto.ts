@@ -1,5 +1,6 @@
 import { Transform } from 'class-transformer';
 import {
+  Equals,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -48,4 +49,8 @@ export class CreateCompanyDto {
   @IsString()
   @MaxLength(100)
   lastName?: string;
+
+  /** Terms of sale and data processing agreement, accepted with a check box. */
+  @Equals(true, { message: 'The terms of sale must be accepted' })
+  acceptTerms!: boolean;
 }

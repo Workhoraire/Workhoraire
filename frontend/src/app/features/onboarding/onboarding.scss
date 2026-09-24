@@ -190,6 +190,29 @@ mat-form-field {
   font-size: 1.1rem;
 }
 
+.terms {
+  margin: 0.25rem 0 0.75rem;
+  font-size: 0.9rem;
+  line-height: 1.45;
+
+  a {
+    color: inherit;
+    font-weight: 700;
+  }
+}
+
+.terms-error {
+  margin: 0.25rem 0 0 2.5rem;
+  color: #b4502f;
+  font-size: 0.85rem;
+}
+
+.terms-note {
+  margin: 0.4rem 0 0 2.5rem;
+  color: #68736d;
+  font-size: 0.82rem;
+}
+
 .submit-button {
   display: flex;
   width: 100%;

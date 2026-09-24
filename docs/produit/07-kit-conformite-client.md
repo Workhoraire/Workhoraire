@@ -69,7 +69,9 @@
 >
 > L'avis du CSE est sollicité lors de la réunion du **[date]**.
 
-## 4. Ce que l'éditeur fournit au client (engagements à formaliser)
+## 4. Ce que l'éditeur fournit au client
+
+Ces engagements sont formalisés dans le contrat de sous-traitance, publié sur le site (`/sous-traitance`) et accepté avec les CGV à la création de l'entreprise.
 
 - Le contrat de sous-traitance (art. 28) et la liste des sous-traitants ultérieurs (hébergeur, envoi d'e-mails).
 - La description des mesures de sécurité : [../technique/securite-et-rgpd.md](../technique/securite-et-rgpd.md).

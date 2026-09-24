@@ -107,6 +107,7 @@ Détail et checklist de production : [securite-et-rgpd.md](securite-et-rgpd.md).
 ## 6. Environnement local
 
 - `docker compose up -d postgres keycloak`. Le realm est importé à la **première** création de la base Keycloak.
-- Sur un Keycloak déjà créé, il faut reporter le profil utilisateur du realm, pour que l'inscription ne demande plus le prénom ni le nom. Lancer `node infrastructure/keycloak/apply-user-profile.mjs` (option `--dry-run` pour un essai à blanc). Le script lit le compte administrateur dans `.env` et envoie le profil du fichier de realm à l'API d'administration Keycloak.
+- Sur un Keycloak déjà créé, il faut reporter les réglages du realm : profil utilisateur (l'inscription ne demande plus le prénom ni le nom), SMTP de Keycloak (Mailpit en local) et vérification des e-mails. Lancer `node infrastructure/keycloak/apply-realm-settings.mjs` (options `--dry-run` pour un essai à blanc, `--env-file` pour un autre fichier que `.env`). Le script lit le compte administrateur dans ce fichier et appelle l'API d'administration Keycloak.
+- `docker compose up -d mailpit` : les e-mails de l'API et de Keycloak arrivent dans Mailpit (`http://localhost:8025`).
 - La base `workhoraire_e2e`, dédiée aux tests e2e, est créée par `infrastructure/postgres/init/02-e2e-database.sql`, mais seulement pour un volume neuf.
 - Le `.env` à la racine est la source unique de configuration (voir `.env.example`). Si le port 5432 est déjà pris, changez `POSTGRES_PORT` et `DATABASE_URL`.

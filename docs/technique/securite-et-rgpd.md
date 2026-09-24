@@ -13,6 +13,7 @@ Complément technique de [../produit/02-cadre-legal-et-rgpd.md](../produit/02-ca
 | Données | Identité (nom, prénom, e-mail), rôle, durée contractuelle, matricule de paie ; horodatages de début et de fin de travail, notes ; corrections (auteur, motif, valeurs avant et après) ; absences (type, dates, commentaire). Identité Keycloak : identifiant technique (`sub`) et e-mail |
 | Données exclues par conception | Biométrie, photo, localisation, données d'appareil, mesure de l'activité, informations médicales (seul le type « arrêt maladie » est connu) |
 | Destinataires | Personnes habilitées du client (ADMIN, MANAGER) ; le salarié pour ses propres données ; le gestionnaire de paie destinataire des exports (fichier remis par le client) |
+| Sous-traitants ultérieurs | L'hébergeur du serveur (UE) ; le fournisseur SMTP (Brevo, Sendinblue SAS, Paris), pour les e-mails d'invitation et de correction : données hébergées dans l'UE, certains de ses prestataires techniques pouvant y accéder depuis les États-Unis avec les garanties du RGPD ; **Stripe**, pour le paiement de l'abonnement. Stripe ne reçoit que des données de l'entreprise cliente (raison sociale, e-mail de l'administrateur, adresse et n° de TVA saisis sur sa page), et le **nombre** de salariés actifs du mois, jamais leur identité ni leurs heures |
 | Conservation | Politique proposée : base active jusqu'à la paie, archive de 3 ans, puis purge. **Pas encore automatisée** (roadmap n° 6) |
 | AIPD | La délibération CNIL 2019-118 dispense d'AIPD le contrôle des horaires **sans biométrie**. Toute future option de géolocalisation imposerait une réanalyse |
 
@@ -66,9 +67,9 @@ Complément technique de [../produit/02-cadre-legal-et-rgpd.md](../produit/02-ca
 - [ ] Mots de passe forts et uniques pour Postgres et l'administrateur Keycloak, stockés dans un coffre de secrets. Le `.env` ne quitte jamais le serveur.
 - [ ] MFA (OTP) obligatoire pour les comptes ADMIN.
 - [ ] Hébergement dans l'Union européenne, sauvegardes chiffrées de Postgres testées (restauration), chiffrement au repos.
-- [ ] Journalisation des accès et des erreurs, sans données personnelles inutiles, conservée 3 mois.
-- [ ] Limitation de débit sur l'API et en-têtes de sécurité (CSP, HSTS) sur le frontend.
-- [ ] Contrat de sous-traitance (art. 28), registre des traitements du sous-traitant, procédure de gestion des violations.
+- [x] Journal d'accès du proxy, conservé 6 mois, avec les jetons d'invitation et les en-têtes d'authentification masqués. Reste à faire : l'alerte sur les erreurs.
+- [x] Limitation de débit sur l'API (`@nestjs/throttler`) et en-têtes de sécurité (CSP, HSTS) posés par le proxy Caddy : voir [exploitation.md](exploitation.md).
+- [ ] Contrat de sous-traitance (art. 28) : publié sur le site (`/sous-traitance`) et accepté avec les CGV à la création de l'entreprise. Il reste à compléter l'identité de l'éditeur, puis à rédiger le registre des traitements du sous-traitant et la procédure de gestion des violations (notification au client sous 48 h, prévue au contrat).
 - [ ] Purge automatique des données au-delà de la durée de conservation.
 - [ ] Audit d'accessibilité (RGAA) et test de charge sur l'export mensuel.
 

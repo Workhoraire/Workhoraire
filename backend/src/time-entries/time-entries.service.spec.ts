@@ -6,6 +6,8 @@ import {
 } from '@nestjs/common';
 import { Prisma, TimeEntryAuditAction, TimeEntrySource, UserRole } from '@prisma/client';
 import { ApplicationUser } from '../auth/auth.types';
+import { ConfigService } from '@nestjs/config';
+import { MailService } from '../notifications/mail.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { TimesheetsService } from '../timesheets/timesheets.service';
 import { TimeEntriesService } from './time-entries.service';
@@ -47,6 +49,7 @@ describe('TimeEntriesService', () => {
   let auditFindMany: jest.Mock;
   let userFindFirst: jest.Mock;
   let lockQuery: jest.Mock;
+  let mail: { send: jest.Mock; enabled: boolean };
 
   function storedEntry(overrides: Record<string, unknown> = {}) {
     return {
@@ -92,7 +95,14 @@ describe('TimeEntriesService', () => {
       ),
     } as unknown as PrismaService;
 
-    service = new TimeEntriesService(prisma, {} as TimesheetsService);
+    // E-mails off by default: one test below turns them on.
+    mail = { send: jest.fn().mockResolvedValue(true), enabled: false };
+    service = new TimeEntriesService(
+      prisma,
+      {} as TimesheetsService,
+      mail as unknown as MailService,
+      { get: (_key: string, fallback: string) => fallback } as unknown as ConfigService,
+    );
   });
 
   describe('clocking', () => {
@@ -285,6 +295,37 @@ describe('TimeEntriesService', () => {
       await expect(
         service.createEntry(admin, { ...dto, userId: 'admin-1' }, now),
       ).resolves.toBeDefined();
+    });
+
+    it('tells the employee by e-mail about a correction, with the reason', async () => {
+      mail.enabled = true;
+      const closed = storedEntry({
+        endAt: new Date('2026-09-22T10:00:00.000Z'),
+        openUserId: null,
+        startAt: new Date('2026-09-22T06:00:00.000Z'),
+      });
+      timeEntry.findFirst.mockResolvedValueOnce(closed).mockResolvedValueOnce(null);
+      timeEntry.update.mockImplementation(({ data }) => Promise.resolve({ ...closed, ...data }));
+      userFindFirst.mockResolvedValue({ email: 'emma@example.com', firstName: 'Emma', isActive: true });
+
+      await service.updateEntry(
+        { ...manager, firstName: 'Karim', lastName: 'Benali' } as ApplicationUser,
+        'entry-1',
+        { endAt: '2026-09-22T10:30:00.000Z', reason: 'Livraison tardive' },
+        now,
+      );
+      // The e-mail leaves after the correction is saved, without delaying it.
+      await new Promise((resolve) => setImmediate(resolve));
+
+      expect(mail.send).toHaveBeenCalledWith(
+        'emma@example.com',
+        expect.objectContaining({
+          subject: 'Vos heures du mardi 22 septembre ont été corrigées',
+          text: expect.stringContaining('Avant : 08:00 – 12:00'),
+        }),
+      );
+      expect(mail.send.mock.calls[0][1].text).toContain('Après : 08:00 – 12:30');
+      expect(mail.send.mock.calls[0][1].text).toContain('Motif : « Livraison tardive »');
     });
 
     it('updates an entry of the company with a before/after snapshot', async () => {

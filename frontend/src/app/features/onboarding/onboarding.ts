@@ -3,13 +3,16 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { Router } from '@angular/router';
 
+import { environment } from '../../../environments/environment';
 import { AuthService } from '../../core/auth/auth.service';
+import { takeOffer } from '../../core/billing/chosen-offer';
 import { OnboardingService } from './onboarding.service';
 
 @Component({
@@ -17,6 +20,7 @@ import { OnboardingService } from './onboarding.service';
   imports: [
     MatButtonModule,
     MatCardModule,
+    MatCheckboxModule,
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
@@ -54,7 +58,15 @@ export class Onboarding {
     ],
     siret: ['', [Validators.pattern(/^\d{14}$/)]],
     timezone: ['Europe/Paris', [Validators.required, Validators.pattern(/\S/), Validators.maxLength(64)]],
+    acceptTerms: [false, Validators.requiredTrue],
   });
+
+  /** Legal pages of the website, opened in a new tab. */
+  protected readonly legalLinks = {
+    terms: `${environment.siteUrl}/cgv`,
+    processing: `${environment.siteUrl}/sous-traitance`,
+    privacy: `${environment.siteUrl}/confidentialite`,
+  };
 
   protected submit(): void {
     if (this.form.invalid) {
@@ -73,11 +85,13 @@ export class Onboarding {
         name: name.trim(),
         siret: siret || undefined,
         timezone: timezone.trim(),
+        acceptTerms: true,
       })
       .subscribe({
         next: () => {
           this.success.set(true);
-          void this.router.navigateByUrl('/');
+          // Essentiel chosen on the website: straight to the payment.
+          void this.router.navigateByUrl(takeOffer() === 'essentiel' ? '/abonnement' : '/');
         },
         error: (response: HttpErrorResponse) => {
           this.submitting.set(false);

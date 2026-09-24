@@ -1,0 +1,20 @@
+# Weekly update proposals (pull requests) for dependencies, base images and actions.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directories: ["/backend", "/frontend", "/site"]
+    schedule:
+      interval: weekly
+    groups:
+      angular:
+        patterns: ["@angular/*", "@angular-devkit/*"]
+      nestjs:
+        patterns: ["@nestjs/*"]
+  - package-ecosystem: docker
+    directories: ["/backend", "/frontend", "/site", "/infrastructure/keycloak", "/infrastructure/backup"]
+    schedule:
+      interval: weekly
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly

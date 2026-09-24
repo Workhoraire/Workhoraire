@@ -1,4 +1,5 @@
 import { Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import {
   ApplicationUserResponse,
   KeycloakUser,
@@ -19,6 +20,7 @@ export class EmployeeInvitationsController {
    * answer only tells the invited person who invites them.
    */
   @Get(':token')
+  @Throttle({ default: { ttl: 60_000, limit: 20 } })
   getInvitation(@Param('token') token: string): Promise<EmployeeInvitationPreview> {
     return this.employeesService.getInvitationPreview(token);
   }

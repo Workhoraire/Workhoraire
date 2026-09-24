@@ -12,11 +12,15 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { NextFunction, Response } from 'express';
+import Stripe from 'stripe';
 import { execFileSync } from 'node:child_process';
 import { AddressInfo } from 'node:net';
 import { resolve } from 'node:path';
 import { AppModule } from '../src/app.module';
 import { KeycloakRequest } from '../src/auth/auth.types';
+import { BillingService } from '../src/billing/billing.service';
+import { STRIPE_CLIENT } from '../src/billing/stripe.provider';
+import { MailService } from '../src/notifications/mail.service';
 import { PrismaService } from '../src/prisma/prisma.service';
 
 function testIdentityMiddleware(request: KeycloakRequest, _response: Response, next: NextFunction): void {
@@ -77,6 +81,13 @@ describe('WorkHoraire API (e2e)', () => {
       throw new Error(`Refusing to use "${databaseName}": E2E_DATABASE_URL must end with _e2e`);
     }
     process.env['DATABASE_URL'] = databaseUrl;
+    // Every test request comes from the same IP: no rate limit here.
+    process.env['THROTTLE_LIMIT_PER_MINUTE'] = '100000';
+    // Payments on, with a fake Stripe account: the billing test replaces every
+    // Stripe call it makes, so nothing leaves the machine.
+    process.env['STRIPE_SECRET_KEY'] = 'sk_test_e2e';
+    process.env['STRIPE_PRICE_ID'] = 'price_e2e';
+    process.env['STRIPE_WEBHOOK_SECRET'] = 'whsec_e2e';
 
     const backendRoot = resolve(__dirname, '..');
     execFileSync(
@@ -85,7 +96,7 @@ describe('WorkHoraire API (e2e)', () => {
       { cwd: backendRoot, env: process.env, stdio: 'ignore' },
     );
 
-    app = await NestFactory.create(AppModule, { logger: false });
+    app = await NestFactory.create(AppModule, { logger: false, rawBody: true });
     app.use(testIdentityMiddleware);
     app.useGlobalPipes(
       new ValidationPipe({ forbidNonWhitelisted: true, transform: true, whitelist: true }),
@@ -102,7 +113,7 @@ describe('WorkHoraire API (e2e)', () => {
     }
 
     await prisma.$executeRawUnsafe(
-      'TRUNCATE "TimeEntryAuditLog", "TimeEntry", "AbsenceRequest", "ContractPeriod", "EmployeeInvitation", "User", "Company" CASCADE',
+      'TRUNCATE "ProcessedWebhook", "BillingUsage", "Subscription", "TimeEntryAuditLog", "TimeEntry", "AbsenceRequest", "ContractPeriod", "EmployeeInvitation", "User", "Company" CASCADE',
     );
 
     const companyA = await prisma.company.create({ data: { name: 'Boulangerie Martin' } });
@@ -652,6 +663,231 @@ describe('WorkHoraire API (e2e)', () => {
     expect(refused.body.message).toBe('The Keycloak user is already associated with a company');
     const stillOpen = await prisma.employeeInvitation.findUnique({ where: { id: crossCompany.body.id } });
     expect(stillOpen?.acceptedAt).toBeNull();
+  });
+
+  it('bills active employees, and makes an unpaid company read-only except for clocking', async () => {
+    const stripe = app.get<Stripe>(STRIPE_CLIENT);
+    const billing = app.get(BillingService);
+    const DAY = 24 * 60 * 60 * 1000;
+
+    // A garage with 5 active employees in June 2026 (4 clocked in, 1 on approved
+    // leave), and the same 4 clocking in in July.
+    const garage = await prisma.company.create({ data: { name: 'Garage Dupont' } });
+    const admin = await prisma.user.create({
+      data: {
+        keycloakSubject: 'sub-garage-admin',
+        email: 'garage-admin@example.com',
+        firstName: 'Gaston',
+        role: 'ADMIN',
+        companyId: garage.id,
+      },
+    });
+    const staff = [];
+    for (let index = 1; index <= 5; index += 1) {
+      staff.push(
+        await prisma.user.create({
+          data: {
+            keycloakSubject: `sub-garage-${index}`,
+            email: `garage-${index}@example.com`,
+            firstName: `Méca${index}`,
+            companyId: garage.id,
+          },
+        }),
+      );
+    }
+    for (const worker of staff.slice(0, 4)) {
+      for (const day of ['2026-06-10', '2026-07-06']) {
+        await prisma.timeEntry.create({
+          data: {
+            companyId: garage.id,
+            userId: worker.id,
+            createdById: worker.id,
+            startAt: new Date(`${day}T07:00:00Z`),
+            endAt: new Date(`${day}T15:00:00Z`),
+          },
+        });
+      }
+    }
+    await prisma.absenceRequest.create({
+      data: {
+        companyId: garage.id,
+        userId: staff[4].id,
+        type: 'PAID_LEAVE',
+        status: 'APPROVED',
+        startDate: new Date('2026-05-25'),
+        endDate: new Date('2026-06-05'),
+        reviewedById: admin.id,
+        reviewedAt: new Date('2026-05-20T10:00:00Z'),
+      },
+    });
+
+    // Only the administrator sees the subscription.
+    expect((await call('sub-garage-1', 'GET', '/billing')).status).toBe(403);
+    const page = await call('sub-garage-admin', 'GET', '/billing');
+    expect(page.status).toBe(200);
+    expect(page.body).toMatchObject({
+      plan: 'DECOUVERTE',
+      freeActiveEmployees: 3,
+      pricePerActiveEmployeeCents: 300,
+      paymentsEnabled: true,
+    });
+
+    // Early July: June is over the free plan, the 30-day grace period starts.
+    const user = await prisma.user.findUniqueOrThrow({ where: { id: admin.id }, include: { company: true } });
+    const july = await billing.getOverview(user, new Date('2026-07-02T10:00:00Z'));
+    expect(july).toMatchObject({
+      month: '2026-07',
+      activeEmployees: 4,
+      estimatedAmountCents: 1200,
+      lastMonth: { month: '2026-06', activeEmployees: 5, amountCents: 1500 },
+      paymentRequired: true,
+      graceUntil: '2026-08-01T10:00:00.000Z',
+      readOnly: false,
+    });
+    const august = await billing.getOverview(user, new Date('2026-08-02T10:00:00Z'));
+    expect(august).toMatchObject({ paymentRequired: true, readOnly: true });
+    // Back under the limit two months in a row: nothing to pay any more.
+    const october = await billing.getOverview(user, new Date('2026-10-02T10:00:00Z'));
+    expect(october).toMatchObject({ paymentRequired: false, graceUntil: null, readOnly: false });
+
+    // Past the grace period: changes are refused, reading and clocking are not.
+    await prisma.subscription.update({
+      where: { companyId: garage.id },
+      data: { paymentRequiredSince: new Date(Date.now() - 31 * DAY) },
+    });
+    const newcomer = { firstName: 'Nina', lastName: 'Test', email: 'nina@example.com' };
+    const refused = await call('sub-garage-admin', 'POST', '/employees/invitations', newcomer);
+    expect(refused.status).toBe(402);
+    expect(refused.body.message).toBe('The subscription is unpaid: the company is in read-only mode');
+    expect((await call('sub-garage-admin', 'GET', '/employees')).status).toBe(200);
+    expect((await call('sub-garage-1', 'POST', '/time-clock/clock-in', {})).status).toBe(201);
+    expect((await call('sub-garage-1', 'POST', '/time-clock/clock-out', {})).status).toBe(201);
+
+    // Paying stays possible: Stripe Checkout, with the company as customer.
+    const createCustomer = jest
+      .spyOn(stripe.customers, 'create')
+      .mockResolvedValue({ id: 'cus_e2e' } as never);
+    const createSession = jest
+      .spyOn(stripe.checkout.sessions, 'create')
+      .mockResolvedValue({ url: 'https://checkout.stripe.com/c/pay/cs_test_e2e' } as never);
+    const checkout = await call('sub-garage-admin', 'POST', '/billing/checkout');
+    expect(checkout.status).toBe(200);
+    expect(checkout.body.url).toBe('https://checkout.stripe.com/c/pay/cs_test_e2e');
+    expect(createCustomer).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'Garage Dupont', metadata: { companyId: garage.id } }),
+    );
+    expect(createSession).toHaveBeenCalledWith(
+      expect.objectContaining({
+        mode: 'subscription',
+        customer: 'cus_e2e',
+        line_items: [{ price: 'price_e2e' }],
+        success_url: expect.stringContaining('/abonnement?paiement=ok'),
+      }),
+    );
+
+    // Stripe confirms: signed, applied once, and the status is read back from Stripe.
+    const retrieve = jest
+      .spyOn(stripe.subscriptions, 'retrieve')
+      .mockResolvedValue({ id: 'sub_e2e', status: 'active' } as never);
+    async function sendWebhook(event: object, secret = 'whsec_e2e'): Promise<number> {
+      const payload = JSON.stringify(event);
+      const response = await fetch(`${baseUrl}/billing/webhook`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'stripe-signature': stripe.webhooks.generateTestHeaderString({ payload, secret }),
+        },
+        body: payload,
+      });
+      return response.status;
+    }
+    const completed = {
+      id: 'evt_e2e_checkout',
+      object: 'event',
+      type: 'checkout.session.completed',
+      data: {
+        object: {
+          id: 'cs_test_e2e',
+          object: 'checkout.session',
+          mode: 'subscription',
+          customer: 'cus_e2e',
+          subscription: 'sub_e2e',
+        },
+      },
+    };
+    expect(await sendWebhook(completed, 'whsec_forged')).toBe(400);
+    expect(await sendWebhook(completed)).toBe(200);
+    expect(await sendWebhook(completed)).toBe(200);
+    expect(retrieve).toHaveBeenCalledTimes(1);
+    expect(await prisma.processedWebhook.count({ where: { id: 'evt_e2e_checkout' } })).toBe(1);
+    expect(await prisma.subscription.findUnique({ where: { companyId: garage.id } })).toMatchObject({
+      plan: 'ESSENTIEL',
+      status: 'ACTIVE',
+      stripeSubscriptionId: 'sub_e2e',
+      paymentRequiredSince: null,
+    });
+    expect((await call('sub-garage-admin', 'POST', '/employees/invitations', newcomer)).status).toBe(201);
+
+    // A failed payment: 30 days to fix it, the administrators are warned once, not at each retry.
+    const send = jest.spyOn(app.get(MailService), 'send').mockResolvedValue(true);
+    retrieve.mockResolvedValue({ id: 'sub_e2e', status: 'past_due' } as never);
+    const invoiceEvent = (id: string, type: string) => ({
+      id,
+      object: 'event',
+      type,
+      data: { object: { id: `in_${id}`, object: 'invoice', customer: 'cus_e2e' } },
+    });
+    expect(await sendWebhook(invoiceEvent('evt_e2e_failed_1', 'invoice.payment_failed'))).toBe(200);
+    expect(await sendWebhook(invoiceEvent('evt_e2e_failed_2', 'invoice.payment_failed'))).toBe(200);
+    const pastDue = await prisma.subscription.findUniqueOrThrow({ where: { companyId: garage.id } });
+    expect(pastDue.status).toBe('PAST_DUE');
+    expect(pastDue.paymentRequiredSince).not.toBeNull();
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(send).toHaveBeenCalledWith(
+      'garage-admin@example.com',
+      expect.objectContaining({ subject: 'Échec du paiement de votre abonnement WorkHoraire' }),
+    );
+
+    // Stripe's next attempt succeeds: back to normal.
+    retrieve.mockResolvedValue({ id: 'sub_e2e', status: 'active' } as never);
+    expect(await sendWebhook(invoiceEvent('evt_e2e_paid', 'invoice.paid'))).toBe(200);
+    expect(await prisma.subscription.findUnique({ where: { companyId: garage.id } })).toMatchObject({
+      status: 'ACTIVE',
+      paymentRequiredSince: null,
+    });
+
+    // Early July, the daily job reports June to Stripe, once.
+    const meterEvent = jest
+      .spyOn(stripe.billing.meterEvents, 'create')
+      .mockResolvedValue({} as never);
+    await billing.runDaily(new Date('2026-07-02T06:00:00Z'));
+    await billing.runDaily(new Date('2026-07-03T06:00:00Z'));
+    expect(meterEvent).toHaveBeenCalledTimes(1);
+    const june = await prisma.billingUsage.findFirstOrThrow({ where: { companyId: garage.id } });
+    expect(june).toMatchObject({ activeEmployees: 5, amountCents: 1500 });
+    expect(june.reportedAt).not.toBeNull();
+    expect(meterEvent).toHaveBeenCalledWith({
+      event_name: 'active_employees',
+      identifier: `usage-${june.id}`,
+      payload: { stripe_customer_id: 'cus_e2e', value: '5' },
+    });
+
+    // Cancelled from the customer portal: back to the free plan.
+    retrieve.mockResolvedValue({ id: 'sub_e2e', status: 'canceled' } as never);
+    const deleted = {
+      id: 'evt_e2e_deleted',
+      object: 'event',
+      type: 'customer.subscription.deleted',
+      data: { object: { id: 'sub_e2e', object: 'subscription', customer: 'cus_e2e', status: 'canceled' } },
+    };
+    expect(await sendWebhook(deleted)).toBe(200);
+    expect(await prisma.subscription.findUnique({ where: { companyId: garage.id } })).toMatchObject({
+      plan: 'DECOUVERTE',
+      status: 'CANCELED',
+      stripeSubscriptionId: null,
+    });
+
+    jest.restoreAllMocks();
   });
 
   it('is protected by database constraints as well', async () => {

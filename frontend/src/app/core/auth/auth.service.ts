@@ -3,9 +3,13 @@ import Keycloak from 'keycloak-js';
 
 import { environment } from '../../../environments/environment';
 
-/** An invitation link first shows who invites the person, before any sign-in. */
-function isInvitationPage(): boolean {
-  return window.location.pathname.startsWith('/employee-invitations/');
+/**
+ * Pages open before any sign-in: an invitation link first shows who invites
+ * the person, and the website's sign-up link leads to the sign-up page.
+ */
+function isPublicPage(): boolean {
+  const path = window.location.pathname;
+  return path.startsWith('/employee-invitations/') || path === '/inscription';
 }
 
 @Injectable({ providedIn: 'root' })
@@ -25,7 +29,7 @@ export class AuthService {
 
   async init(): Promise<void> {
     const authenticated = await this.keycloak.init({
-      onLoad: isInvitationPage() ? 'check-sso' : 'login-required',
+      onLoad: isPublicPage() ? 'check-sso' : 'login-required',
       pkceMethod: 'S256',
       checkLoginIframe: false,
       redirectUri: this.redirectUri(),

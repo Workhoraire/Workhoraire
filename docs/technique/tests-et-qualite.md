@@ -7,11 +7,12 @@ Conformément à AGENTS.md, les tests portent sur les comportements métier crit
 | Niveau | Outil | Contenu | Commande |
 |---|---|---|---|
 | Unitaires backend | Jest | Moteur de calcul (fuseaux, heures sup, congés dans le seuil, congé travaillé, nuit du dimanche au lundi, contrat par semaine, heures complémentaires, alertes, jours fériés), services (isolation, rôles, conflits d'intérêts, audit, verrous, absences, contrats, invitations), DTO, CSV | `cd backend && npm test` |
-| Intégration (e2e) backend | Jest + vraie base PostgreSQL | API HTTP complète : validation, gardes, SQL, contraintes, concurrence (5 pointages simultanés : 1 seul accepté ; 3 demandes d'absence simultanées : 1 seule acceptée), annulation d'absence par le manager, historique de contrat, invitation remplacée, **chaîne complète d'ajout d'un salarié** (invitation, acceptation, premier pointage, visibilité chez l'admin, rôle, désactivation, réactivation, cas refusés), exports | `cd backend && npm run test:e2e` |
-| Unitaires frontend | Karma + Jasmine (Chrome headless) | Formatage des durées et des dates, conversions de fuseau, libellés d’alertes, traduction des erreurs de l'API, champs réellement modifiés dans une correction, page d'invitation (accueil sans compte, création du mot de passe, liens expirés) et ses messages, gardes de compte (sans entreprise, désactivé), navigation selon le rôle, composant racine | `cd frontend && npx ng test --watch=false --browsers=ChromeHeadless` |
+| Intégration (e2e) backend | Jest + vraie base PostgreSQL | API HTTP complète : validation, gardes, SQL, contraintes, concurrence (5 pointages simultanés : 1 seul accepté ; 3 demandes d'absence simultanées : 1 seule acceptée), annulation d'absence par le manager, historique de contrat, invitation remplacée, **chaîne complète d'ajout d'un salarié** (invitation, acceptation, premier pointage, visibilité chez l'admin, rôle, désactivation, réactivation, cas refusés), exports, **facturation** (salariés actifs du mois, délai de 30 jours, lecture seule sauf pointage, Checkout, webhooks signés, rejoués ou falsifiés, déclaration mensuelle unique, résiliation), avec un faux compte Stripe | `cd backend && npm run test:e2e` |
+| Unitaires frontend | Karma + Jasmine (Chrome headless) | Formatage des durées et des dates, conversions de fuseau, libellés d’alertes, traduction des erreurs de l'API, champs réellement modifiés dans une correction, page d'invitation (accueil sans compte, création du mot de passe, liens expirés) et ses messages, gardes de compte (sans entreprise, désactivé), navigation selon le rôle, page Abonnement (estimation, échéance, lecture seule, portail), offre choisie sur le site, création d'entreprise (acceptation des CGV obligatoire, liens vers les pages légales), composant racine | `cd frontend && npx ng test --watch=false --browsers=ChromeHeadless` |
+| Site vitrine | Karma + Jasmine | Simulateur de prix (grands effectifs, valeurs invalides, limite expliquée), page tarifs, pages légales (champs manquants signalés, pénalités de retard, sous-traitants, droits), balises SEO par page, en-tête | `cd site && npx ng test --watch=false --browsers=ChromeHeadless` |
 | Build | Angular CLI et Nest CLI | Compilation stricte (templates compris), budgets de taille | `npm run build` dans chaque dossier |
 
-**Résultats au 23/09/2026** : 89 tests unitaires backend, 16 tests e2e et 31 tests frontend, tous au vert. Builds OK : bundle initial de 458 kB, pour un budget de 500 kB.
+**Résultats au 24/09/2026** : 102 tests unitaires backend, 17 tests e2e, 41 tests frontend et 30 tests du site vitrine, tous au vert. Builds OK. Les six images Docker de production (api, migrate, app, site, keycloak, backup) se construisent, et la pile a été répétée en local en HTTPS (voir [exploitation.md](exploitation.md#9-répéter-la-production-en-local)).
 
 ## 2. Lancer les tests e2e
 
@@ -83,6 +84,6 @@ Une revue complète du code, puis une recette faite avec de vrais comptes Keyclo
 ## 6. Ce qui manque encore
 
 - Tests de composants Angular sur les pages (formulaires, états d'erreur) et tests de bout en bout dans le navigateur (Playwright), avec un Keycloak de test.
-- Intégration continue : lancer les tests unitaires, le build et les tests e2e sur chaque pull request.
+- Intégration continue : en place (`.github/workflows/ci.yml`). Il reste à la rendre obligatoire avant chaque fusion (protection de branche).
 - Lint et formatage partagés (ESLint, Prettier).
 - Test de charge de l'export mensuel pour 50 salariés.

@@ -4,6 +4,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 
+import { environment } from '../../../environments/environment';
 import { AuthService } from '../auth/auth.service';
 import { CurrentUser, isManagerRole } from '../auth/auth.models';
 import { ROLE_LABELS } from '../time/labels';
@@ -29,10 +30,11 @@ const NAV_ITEMS: NavItem[] = [
   { path: '/team', label: 'Heures de l’équipe', shortLabel: 'Équipe', icon: 'groups', access: 'manager', section: 'Équipe' },
   { path: '/exports', label: 'Exports paie', shortLabel: 'Exports', icon: 'download', access: 'manager', section: 'Équipe' },
   { path: '/employees', label: 'Salariés', shortLabel: 'Salariés', icon: 'badge', access: 'admin', section: 'Administration' },
+  { path: '/abonnement', label: 'Abonnement', shortLabel: 'Abonnement', icon: 'credit_card', access: 'admin', section: 'Administration' },
 ];
 
 /** Order of the bottom navigation on phones; the rest goes in the "Plus" menu. */
-const MOBILE_PRIORITY = ['/dashboard', '/clock', '/team', '/absences', '/my-time', '/exports', '/employees'];
+const MOBILE_PRIORITY = ['/dashboard', '/clock', '/team', '/absences', '/my-time', '/exports', '/employees', '/abonnement'];
 const MOBILE_SLOTS = 4;
 
 @Component({
@@ -86,6 +88,11 @@ export class Shell {
   });
 
   protected readonly roleLabels = ROLE_LABELS;
+  /** Legal pages of the website, for every user, employees included. */
+  protected readonly legalLinks = {
+    privacy: `${environment.siteUrl}/confidentialite`,
+    terms: `${environment.siteUrl}/cgv`,
+  };
   protected readonly fullName = fullName;
   protected readonly initials = initials;
 

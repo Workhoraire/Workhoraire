@@ -1,0 +1,72 @@
+# Edge proxy of the production stack (docker-compose.prod.yml): HTTPS for
+# every domain (Let's Encrypt certificates, or a local authority when
+# CADDY_EXTRA_GLOBAL=local_certs for a test on *.localhost), security headers
+# and routing to the containers.
+{
+	email {$ACME_EMAIL}
+	{$CADDY_EXTRA_GLOBAL}
+}
+
+(security_headers) {
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "geolocation=(), camera=(), microphone=(), payment=()"
+		-Server
+	}
+}
+
+# Access logs, for security only: kept 6 months, as the privacy policy says.
+# Invitation tokens are masked in the logged addresses; Caddy already leaves
+# out cookies and Authorization headers.
+(access_log) {
+	log {
+		output file /data/logs/access.log {
+			roll_size 50MiB
+			roll_keep_for 4320h
+		}
+		format filter {
+			wrap json
+			fields {
+				request>uri regexp "/employee-invitations/[^/?]+" "/employee-invitations/REDACTED"
+			}
+		}
+	}
+}
+
+{$SITE_HOST} {
+	import security_headers
+	import access_log
+	header X-Frame-Options "DENY"
+	# Pre-rendered Angular pages carry small inline scripts (hydration, event
+	# replay); nothing is loaded from elsewhere, and there is no form or cookie.
+	header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
+	reverse_proxy site:80
+}
+
+{$APP_HOST} {
+	import security_headers
+	import access_log
+	header {
+		X-Frame-Options "DENY"
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' https://{$API_HOST} https://{$AUTH_HOST}; frame-src https://{$AUTH_HOST}; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://{$AUTH_HOST}; object-src 'none'"
+	}
+	reverse_proxy app:80
+}
+
+{$API_HOST} {
+	import security_headers
+	import access_log
+	reverse_proxy api:3000
+}
+
+{$AUTH_HOST} {
+	import security_headers
+	import access_log
+	# Never exposed publicly: the administration console and the master realm.
+	# Administer through an SSH tunnel to 127.0.0.1:8180 on the server.
+	@admin path /admin /admin/* /realms/master /realms/master/*
+	respond @admin 404
+	reverse_proxy keycloak:8080
+}

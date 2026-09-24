@@ -5,4 +5,6 @@ export interface CreateCompanyRequest {
   name: string;
   siret?: string;
   timezone: string;
+  /** Terms of sale and data processing agreement, accepted with the check box. */
+  acceptTerms: true;
 }

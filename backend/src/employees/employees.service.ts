@@ -21,6 +21,9 @@ import {
   startOfWeek,
   toDateKey,
 } from '../common/dates/local-date';
+import { formatMailDate, mailName } from '../notifications/mail-format';
+import { invitationMail } from '../notifications/mail-templates';
+import { MailService } from '../notifications/mail.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CONTRACT_HISTORY_START, initialContractPeriod } from './contract-periods';
 import { CreateEmployeeInvitationDto } from './dto/create-employee-invitation.dto';
@@ -55,10 +58,15 @@ export class EmployeesService {
    */
   private readonly requireVerifiedEmail: boolean;
 
+  /** Origin of the application, for the links sent by e-mail. */
+  private readonly appUrl: string;
+
   constructor(
     private readonly prisma: PrismaService,
     configService: ConfigService,
+    private readonly mail: MailService,
   ) {
+    this.appUrl = configService.get<string>('FRONTEND_URL', 'http://localhost:4200');
     this.requireVerifiedEmail =
       configService.get<string>('KEYCLOAK_REQUIRE_VERIFIED_EMAIL', 'true') !== 'false';
 
@@ -288,6 +296,19 @@ export class EmployeesService {
         return { invitation: created, replacesPrevious: replaced.count > 0 };
       });
 
+      // The link also goes by e-mail: the invited person does not wait for a
+      // copy-paste, and receiving it proves the address is theirs.
+      const emailSent = await this.mail.send(
+        invitation.email,
+        invitationMail({
+          firstName: invitation.firstName,
+          companyName: currentUser.company.name,
+          inviterName: mailName(currentUser),
+          link: `${this.appUrl}/employee-invitations/${token}`,
+          expiresOn: formatMailDate(invitation.expiresAt, currentUser.company.timezone),
+        }),
+      );
+
       return {
         id: invitation.id,
         email: invitation.email,
@@ -298,6 +319,7 @@ export class EmployeesService {
         token,
         expiresAt: invitation.expiresAt,
         replacesPrevious,
+        emailSent,
       };
     } catch (error: unknown) {
       if (error instanceof ConflictException) {

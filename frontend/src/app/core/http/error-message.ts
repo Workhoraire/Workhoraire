@@ -51,6 +51,12 @@ const KNOWN_MESSAGES: Record<string, string> = {
   'contractEffectiveFrom must be a valid date (YYYY-MM-DD)':
     'La date d’application du contrat est invalide.',
   'The application user is inactive': 'Votre compte est désactivé. Contactez votre administrateur.',
+  'The subscription is unpaid: the company is in read-only mode':
+    'Abonnement impayé : WorkHoraire est en lecture seule. Le pointage reste possible ; l’administrateur peut régler l’abonnement depuis la page « Abonnement ».',
+  'Online payment is not configured': 'Le paiement en ligne n’est pas encore ouvert.',
+  'The company already has a subscription: use the customer portal':
+    'Votre entreprise a déjà un abonnement : gérez-le avec « Factures et moyen de paiement ».',
+  'The company has no Stripe customer yet': 'Aucun moyen de paiement n’a encore été ajouté.',
 };
 
 export function apiErrorMessage(response: HttpErrorResponse, fallback?: string): string {
@@ -70,6 +76,8 @@ export function apiErrorMessage(response: HttpErrorResponse, fallback?: string):
       return 'Votre session a expiré. Reconnectez-vous pour continuer.';
     case 403:
       return 'Vous n’avez pas les droits nécessaires pour cette action.';
+    case 402:
+      return 'Abonnement impayé : WorkHoraire est en lecture seule. Le pointage reste possible.';
     case 404:
       return 'Élément introuvable. Actualisez la page.';
     case 409:

@@ -1,6 +1,9 @@
 # API REST
 
-Toutes les routes, sauf `/health`, exigent un jeton Keycloak (`Authorization: Bearer …`), puis un utilisateur applicatif actif. Le `companyId` n'est **jamais** fourni par le client.
+Toutes les routes, sauf `/health`, l'aperçu d'invitation et le webhook Stripe, exigent un jeton Keycloak (`Authorization: Bearer …`), puis un utilisateur applicatif actif. Le `companyId` n'est **jamais** fourni par le client.
+
+- **Lecture seule** : quand l'abonnement d'une entreprise est impayé depuis plus de 30 jours (et seulement si le paiement en ligne est configuré), toute route `POST`, `PUT`, `PATCH` ou `DELETE` répond **402**, sauf le pointage (`/time-clock/*`) et le paiement (`/billing/checkout`, `/billing/portal`). Les lectures et les exports restent ouverts.
+- **Limite de requêtes** : 300 par minute et par adresse IP (`THROTTLE_LIMIT_PER_MINUTE`), 20 par minute pour l'aperçu d'invitation ; au-delà, **429**.
 
 - **Dates** : les jours sont au format `YYYY-MM-DD` ; les instants sont en ISO 8601 **avec fuseau** (`2026-09-23T08:00:00+02:00` ou `…Z`).
 - **Erreurs** : format NestJS (`statusCode`, `message`). Les messages métier sont en anglais et traduits par le frontend (`core/http/error-message.ts`).
@@ -12,7 +15,7 @@ Colonne « Rôles » : **Tous** = ADMIN, MANAGER et EMPLOYEE ; **Équipe** = ADM
 | Méthode et route | Rôles | Description |
 |---|---|---|
 | `GET /me` | Tous | Profil : rôle, contrat, entreprise (dont le fuseau) |
-| `POST /onboarding/company` | Keycloak seul | Crée l'entreprise et son ADMIN (`name`, `siret?`, `timezone?`, `firstName?`, `lastName?` : le nom de l'administrateur est saisi dans le formulaire, Keycloak ne le demande plus) |
+| `POST /onboarding/company` | Keycloak seul | Crée l'entreprise et son ADMIN (`name`, `siret?`, `timezone?`, `firstName?`, `lastName?` : le nom de l'administrateur est saisi dans le formulaire, Keycloak ne le demande plus). `acceptTerms: true` est obligatoire : l'API enregistre la date et la version des CGV et du contrat de sous-traitance acceptés |
 | `GET /employee-invitations/:token` | **Public** (le lien suffit) | Aperçu de l'invitation pour la page d'accueil : prénom, nom, e-mail, rôle, entreprise, expiration. 404 si le lien est inconnu, 409 s'il a déjà servi, 410 s'il a expiré ou a été remplacé |
 | `POST /employee-invitations/:token/accept` | Keycloak seul | Accepte une invitation. Exige l'e-mail invité (403 sinon), vérifié si `KEYCLOAK_REQUIRE_VERIFIED_EMAIL=true` ; 410 si le lien a expiré ou a été remplacé |
 
@@ -80,3 +83,12 @@ Si deux demandes qui se chevauchent sont envoyées en même temps, une seule est
 |---|---|
 | `GET /dashboard/team` | Présents, sorties non pointées, absents, heures du jour et de la semaine, demandes en attente, alertes |
 | `GET /exports/timesheets?from&to&granularity=week\|day` | CSV (`text/csv; charset=utf-8`, en pièce jointe), 62 jours au plus |
+
+## Abonnement
+
+| Méthode et route | Rôles | Description |
+|---|---|---|
+| `GET /billing` | ADMIN | Offre, statut, salariés actifs du mois et du mois précédent, montants estimés, échéance du délai de paiement, lecture seule, paiement en ligne ouvert ou non |
+| `POST /billing/checkout` | ADMIN | Renvoie l'adresse d'une page Stripe Checkout pour souscrire l'offre Essentiel. 409 si un abonnement est déjà en cours, 503 si le paiement en ligne n'est pas configuré |
+| `POST /billing/portal` | ADMIN | Renvoie l'adresse de l'espace client Stripe : factures, moyen de paiement, résiliation. 409 s'il n'y a pas encore de client Stripe |
+| `POST /billing/webhook` | **Stripe** (signature `Stripe-Signature`) | Événements d'abonnement et de facture. 400 si la signature est absente ou fausse ; un événement déjà traité est ignoré |

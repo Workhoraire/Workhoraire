@@ -12,6 +12,7 @@ import {
 import { initialContractPeriod } from '../employees/contract-periods';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCompanyDto } from './dto/create-company.dto';
+import { CURRENT_TERMS_VERSION } from './terms';
 
 const DEFAULT_TIMEZONE = 'Europe/Paris';
 
@@ -47,6 +48,8 @@ export class OnboardingService {
             name,
             siret,
             timezone,
+            termsAcceptedAt: new Date(),
+            termsVersion: CURRENT_TERMS_VERSION,
           },
         });
 
