@@ -1,46 +1,36 @@
 /**
- * End-to-end tests of the REST API against a real PostgreSQL database.
+ * End-to-end tests of the REST API against a real PostgreSQL database, with
+ * the production setup of main.ts (configureApp).
  *
- * Instead of the keycloak-connect middleware (which needs a running Keycloak),
- * a test middleware builds the verified token content from the
- * `x-test-subject` header. Everything else (Keycloak guard, validation,
- * application guards, services, Prisma, SQL constraints) is production code.
+ * Only the signature check of Keycloak tokens is replaced, as it needs a
+ * running Keycloak: a bearer token "test:<subject>" stands for a verified
+ * token of that subject. Any other token goes through the real check.
+ * Everything else (guards, validation, services, Prisma, SQL constraints) is
+ * production code.
  *
  * The database is wiped: E2E_DATABASE_URL must point to a database whose name
  * ends with `_e2e`. See docs/technique/tests-et-qualite.md.
  */
-import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import { NextFunction, Response } from 'express';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import Stripe from 'stripe';
 import { execFileSync } from 'node:child_process';
 import { AddressInfo } from 'node:net';
 import { resolve } from 'node:path';
 import { AppModule } from '../src/app.module';
-import { KeycloakRequest } from '../src/auth/auth.types';
+import { configureApp } from '../src/app.setup';
+import { KeycloakService } from '../src/auth/keycloak.service';
 import { BillingService } from '../src/billing/billing.service';
 import { STRIPE_CLIENT } from '../src/billing/stripe.provider';
+import { EmployeesService } from '../src/employees/employees.service';
 import { MailService } from '../src/notifications/mail.service';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { TimeEntriesService } from '../src/time-entries/time-entries.service';
 
-function testIdentityMiddleware(request: KeycloakRequest, _response: Response, next: NextFunction): void {
-  const subject = request.headers['x-test-subject'];
-
-  if (typeof subject === 'string') {
-    request.kauth = {
-      grant: {
-        access_token: {
-          content: { sub: subject, email: `${subject}@example.com`, email_verified: true },
-        },
-      },
-    };
-  }
-
-  next();
-}
+const TEST_TOKEN = 'test:';
 
 describe('WorkHoraire API (e2e)', () => {
-  let app: INestApplication;
+  let app: NestExpressApplication;
   let prisma: PrismaService;
   let baseUrl: string;
   const ids: Record<string, string> = {};
@@ -55,7 +45,7 @@ describe('WorkHoraire API (e2e)', () => {
       method,
       headers: {
         'content-type': 'application/json',
-        'x-test-subject': subject,
+        authorization: `Bearer ${TEST_TOKEN}${subject}`,
       },
       body: body === undefined ? undefined : JSON.stringify(body),
     });
@@ -96,11 +86,17 @@ describe('WorkHoraire API (e2e)', () => {
       { cwd: backendRoot, env: process.env, stdio: 'ignore' },
     );
 
-    app = await NestFactory.create(AppModule, { logger: false, rawBody: true });
-    app.use(testIdentityMiddleware);
-    app.useGlobalPipes(
-      new ValidationPipe({ forbidNonWhitelisted: true, transform: true, whitelist: true }),
-    );
+    app = await NestFactory.create<NestExpressApplication>(AppModule, { logger: false, rawBody: true });
+    configureApp(app);
+    const keycloak = app.get(KeycloakService);
+    const verifyAccessToken = keycloak.verifyAccessToken.bind(keycloak);
+    keycloak.verifyAccessToken = async (token: string) => {
+      if (!token.startsWith(TEST_TOKEN)) {
+        return verifyAccessToken(token);
+      }
+      const subject = token.slice(TEST_TOKEN.length);
+      return { sub: subject, email: `${subject}@example.com`, email_verified: true };
+    };
     await app.listen(0, '127.0.0.1');
     baseUrl = `http://127.0.0.1:${(app.getHttpServer().address() as AddressInfo).port}`;
 
@@ -113,13 +109,20 @@ describe('WorkHoraire API (e2e)', () => {
     }
 
     await prisma.$executeRawUnsafe(
-      'TRUNCATE "ProcessedWebhook", "BillingUsage", "Subscription", "TimeEntryAuditLog", "TimeEntry", "AbsenceRequest", "ContractPeriod", "EmployeeInvitation", "User", "Company" CASCADE',
+      'TRUNCATE "ProcessedWebhook", "TermsAcceptanceArchive", "BillingUsage", "Subscription", "TimeEntryAuditLog", "TimeEntry", "AbsenceRequest", "ContractPeriod", "EmployeeInvitation", "User", "Company" CASCADE',
     );
 
-    const companyA = await prisma.company.create({ data: { name: 'Boulangerie Martin' } });
+    const companyA = await prisma.company.create({
+      data: {
+        name: 'Boulangerie Martin',
+        termsAcceptedAt: new Date('2026-01-05T08:00:00.000Z'),
+        termsVersion: '2026-01-01',
+      },
+    });
     const companyB = await prisma.company.create({ data: { name: 'Autre entreprise' } });
     ids.companyA = companyA.id;
 
+    // Hired on Monday 5 January 2026, one minute apart: the admin created the company.
     const users = [
       { key: 'admin', companyId: companyA.id, role: 'ADMIN' as const, firstName: 'Alice' },
       { key: 'manager', companyId: companyA.id, role: 'MANAGER' as const, firstName: 'Marc' },
@@ -127,16 +130,18 @@ describe('WorkHoraire API (e2e)', () => {
       { key: 'partTime', companyId: companyA.id, role: 'EMPLOYEE' as const, firstName: 'Paul' },
       { key: 'outsider', companyId: companyB.id, role: 'EMPLOYEE' as const, firstName: 'Olga' },
     ];
-    for (const user of users) {
+    for (const [index, user] of users.entries()) {
       const created = await prisma.user.create({
         data: {
           keycloakSubject: `sub-${user.key}`,
-          email: `${user.key}@example.com`,
+          // Same address as the test identity: WorkHoraire keeps the verified one.
+          email: `sub-${user.key}@example.com`,
           firstName: user.firstName,
           lastName: 'Test',
           role: user.role,
           companyId: user.companyId,
           weeklyContractMinutes: user.key === 'partTime' ? 24 * 60 : 35 * 60,
+          createdAt: new Date(Date.UTC(2026, 0, 5, 8, index)),
         },
       });
       ids[user.key] = created.id;
@@ -156,6 +161,32 @@ describe('WorkHoraire API (e2e)', () => {
       weeklyContractMinutes: 2100,
       company: { name: 'Boulangerie Martin', timezone: 'Europe/Paris' },
     });
+  });
+
+  it('refuses bad tokens, exposes no Keycloak adapter route and keeps the public routes open', async () => {
+    const withToken = (authorization?: string) =>
+      fetch(`${baseUrl}/me`, { headers: authorization ? { authorization } : {} });
+    expect((await withToken()).status).toBe(401);
+    expect((await withToken('Bearer not-a-jwt')).status).toBe(401);
+    expect((await withToken('Basic c3ViLWFkbWluOnNlY3JldA==')).status).toBe(401);
+
+    // keycloak-connect's admin, logout and login callbacks are not mounted.
+    for (const path of ['/k_logout', '/k_push_not_before']) {
+      const response = await fetch(`${baseUrl}${path}`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/octet-stream' },
+        body: 'x'.repeat(1024),
+      });
+      expect(response.status).toBe(404);
+    }
+    expect((await fetch(`${baseUrl}/logout`)).status).toBe(404);
+
+    // Public: the probe (which checks the database), with or without a stray OIDC callback.
+    const health = await fetch(`${baseUrl}/health?auth_callback=1&code=x`);
+    expect(health.status).toBe(200);
+    expect(await health.json()).toEqual({ status: 'ok' });
+    // Public too: the Stripe webhook answers by its own signature check.
+    expect((await fetch(`${baseUrl}/billing/webhook`, { method: 'POST' })).status).toBe(400);
   });
 
   it('clocks in and out, with a single open entry even under concurrent requests', async () => {
@@ -331,6 +362,17 @@ describe('WorkHoraire API (e2e)', () => {
 
     const badPeriod = await call('sub-employee', 'GET', '/timesheets/me?from=2026-09-30&to=2026-09-01');
     expect(badPeriod.status).toBe(400);
+
+    // Valid dates whose whole weeks leave the supported years: 400, never a 500.
+    const firstDays = await call('sub-employee', 'GET', '/timesheets/me?from=2000-01-01&to=2000-01-02');
+    expect(firstDays.status).toBe(400);
+    const lastDays = await call('sub-employee', 'GET', '/timesheets/me?from=2100-12-28&to=2100-12-31');
+    expect(lastDays.status).toBe(400);
+    const oldContract = await call('sub-admin', 'PATCH', `/employees/${ids.partTime}`, {
+      weeklyContractMinutes: 1200,
+      contractEffectiveFrom: '2000-01-01',
+    });
+    expect(oldContract.status).toBe(400);
   });
 
   it('computes the timesheet with worked time, breaks and corrected entries', async () => {
@@ -456,10 +498,10 @@ describe('WorkHoraire API (e2e)', () => {
       'workhoraire-semaines-2026-09-01_2026-09-30.csv',
     );
     expect(response.text.startsWith('﻿Matricule;Nom;Prénom;E-mail;Semaine du')).toBe(true);
-    expect(response.text).toContain('E-042;Test;Emma;employee@example.com;2026-09-21;2026-09-27;35,00;8,50;0,00');
+    expect(response.text).toContain('E-042;Test;Emma;sub-employee@example.com;2026-09-21;2026-09-27;35,00;8,50;0,00');
 
     const daily = await call('sub-admin', 'GET', '/exports/timesheets?from=2026-09-21&to=2026-09-21&granularity=day');
-    expect(daily.text).toContain('E-042;Test;Emma;employee@example.com;2026-09-21;lundi;;08:00;17:30;1,00;8,50');
+    expect(daily.text).toContain('E-042;Test;Emma;sub-employee@example.com;2026-09-21;lundi;;08:00;17:30;1,00;8,50');
 
     const byEmployee = await call('sub-employee', 'GET', '/exports/timesheets?from=2026-09-01&to=2026-09-30');
     expect(byEmployee.status).toBe(403);
@@ -471,12 +513,39 @@ describe('WorkHoraire API (e2e)', () => {
     });
     expect(withoutContract.status).toBe(400);
 
+    // Paul joined in the week of Monday 5 January 2026: no contract before it.
+    const beforeJoining = await call('sub-admin', 'PATCH', `/employees/${ids.partTime}`, {
+      weeklyContractMinutes: 28 * 60,
+      contractEffectiveFrom: '2026-01-04',
+    });
+    expect(beforeJoining.status).toBe(400);
+    expect(beforeJoining.body.message).toBe('The contract cannot change before the week the employee joined');
+
     // 24 h, then 28 h from Thursday 1 October 2026, i.e. from Monday 28 September.
+    const mail = app.get(MailService);
+    jest.spyOn(mail, 'enabled', 'get').mockReturnValue(true);
+    const send = jest.spyOn(mail, 'send').mockResolvedValue(true);
     const changed = await call('sub-admin', 'PATCH', `/employees/${ids.partTime}`, {
       weeklyContractMinutes: 28 * 60,
       contractEffectiveFrom: '2026-10-01',
     });
     expect(changed.status).toBe(200);
+    // Paul is told, with the week from which it applies.
+    expect(send).toHaveBeenCalledWith(
+      expect.stringMatching(/^sub-parttime@example\.com$/i),
+      expect.objectContaining({
+        subject: 'Votre durée de travail hebdomadaire a été modifiée',
+        text: expect.stringContaining('À partir de la semaine du 28 septembre 2026'),
+      }),
+    );
+    jest.restoreAllMocks();
+
+    // Once Monday 28 September has come, the contract in force is 28 h everywhere.
+    await app.get(EmployeesService).refreshCurrentContracts(new Date('2026-09-28T10:00:00.000Z'));
+    const employees = await call('sub-admin', 'GET', '/employees');
+    expect(
+      employees.body.find((employee: { id: string }) => employee.id === ids.partTime),
+    ).toMatchObject({ weeklyContractMinutes: 28 * 60 });
 
     const timesheet = await call(
       'sub-admin',
@@ -665,6 +734,105 @@ describe('WorkHoraire API (e2e)', () => {
     expect(stillOpen?.acceptedAt).toBeNull();
   });
 
+  it('reminds by e-mail, once, an employee who forgot to clock out', async () => {
+    const mail = app.get(MailService);
+    jest.spyOn(mail, 'enabled', 'get').mockReturnValue(true);
+    const send = jest.spyOn(mail, 'send').mockResolvedValue(true);
+    const forgetful = await prisma.user.create({
+      data: {
+        keycloakSubject: 'sub-forgetful',
+        email: 'sub-forgetful@example.com',
+        firstName: 'Félix',
+        companyId: ids.companyA,
+      },
+    });
+    const now = new Date();
+    await prisma.timeEntry.create({
+      data: {
+        companyId: ids.companyA,
+        userId: forgetful.id,
+        createdById: forgetful.id,
+        openUserId: forgetful.id,
+        startAt: new Date(now.getTime() - 13 * 60 * 60 * 1000),
+      },
+    });
+
+    expect(await app.get(TimeEntriesService).remindForgottenClockOuts(now)).toBeGreaterThanOrEqual(1);
+    expect(send).toHaveBeenCalledWith(
+      'sub-forgetful@example.com',
+      expect.objectContaining({ subject: expect.stringContaining('Sortie non pointée le') }),
+    );
+    // Already reminded: nothing is sent again.
+    send.mockClear();
+    expect(await app.get(TimeEntriesService).remindForgottenClockOuts(now)).toBe(0);
+    expect(send).not.toHaveBeenCalled();
+
+    jest.restoreAllMocks();
+  });
+
+  it('lets each person download their own data, and only theirs', async () => {
+    const response = await call('sub-employee', 'GET', '/me/data-export');
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-disposition')).toMatch(
+      /^attachment; filename="workhoraire-mes-donnees-\d{4}-\d{2}-\d{2}\.json"$/,
+    );
+    expect(response.body.profile).toMatchObject({
+      email: 'sub-employee@example.com',
+      company: { name: 'Boulangerie Martin' },
+    });
+    const ownEntries = await prisma.timeEntry.count({ where: { userId: ids.employee } });
+    expect(ownEntries).toBeGreaterThan(0);
+    expect(response.body.timeEntries).toHaveLength(ownEntries);
+    const ownAbsences = await prisma.absenceRequest.count({ where: { userId: ids.employee } });
+    expect(response.body.absences).toHaveLength(ownAbsences);
+    expect(response.text).not.toContain('sub-outsider@example.com');
+    expect(response.text).not.toContain('sub-partTime@example.com');
+    expect(response.body).toMatchObject({
+      invitation: null,
+      termsAcceptance: null,
+      invitationsSent: [],
+      correctionsMade: [],
+      absenceDecisions: [],
+      entriesCreatedForOthers: [],
+    });
+
+    expect((await call('unknown-subject', 'GET', '/me/data-export')).status).toBe(403);
+
+    // The invitation that created the account, without its token.
+    const invited = await call('sub-nina', 'GET', '/me/data-export');
+    expect(invited.body.invitation).toMatchObject({
+      email: 'sub-nina@example.com',
+      role: 'EMPLOYEE',
+      invitedBy: 'Alice Test',
+      acceptedAt: expect.any(String),
+    });
+    expect(invited.text).not.toContain('tokenHash');
+
+    // What the administrator did about others: who, when, what; and the terms they accepted.
+    const admin = await call('sub-admin', 'GET', '/me/data-export');
+    expect(admin.body.termsAcceptance).toEqual({ acceptedAt: '2026-01-05T08:00:00.000Z', version: '2026-01-01' });
+    expect(admin.body.invitationsSent).toEqual(
+      expect.arrayContaining([
+        { name: 'Nina Test', role: 'EMPLOYEE', createdAt: expect.any(String) },
+        { name: 'Léo Chaîne', role: 'EMPLOYEE', createdAt: expect.any(String) },
+      ]),
+    );
+    expect(admin.body.correctionsMade).toEqual(
+      expect.arrayContaining([{ createdAt: expect.any(String), action: 'DELETED', employee: 'Emma Test' }]),
+    );
+    expect(admin.body.entriesCreatedForOthers).toEqual([
+      { createdAt: expect.any(String), action: 'CREATED', employee: 'Emma Test' },
+    ]);
+
+    // The manager's decision on Emma's leave (approved, then revoked).
+    const manager = await call('sub-manager', 'GET', '/me/data-export');
+    expect(manager.body.absenceDecisions).toEqual([
+      { reviewedAt: expect.any(String), decision: 'CANCELLED', employee: 'Emma Test' },
+    ]);
+    expect(manager.body.termsAcceptance).toBeNull();
+  });
+
   it('bills active employees, and makes an unpaid company read-only except for clocking', async () => {
     const stripe = app.get<Stripe>(STRIPE_CLIENT);
     const billing = app.get(BillingService);
@@ -676,7 +844,7 @@ describe('WorkHoraire API (e2e)', () => {
     const admin = await prisma.user.create({
       data: {
         keycloakSubject: 'sub-garage-admin',
-        email: 'garage-admin@example.com',
+        email: 'sub-garage-admin@example.com',
         firstName: 'Gaston',
         role: 'ADMIN',
         companyId: garage.id,
@@ -688,7 +856,7 @@ describe('WorkHoraire API (e2e)', () => {
         await prisma.user.create({
           data: {
             keycloakSubject: `sub-garage-${index}`,
-            email: `garage-${index}@example.com`,
+            email: `sub-garage-${index}@example.com`,
             firstName: `Méca${index}`,
             companyId: garage.id,
           },
@@ -762,6 +930,13 @@ describe('WorkHoraire API (e2e)', () => {
     expect((await call('sub-garage-admin', 'GET', '/employees')).status).toBe(200);
     expect((await call('sub-garage-1', 'POST', '/time-clock/clock-in', {})).status).toBe(201);
     expect((await call('sub-garage-1', 'POST', '/time-clock/clock-out', {})).status).toBe(201);
+    // An access can always be revoked, paid or not: the employee leaves, then comes back.
+    const departure = await call('sub-garage-admin', 'PATCH', `/employees/${staff[3].id}`, { isActive: false });
+    expect(departure.status).toBe(200);
+    expect((await call('sub-garage-4', 'GET', '/me')).status).toBe(403);
+    expect(
+      (await call('sub-garage-admin', 'PATCH', `/employees/${staff[3].id}`, { isActive: true })).status,
+    ).toBe(200);
 
     // Paying stays possible: Stripe Checkout, with the company as customer.
     const createCustomer = jest
@@ -770,12 +945,18 @@ describe('WorkHoraire API (e2e)', () => {
     const createSession = jest
       .spyOn(stripe.checkout.sessions, 'create')
       .mockResolvedValue({ url: 'https://checkout.stripe.com/c/pay/cs_test_e2e' } as never);
+    // A payment page left open in another tab is closed first.
+    jest
+      .spyOn(stripe.checkout.sessions, 'list')
+      .mockResolvedValue({ data: [{ id: 'cs_test_forgotten_tab' }] } as never);
+    const expireSession = jest.spyOn(stripe.checkout.sessions, 'expire').mockResolvedValue({} as never);
     const checkout = await call('sub-garage-admin', 'POST', '/billing/checkout');
     expect(checkout.status).toBe(200);
     expect(checkout.body.url).toBe('https://checkout.stripe.com/c/pay/cs_test_e2e');
     expect(createCustomer).toHaveBeenCalledWith(
       expect.objectContaining({ name: 'Garage Dupont', metadata: { companyId: garage.id } }),
     );
+    expect(expireSession).toHaveBeenCalledWith('cs_test_forgotten_tab');
     expect(createSession).toHaveBeenCalledWith(
       expect.objectContaining({
         mode: 'subscription',
@@ -820,11 +1001,14 @@ describe('WorkHoraire API (e2e)', () => {
     expect(await sendWebhook(completed)).toBe(200);
     expect(retrieve).toHaveBeenCalledTimes(1);
     expect(await prisma.processedWebhook.count({ where: { id: 'evt_e2e_checkout' } })).toBe(1);
-    expect(await prisma.subscription.findUnique({ where: { companyId: garage.id } })).toMatchObject({
+    const subscribed = await prisma.subscription.findUniqueOrThrow({ where: { companyId: garage.id } });
+    expect(subscribed).toMatchObject({
       plan: 'ESSENTIEL',
       status: 'ACTIVE',
       stripeSubscriptionId: 'sub_e2e',
       paymentRequiredSince: null,
+      // The paid subscription starts now: the months before stay on the free offer.
+      subscribedAt: expect.any(Date),
     });
     expect((await call('sub-garage-admin', 'POST', '/employees/invitations', newcomer)).status).toBe(201);
 
@@ -844,7 +1028,7 @@ describe('WorkHoraire API (e2e)', () => {
     expect(pastDue.paymentRequiredSince).not.toBeNull();
     expect(send).toHaveBeenCalledTimes(1);
     expect(send).toHaveBeenCalledWith(
-      'garage-admin@example.com',
+      'sub-garage-admin@example.com',
       expect.objectContaining({ subject: 'Échec du paiement de votre abonnement WorkHoraire' }),
     );
 
@@ -856,14 +1040,28 @@ describe('WorkHoraire API (e2e)', () => {
       paymentRequiredSince: null,
     });
 
-    // Early July, the daily job reports June to Stripe, once.
+    // A failed payment, then a paid one, keep the start of the subscription.
+    expect(await prisma.subscription.findUniqueOrThrow({ where: { companyId: garage.id } })).toMatchObject({
+      subscribedAt: subscribed.subscribedAt,
+    });
+
+    // Early July, June is not billed: it came before the subscription (made today).
     const meterEvent = jest
       .spyOn(stripe.billing.meterEvents, 'create')
       .mockResolvedValue({} as never);
     await billing.runDaily(new Date('2026-07-02T06:00:00Z'));
+    expect(meterEvent).not.toHaveBeenCalled();
+    // Subscribed in June instead: June is reported to Stripe, once (May and April are free).
+    await prisma.subscription.update({
+      where: { companyId: garage.id },
+      data: { subscribedAt: new Date('2026-06-20T10:00:00Z') },
+    });
+    await billing.runDaily(new Date('2026-07-02T06:00:00Z'));
     await billing.runDaily(new Date('2026-07-03T06:00:00Z'));
     expect(meterEvent).toHaveBeenCalledTimes(1);
-    const june = await prisma.billingUsage.findFirstOrThrow({ where: { companyId: garage.id } });
+    const june = await prisma.billingUsage.findUniqueOrThrow({
+      where: { companyId_month: { companyId: garage.id, month: new Date('2026-06-01') } },
+    });
     expect(june).toMatchObject({ activeEmployees: 5, amountCents: 1500 });
     expect(june.reportedAt).not.toBeNull();
     expect(meterEvent).toHaveBeenCalledWith({
@@ -885,7 +1083,21 @@ describe('WorkHoraire API (e2e)', () => {
       plan: 'DECOUVERTE',
       status: 'CANCELED',
       stripeSubscriptionId: null,
+      subscribedAt: null,
     });
+
+    // Subscribing again starts a new paid subscription, from today.
+    retrieve.mockResolvedValue({ id: 'sub_e2e_again', status: 'active' } as never);
+    const again = {
+      ...completed,
+      id: 'evt_e2e_checkout_again',
+      data: { object: { ...completed.data.object, id: 'cs_test_again', subscription: 'sub_e2e_again' } },
+    };
+    const before = Date.now();
+    expect(await sendWebhook(again)).toBe(200);
+    const resubscribed = await prisma.subscription.findUniqueOrThrow({ where: { companyId: garage.id } });
+    expect(resubscribed).toMatchObject({ status: 'ACTIVE', stripeSubscriptionId: 'sub_e2e_again' });
+    expect(resubscribed.subscribedAt!.getTime()).toBeGreaterThanOrEqual(before);
 
     jest.restoreAllMocks();
   });

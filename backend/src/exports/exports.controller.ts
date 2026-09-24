@@ -1,20 +1,13 @@
 import { Controller, Get, Query, StreamableFile, UseGuards } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
-import { IsIn, IsOptional } from 'class-validator';
 import { ApplicationRolesGuard } from '../auth/application-roles.guard';
 import { ApplicationUserGuard } from '../auth/application-user.guard';
 import { ApplicationUser } from '../auth/auth.types';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { KeycloakAuthGuard } from '../auth/keycloak-auth.guard';
 import { Roles } from '../auth/roles.decorator';
-import { PeriodQueryDto } from '../common/dates/period';
-import { ExportGranularity, ExportsService } from './exports.service';
-
-export class ExportTimesheetsQueryDto extends PeriodQueryDto {
-  @IsOptional()
-  @IsIn(['week', 'day'])
-  granularity?: ExportGranularity;
-}
+import { ExportTimesheetsQueryDto } from './dto/export-timesheets-query.dto';
+import { ExportsService } from './exports.service';
 
 @Controller('exports')
 @UseGuards(KeycloakAuthGuard, ApplicationUserGuard, ApplicationRolesGuard)

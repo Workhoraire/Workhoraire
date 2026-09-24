@@ -50,6 +50,7 @@ model User {
   companyId             String               @db.Uuid
   company               Company              @relation(fields: [companyId], references: [id], onDelete: Restrict)
   sentInvitations       EmployeeInvitation[] @relation("EmployeeInvitations")
+  acceptedInvitations   EmployeeInvitation[] @relation("AcceptedInvitations")
   timeEntries           TimeEntry[]          @relation("EmployeeTimeEntries")
   createdTimeEntries    TimeEntry[]          @relation("TimeEntryCreators")
   timeEntryAuditLogs    TimeEntryAuditLog[]  @relation("TimeEntryAuditEmployees")
@@ -94,10 +95,13 @@ model EmployeeInvitation {
   invitedById           String    @db.Uuid
   expiresAt             DateTime
   acceptedAt            DateTime?
+  /// The account created by accepting the invitation.
+  acceptedById          String?   @db.Uuid
   createdAt             DateTime  @default(now())
 
-  company   Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
-  invitedBy User    @relation("EmployeeInvitations", fields: [invitedById], references: [id], onDelete: Restrict)
+  company    Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  invitedBy  User    @relation("EmployeeInvitations", fields: [invitedById], references: [id], onDelete: Restrict)
+  acceptedBy User?   @relation("AcceptedInvitations", fields: [acceptedById], references: [id], onDelete: Restrict)
 
   @@index([companyId])
   @@index([email])
@@ -112,19 +116,21 @@ enum TimeEntrySource {
 
 /// A continuous period of work. A break is the gap between two entries.
 model TimeEntry {
-  id          String          @id @default(uuid()) @db.Uuid
-  companyId   String          @db.Uuid
-  userId      String          @db.Uuid
-  startAt     DateTime
-  endAt       DateTime?
+  id             String          @id @default(uuid()) @db.Uuid
+  companyId      String          @db.Uuid
+  userId         String          @db.Uuid
+  startAt        DateTime
+  endAt          DateTime?
   /// Equals userId while the entry is open. The unique index guarantees a
   /// single open entry per employee, even under concurrent requests.
-  openUserId  String?         @unique @db.Uuid
-  source      TimeEntrySource @default(CLOCK)
-  note        String?         @db.VarChar(500)
-  createdById String          @db.Uuid
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  openUserId     String?         @unique @db.Uuid
+  source         TimeEntrySource @default(CLOCK)
+  note           String?         @db.VarChar(500)
+  /// Set when the employee was reminded by e-mail of a forgotten clock-out, so that it is sent once.
+  reminderSentAt DateTime?
+  createdById    String          @db.Uuid
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
 
   company   Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
   user      User    @relation("EmployeeTimeEntries", fields: [userId], references: [id], onDelete: Restrict)
@@ -229,8 +235,12 @@ model Subscription {
   status               SubscriptionStatus @default(NONE)
   stripeCustomerId     String?            @unique @db.VarChar(255)
   stripeSubscriptionId String?            @unique @db.VarChar(255)
+  /// Start of the current paid subscription: only the months from this one onward are billed.
+  subscribedAt         DateTime?
   /// First time the company needed a payment method (more than 3 active employees): the grace period starts there.
   paymentRequiredSince DateTime?
+  /// When the administrators received the e-mail about the current grace period.
+  paymentWarningSentAt DateTime?
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
 
@@ -251,6 +261,20 @@ model BillingUsage {
   company Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
 
   @@unique([companyId, month])
+}
+
+/// Proof that a closed company accepted the terms of sale and the data
+/// processing agreement, kept 5 years after its deletion (privacy policy).
+model TermsAcceptanceArchive {
+  id                  String   @id @default(uuid()) @db.Uuid
+  /// Identifier of the deleted company (no foreign key: the company is gone).
+  companyId           String   @db.Uuid
+  companyName         String   @db.VarChar(120)
+  siret               String?  @db.VarChar(14)
+  administratorEmails String[]
+  termsAcceptedAt     DateTime
+  termsVersion        String?  @db.VarChar(20)
+  closedAt            DateTime @default(now())
 }
 
 /// Stripe events already handled: a replayed webhook changes nothing.

@@ -1,7 +1,6 @@
 import { Transform } from 'class-transformer';
 import {
   IsBoolean,
-  IsEmail,
   IsEnum,
   IsInt,
   IsNotEmpty,
@@ -14,15 +13,12 @@ import {
 } from 'class-validator';
 import { UserRole } from '@prisma/client';
 import { DATE_KEY_REGEX } from '../../common/dates/period';
-
-const trimString = ({ value }: { value: unknown }): unknown =>
-  typeof value === 'string' ? value.trim() : value;
-
-const normalizeEmail = ({ value }: { value: unknown }): unknown =>
-  typeof value === 'string' ? value.trim().toLowerCase() : value;
+import { NoWebAddress } from '../../common/validation/no-web-address';
+import { trimString } from '../../common/validation/trim-string';
 
 export class UpdateEmployeeDto {
   @Transform(trimString)
+  @NoWebAddress()
   @IsOptional()
   @IsString()
   @IsNotEmpty()
@@ -30,17 +26,12 @@ export class UpdateEmployeeDto {
   firstName?: string;
 
   @Transform(trimString)
+  @NoWebAddress()
   @IsOptional()
   @IsString()
   @IsNotEmpty()
   @MaxLength(100)
   lastName?: string;
-
-  @Transform(normalizeEmail)
-  @IsOptional()
-  @IsEmail()
-  @MaxLength(320)
-  email?: string;
 
   @IsOptional()
   @IsEnum(UserRole)

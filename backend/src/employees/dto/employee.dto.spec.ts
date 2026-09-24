@@ -32,7 +32,6 @@ describe('Employee DTOs', () => {
       role: 'OWNER',
     });
     const update = plainToInstance(UpdateEmployeeDto, {
-      email: 'not-an-email',
       role: 'OWNER',
       isActive: 'false',
     });
@@ -54,5 +53,17 @@ describe('Employee DTOs', () => {
     expect(await validate(valid)).toHaveLength(0);
     expect(await validate(tooLow)).not.toHaveLength(0);
     expect(await validate(tooHigh)).not.toHaveLength(0);
+  });
+  it('refuses web addresses in names, which are copied into e-mails', async () => {
+    const invitation = plainToInstance(CreateEmployeeInvitationDto, {
+      firstName: 'Jean',
+      lastName: 'https://evil.example',
+      email: 'jean@example.com',
+    });
+    const update = plainToInstance(UpdateEmployeeDto, { firstName: 'www.evil.example' });
+
+    expect((await validate(invitation)).map((error) => error.property)).toEqual(['lastName']);
+    expect((await validate(update)).map((error) => error.property)).toEqual(['firstName']);
+    expect(await validate(plainToInstance(UpdateEmployeeDto, { firstName: 'Jean-Pierre' }))).toHaveLength(0);
   });
 });

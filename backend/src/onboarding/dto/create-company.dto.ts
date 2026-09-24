@@ -8,12 +8,12 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
-
-const trimString = ({ value }: { value: unknown }): unknown =>
-  typeof value === 'string' ? value.trim() : value;
+import { NoWebAddress } from '../../common/validation/no-web-address';
+import { trimString } from '../../common/validation/trim-string';
 
 export class CreateCompanyDto {
   @Transform(trimString)
+  @NoWebAddress()
   @IsString()
   @IsNotEmpty()
   @MinLength(2)
@@ -39,12 +39,14 @@ export class CreateCompanyDto {
 
   /** The administrator's name: the sign-up page only asks for an e-mail and a password. */
   @Transform(trimString)
+  @NoWebAddress()
   @IsOptional()
   @IsString()
   @MaxLength(100)
   firstName?: string;
 
   @Transform(trimString)
+  @NoWebAddress()
   @IsOptional()
   @IsString()
   @MaxLength(100)

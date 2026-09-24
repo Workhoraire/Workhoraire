@@ -1,8 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { RequestHandler } from 'express';
 import Keycloak = require('keycloak-connect');
+import { KeycloakUser } from './auth.types';
 
+/**
+ * Validates the access tokens issued by Keycloak, with the grant manager of
+ * keycloak-connect: signature (realm keys), issuer, audience and expiry. Its
+ * Express middleware is not mounted: a bearer-only API needs none of its
+ * login, logout or admin callback routes.
+ */
 @Injectable()
 export class KeycloakService {
   private readonly adapter: Keycloak.Keycloak;
@@ -15,17 +21,25 @@ export class KeycloakService {
           'KEYCLOAK_AUTH_SERVER_URL',
           'http://localhost:8180',
         ),
-      'ssl-required': configService.get<string>('KEYCLOAK_SSL_REQUIRED', 'none'),
       resource: configService.get<string>('KEYCLOAK_CLIENT_ID', 'workhoraire-api'),
       'bearer-only': true,
       'verify-token-audience': true,
-      'confidential-port': 0,
-    } as Keycloak.KeycloakConfig;
+    };
 
-    this.adapter = new Keycloak({}, config);
+    // The typing of keycloak-connect requires redirect settings that token checks never read.
+    this.adapter = new Keycloak({}, config as unknown as Keycloak.KeycloakConfig);
   }
 
-  getMiddleware(): RequestHandler[] {
-    return this.adapter.middleware();
+  /** The claims of a valid access token, or null for a missing, forged, foreign or expired one. */
+  async verifyAccessToken(accessToken: string): Promise<KeycloakUser | null> {
+    try {
+      const grant = await this.adapter.grantManager.createGrant(
+        JSON.stringify({ access_token: accessToken }),
+      );
+      const token = grant.access_token as unknown as { content?: KeycloakUser } | undefined;
+      return token?.content?.sub ? token.content : null;
+    } catch {
+      return null;
+    }
   }
 }

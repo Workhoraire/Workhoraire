@@ -132,12 +132,6 @@ export function toDateKey(instant: Date, timeZone: string): string {
   return `${pad(parts.year, 4)}-${pad(parts.month)}-${pad(parts.day)}`;
 }
 
-/** Minutes elapsed since local midnight, e.g. 510 for 08:30. */
-export function localMinutesOfDay(instant: Date, timeZone: string): number {
-  const parts = localParts(instant, timeZone);
-  return parts.hour * 60 + parts.minute;
-}
-
 /** Instant of the local midnight that starts this calendar date. */
 export function startOfLocalDay(dateKey: string, timeZone: string): Date {
   const { year, month, day } = parseDateKey(dateKey);
@@ -146,20 +140,6 @@ export function startOfLocalDay(dateKey: string, timeZone: string): Date {
   const offset = timeZoneOffsetMinutes(new Date(firstGuess), timeZone);
 
   return new Date(utcMidnight - offset * MINUTE_MS);
-}
-
-/** Instant of a local wall-clock time on a calendar date, e.g. 08:30. */
-export function localDateTimeToInstant(
-  dateKey: string,
-  minutesOfDay: number,
-  timeZone: string,
-): Date {
-  const { year, month, day } = parseDateKey(dateKey);
-  const wallClock = Date.UTC(year, month - 1, day) + minutesOfDay * MINUTE_MS;
-  const firstGuess = wallClock - timeZoneOffsetMinutes(new Date(wallClock), timeZone) * MINUTE_MS;
-  const offset = timeZoneOffsetMinutes(new Date(firstGuess), timeZone);
-
-  return new Date(wallClock - offset * MINUTE_MS);
 }
 
 export function addDays(dateKey: string, days: number): string {

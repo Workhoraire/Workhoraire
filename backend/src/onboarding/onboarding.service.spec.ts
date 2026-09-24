@@ -1,4 +1,5 @@
-import { BadRequestException, ConflictException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { UserRole } from '@prisma/client';
 import { KeycloakUser } from '../auth/auth.types';
@@ -27,6 +28,7 @@ describe('OnboardingService', () => {
   const keycloakUser: KeycloakUser = {
     sub: 'keycloak-subject-1',
     email: 'owner@example.com',
+    email_verified: true,
     given_name: 'Alice',
     family_name: 'Martin',
   };
@@ -68,7 +70,7 @@ describe('OnboardingService', () => {
         callback(transaction),
     );
 
-    service = new OnboardingService(prisma);
+    service = new OnboardingService(prisma, new ConfigService({ KEYCLOAK_REQUIRE_VERIFIED_EMAIL: 'true' }));
   });
 
   it('creates a company and attaches the authenticated user as ADMIN atomically', async () => {
@@ -113,7 +115,7 @@ describe('OnboardingService', () => {
 
   it('uses the name typed in the form, the sign-up page no longer asking for it', async () => {
     await service.createCompanyForUser(
-      { sub: 'new-admin', email: 'claire@example.com' },
+      { sub: 'new-admin', email: 'claire@example.com', email_verified: true },
       { name: 'Atelier Durand', firstName: ' Claire ', lastName: 'Durand', acceptTerms: true },
     );
 
@@ -179,5 +181,14 @@ describe('OnboardingService', () => {
     expect(transaction.user.create.mock.calls[0][0].data).not.toHaveProperty(
       'userId',
     );
+  });
+  it('refuses to create a company with an unverified e-mail address', async () => {
+    await expect(
+      service.createCompanyForUser(
+        { sub: 'unverified', email: 'dg@example.com', email_verified: false },
+        { name: 'Acme', acceptTerms: true },
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 });

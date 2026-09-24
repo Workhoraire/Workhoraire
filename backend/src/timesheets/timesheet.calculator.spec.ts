@@ -415,4 +415,65 @@ describe('calculateTimesheet', () => {
     expect(timesheet.weeks[0].workedMinutes).toBe(480);
     expect(timesheet.totals.workedMinutes).toBe(0);
   });
+
+  it('counts real time across the autumn clock change and cuts the week at local midnight', () => {
+    // Summer time ends on Sunday 25 October 2026: 03:00 (UTC+2) becomes 02:00 (UTC+1).
+    const shift = (id: string, startAt: string, endAt: string): CalculatorEntry => ({
+      id,
+      startAt: new Date(startAt),
+      endAt: new Date(endAt),
+      source: TimeEntrySource.CLOCK,
+      note: null,
+      isCorrected: false,
+    });
+    const timesheet = calculateTimesheet({
+      from: '2026-10-19',
+      to: '2026-11-01',
+      timezone: PARIS,
+      now: new Date('2026-11-02T10:00:00Z'),
+      contractMinutes: FULL_TIME,
+      entries: [
+        // Sunday 01:00 (summer time) to 06:00 (winter time): 6 real hours, 5 on the clock face.
+        shift('night', '2026-10-25T01:00:00+02:00', '2026-10-25T06:00:00+01:00'),
+        // Sunday 22:00 to Monday 03:00 (winter time): 2 hours in each week, then 3.
+        shift('late', '2026-10-25T22:00:00+01:00', '2026-10-26T03:00:00+01:00'),
+      ],
+      absences: [],
+    });
+
+    const sunday = timesheet.days.find((day) => day.date === '2026-10-25')!;
+    expect(sunday.workedMinutes).toBe(6 * 60 + 5 * 60);
+    expect(timesheet.weeks.map((item) => [item.weekStart, item.workedMinutes])).toEqual([
+      ['2026-10-19', 6 * 60 + 2 * 60],
+      ['2026-10-26', 3 * 60],
+    ]);
+    // 11 real hours on the Sunday; the 16-hour gap between the shifts is a break.
+    expect(sunday.alerts.map((alert) => alert.code)).toEqual(['DAILY_MAX_EXCEEDED']);
+  });
+
+  it('counts real time across the spring clock change', () => {
+    // Summer time starts on Sunday 29 March 2026: 02:00 (UTC+1) becomes 03:00 (UTC+2).
+    const timesheet = calculateTimesheet({
+      from: '2026-03-23',
+      to: '2026-03-29',
+      timezone: PARIS,
+      now: new Date('2026-04-01T10:00:00Z'),
+      contractMinutes: FULL_TIME,
+      entries: [
+        {
+          id: 'night',
+          // 01:00 (winter time) to 05:00 (summer time): 3 real hours, 4 on the clock face.
+          startAt: new Date('2026-03-29T01:00:00+01:00'),
+          endAt: new Date('2026-03-29T05:00:00+02:00'),
+          source: TimeEntrySource.CLOCK,
+          note: null,
+          isCorrected: false,
+        },
+      ],
+      absences: [],
+    });
+
+    expect(timesheet.days.find((day) => day.date === '2026-03-29')!.workedMinutes).toBe(3 * 60);
+    expect(timesheet.weeks[0].workedMinutes).toBe(3 * 60);
+  });
 });

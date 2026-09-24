@@ -54,18 +54,8 @@ export function toApplicationUserResponse(
   };
 }
 
-interface KeycloakAccessToken {
-  content: KeycloakUser;
-}
-
-interface KeycloakGrant {
-  access_token?: KeycloakAccessToken;
-}
-
 export interface KeycloakRequest extends Request {
-  kauth?: {
-    grant?: KeycloakGrant;
-  };
+  /** Claims of the verified access token (KeycloakAuthGuard). */
   user?: KeycloakUser;
   applicationUser?: ApplicationUser;
 }

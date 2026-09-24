@@ -3,6 +3,11 @@ import { ConfigService } from '@nestjs/config';
 import { Transporter, createTransport } from 'nodemailer';
 import { MailContent } from './mail-templates';
 
+/** SMTP errors quote the rejected addresses: they stay out of the logs. */
+function withoutAddresses(text: string): string {
+  return text.replace(/[^\s<>()"',;:]+@[^\s<>()"',;:]+/g, '<address>');
+}
+
 /**
  * Sends the transactional e-mails through SMTP (Brevo or any provider in
  * production, Mailpit in development). Without SMTP_HOST nothing is sent and
@@ -29,6 +34,8 @@ export class MailService {
       host,
       port,
       secure: port === 465,
+      // Submission port: never fall back to clear text if STARTTLS is stripped.
+      requireTLS: port === 587,
       auth: user ? { user, pass: config.get<string>('SMTP_PASSWORD', '') } : undefined,
       // A slow or unreachable server must not hold a request for minutes.
       connectionTimeout: 10_000,
@@ -53,7 +60,16 @@ export class MailService {
       await this.transport.sendMail({ from: this.from, to, ...content });
       return true;
     } catch (error: unknown) {
-      this.logger.error(`E-mail not sent: ${error instanceof Error ? error.message : String(error)}`);
+      const { code, responseCode, message } = (error ?? {}) as {
+        code?: string;
+        responseCode?: number;
+        message?: string;
+      };
+      this.logger.error(
+        `E-mail not sent: ${[code, responseCode, withoutAddresses(message ?? String(error))]
+          .filter((part) => part !== undefined && part !== '')
+          .join(' ')}`,
+      );
       return false;
     }
   }

@@ -17,7 +17,7 @@ const CHANGING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 /**
  * Read-only mode of the companies whose subscription is unpaid after the
  * grace period: every change is refused with 402 Payment Required, except the
- * routes marked @AllowedWhenReadOnly() (clocking and paying). Hours stay
+ * routes marked @AllowedWhenReadOnly() (clocking, paying, employees' accounts). Hours stay
  * readable and exportable. Interceptors run after the guards, once the
  * application user is known.
  */

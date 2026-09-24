@@ -1,6 +1,14 @@
 import { TimeEntryAuditAction } from '@prisma/client';
-import { formatMailDate, formatMailDay, formatMailPeriod } from './mail-format';
-import { correctionMail, escapeHtml, invitationMail, paymentRequiredMail } from './mail-templates';
+import { formatMailDate, formatMailDay, formatMailDuration, formatMailPeriod } from './mail-format';
+import {
+  contractChangeMail,
+  correctionMail,
+  escapeHtml,
+  forgottenClockOutMail,
+  invitationMail,
+  paymentFailedMail,
+  paymentRequiredMail,
+} from './mail-templates';
 
 describe('Transactional e-mails', () => {
   it('invites with the company, the inviter and the personal link', () => {
@@ -53,6 +61,25 @@ describe('Transactional e-mails', () => {
     expect(mail.text).toContain('Motif : « Livraison tardive »');
   });
 
+  it('tells an employee about a contract change, with before, after, the week and the author', () => {
+    const mail = contractChangeMail({
+      firstName: 'Paul',
+      actorName: 'Alice <Martin>',
+      before: formatMailDuration(24 * 60),
+      after: formatMailDuration(28 * 60 + 30),
+      fromWeek: '28 septembre 2026',
+      link: 'https://app.example.com/my-time',
+    });
+
+    expect(mail.subject).toBe('Votre durée de travail hebdomadaire a été modifiée');
+    expect(mail.text).toContain('Alice <Martin> a modifié votre durée de travail hebdomadaire');
+    expect(mail.text).toContain('Avant : 24 h par semaine');
+    expect(mail.text).toContain('Après : 28 h 30 par semaine');
+    expect(mail.text).toContain('À partir de la semaine du 28 septembre 2026');
+    expect(mail.html).toContain('Alice &lt;Martin&gt;');
+    expect(mail.html).toContain('href="https://app.example.com/my-time"');
+  });
+
   it('formats days, dates and periods in the company timezone', () => {
     // 22:30 UTC is already the next day in Paris (UTC+2 in September).
     const instant = new Date('2026-09-21T22:30:00.000Z');
@@ -75,11 +102,38 @@ describe('Transactional e-mails', () => {
     });
 
     expect(mail.subject).toBe('Offre gratuite dépassée : ajoutez un moyen de paiement');
-    expect(mail.text).toContain('5 salariés ont utilisé WorkHoraire');
+    expect(mail.text).toContain('5 utilisateurs (salariés, managers ou dirigeants) ont utilisé WorkHoraire');
     expect(mail.text).toContain('avant le 24 octobre 2026');
     expect(mail.text).toContain('vos salariés pourront toujours pointer');
     expect(mail.html).toContain('Garage &lt;Dupont&gt;');
     expect(mail.html).not.toContain('<Dupont>');
     expect(mail.html).toContain('l’administrateur de Garage &lt;Dupont&gt;');
+  });
+  it('reminds a forgotten clock-out with the day and the start time', () => {
+    const mail = forgottenClockOutMail({
+      firstName: 'Emma',
+      day: 'lundi 21 septembre',
+      start: '08:00',
+      link: 'https://app.example.com/clock',
+    });
+
+    expect(mail.subject).toBe('Sortie non pointée le lundi 21 septembre');
+    expect(mail.text).toContain('arrivée le lundi 21 septembre à 08:00, mais pas votre sortie');
+    expect(mail.html).toContain('href="https://app.example.com/clock"');
+    expect(mail.html).toContain('Déclarer ma sortie');
+  });
+
+  it('tells the administrator a payment failed, with the deadline', () => {
+    const mail = paymentFailedMail({
+      firstName: null,
+      companyName: 'Garage Dupont',
+      deadline: '24 octobre 2026',
+      link: 'https://app.example.com/abonnement',
+    });
+
+    expect(mail.subject).toBe('Échec du paiement de votre abonnement WorkHoraire');
+    expect(mail.text.startsWith('Bonjour,')).toBe(true);
+    expect(mail.text).toContain('avant le 24 octobre 2026');
+    expect(mail.html).toContain('Mettre à jour le paiement');
   });
 });

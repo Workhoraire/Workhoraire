@@ -127,6 +127,52 @@ export function correctionMail(data: CorrectionMail): MailContent {
   return { subject, text, html };
 }
 
+export interface ContractChangeMail {
+  firstName: string | null;
+  actorName: string;
+  /** "35 h" */
+  before: string;
+  /** "28 h" */
+  after: string;
+  /** Monday of the first week concerned: "28 septembre 2026" */
+  fromWeek: string;
+  link: string;
+}
+
+/** Tells the employee that their contractual weekly time changes, and from when. */
+export function contractChangeMail(data: ContractChangeMail): MailContent {
+  const greeting = data.firstName ? `Bonjour ${data.firstName},` : 'Bonjour,';
+  const subject = 'Votre durée de travail hebdomadaire a été modifiée';
+  const change = `${data.actorName} a modifié votre durée de travail hebdomadaire dans WorkHoraire.`;
+  const details = [
+    `Avant : ${data.before} par semaine`,
+    `Après : ${data.after} par semaine`,
+    `À partir de la semaine du ${data.fromWeek}`,
+  ];
+  const consequence =
+    'Vos heures supplémentaires ou complémentaires sont calculées avec cette durée à partir de cette semaine.';
+  const text = [
+    greeting,
+    '',
+    change,
+    ...details,
+    '',
+    consequence,
+    data.link,
+    'En cas de désaccord, parlez-en à votre responsable.',
+  ].join('\n');
+  const html = layout(
+    greeting,
+    [
+      escapeHtml(change),
+      details.map(escapeHtml).join('<br>'),
+      `${escapeHtml(consequence)} En cas de désaccord, parlez-en à votre responsable.`,
+    ],
+    { label: 'Voir mes heures', url: data.link },
+  );
+  return { subject, text, html };
+}
+
 export interface PaymentRequiredMail {
   firstName: string | null;
   companyName: string;
@@ -140,7 +186,7 @@ export interface PaymentRequiredMail {
 export function paymentRequiredMail(data: PaymentRequiredMail): MailContent {
   const greeting = data.firstName ? `Bonjour ${data.firstName},` : 'Bonjour,';
   const subject = 'Offre gratuite dépassée : ajoutez un moyen de paiement';
-  const usage = `${data.activeEmployees} salariés ont utilisé WorkHoraire chez ${data.companyName} sur un même mois. L’offre Découverte est gratuite jusqu’à 3 salariés actifs ; au-delà, l’offre Essentiel coûte 3 € HT par salarié actif et par mois.`;
+  const usage = `${data.activeEmployees} utilisateurs (salariés, managers ou dirigeants) ont utilisé WorkHoraire chez ${data.companyName} sur un même mois. L’offre Découverte est gratuite jusqu’à 3 utilisateurs actifs ; au-delà, l’offre Essentiel coûte 3 € HT par utilisateur actif et par mois, tous comptés.`;
   const deadline = `Ajoutez un moyen de paiement avant le ${data.deadline}. Passé ce délai, WorkHoraire passera en lecture seule : vos salariés pourront toujours pointer et vous pourrez consulter et exporter les heures, mais plus rien modifier.`;
   const text = [greeting, '', usage, '', deadline, '', data.link].join('\n');
   const html = layout(
@@ -173,5 +219,28 @@ export function paymentFailedMail(data: PaymentFailedMail): MailContent {
     { label: 'Mettre à jour le paiement', url: data.link },
     `Cet e-mail est envoyé par WorkHoraire à l’administrateur de ${data.companyName}.`,
   );
+  return { subject, text, html };
+}
+
+export interface ForgottenClockOutMail {
+  firstName: string | null;
+  /** "lundi 21 septembre" */
+  day: string;
+  /** "08:00" */
+  start: string;
+  link: string;
+}
+
+/** Reminds the employee to declare the real time of a forgotten clock-out. */
+export function forgottenClockOutMail(data: ForgottenClockOutMail): MailContent {
+  const greeting = data.firstName ? `Bonjour ${data.firstName},` : 'Bonjour,';
+  const subject = `Sortie non pointée le ${data.day}`;
+  const fact = `Vous avez pointé votre arrivée le ${data.day} à ${data.start}, mais pas votre sortie.`;
+  const action = 'Indiquez l’heure réelle de votre sortie dans WorkHoraire : tant qu’elle manque, cette journée ne compte pas dans vos heures.';
+  const text = [greeting, '', fact, action, '', data.link].join('\n');
+  const html = layout(greeting, [escapeHtml(fact), escapeHtml(action)], {
+    label: 'Déclarer ma sortie',
+    url: data.link,
+  });
   return { subject, text, html };
 }

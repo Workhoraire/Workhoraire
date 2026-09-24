@@ -45,4 +45,32 @@ describe('ApplicationUserGuard', () => {
       ForbiddenException,
     );
   });
+  it('keeps the e-mail of the verified sign-in account, and only a verified one', async () => {
+    const stored = () => ({
+      id: 'user-1',
+      keycloakSubject: 'subject-1',
+      companyId: 'company-a',
+      email: 'old@example.com',
+      isActive: true,
+    });
+    const authService = {
+      findByKeycloakSubject: jest.fn().mockImplementation(async () => stored()),
+      updateEmail: jest.fn().mockResolvedValue(undefined),
+    } as unknown as AuthService;
+    const guard = new ApplicationUserGuard(authService);
+
+    const unverified = {
+      user: { sub: 'subject-1', email: 'attacker@example.com', email_verified: false },
+    } as KeycloakRequest;
+    await guard.canActivate(contextFor(unverified));
+    expect(authService.updateEmail).not.toHaveBeenCalled();
+    expect(unverified.applicationUser?.email).toBe('old@example.com');
+
+    const verified = {
+      user: { sub: 'subject-1', email: ' New@Example.com ', email_verified: true },
+    } as KeycloakRequest;
+    await guard.canActivate(contextFor(verified));
+    expect(authService.updateEmail).toHaveBeenCalledWith('user-1', 'new@example.com');
+    expect(verified.applicationUser?.email).toBe('new@example.com');
+  });
 });

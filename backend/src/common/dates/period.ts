@@ -1,11 +1,13 @@
 import { BadRequestException } from '@nestjs/common';
 import { Matches } from 'class-validator';
-import { daysBetween, isValidDateKey } from './local-date';
+import { addDays, daysBetween, isValidDateKey, isoWeekday } from './local-date';
 
 export const DATE_KEY_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 
 /** Longest period accepted by timesheet, export and listing endpoints. */
 export const MAX_PERIOD_DAYS = 93;
+
+const INVALID_DATES = 'Dates must be valid calendar dates (YYYY-MM-DD)';
 
 export class PeriodQueryDto {
   @Matches(DATE_KEY_REGEX, { message: 'from must use the YYYY-MM-DD format' })
@@ -21,7 +23,7 @@ export function assertValidPeriod(
   maxDays = MAX_PERIOD_DAYS,
 ): void {
   if (!isValidDateKey(from) || !isValidDateKey(to)) {
-    throw new BadRequestException('Dates must be valid calendar dates (YYYY-MM-DD)');
+    throw new BadRequestException(INVALID_DATES);
   }
 
   if (to < from) {
@@ -30,5 +32,11 @@ export function assertValidPeriod(
 
   if (daysBetween(from, to) + 1 > maxDays) {
     throw new BadRequestException(`The period cannot exceed ${maxDays} days`);
+  }
+
+  // Timesheets read whole weeks, plus the day before and the day after:
+  // those days must also be within the supported years.
+  if (!isValidDateKey(addDays(from, -isoWeekday(from))) || !isValidDateKey(addDays(to, 8 - isoWeekday(to)))) {
+    throw new BadRequestException(INVALID_DATES);
   }
 }

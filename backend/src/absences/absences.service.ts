@@ -14,6 +14,7 @@ import {
   isValidDateKey,
   toDateKey,
 } from '../common/dates/local-date';
+import { lockEmployee } from '../prisma/lock-employee';
 import { PrismaService } from '../prisma/prisma.service';
 import { CalculatorAbsence, countAbsenceDays } from '../timesheets/timesheet.calculator';
 import { AbsenceRequestResponse } from './absence.types';
@@ -70,7 +71,7 @@ export class AbsencesService {
     this.assertValidSpan(span);
 
     return this.prisma.$transaction(async (transaction) => {
-      await this.lockEmployee(transaction, user.id);
+      await lockEmployee(transaction, user.id);
       await this.assertNoOverlap(transaction, user.companyId, user.id, span);
 
       const request = await transaction.absenceRequest.create({
@@ -211,7 +212,7 @@ export class AbsencesService {
     return this.prisma.$transaction(async (transaction) => {
       if (decision === AbsenceStatus.APPROVED) {
         // Two overlapping requests may both be pending: only one may be approved.
-        await this.lockEmployee(transaction, request.userId);
+        await lockEmployee(transaction, request.userId);
         await this.assertNoOverlap(
           transaction,
           actor.companyId,
@@ -236,14 +237,6 @@ export class AbsencesService {
     if (actor.role === UserRole.MANAGER && employeeId === actor.id) {
       throw new ForbiddenException('A manager cannot review their own absence request');
     }
-  }
-
-  /**
-   * Serialises the absence changes of one employee (row lock on the user), so
-   * that two concurrent requests cannot both pass the overlap check.
-   */
-  private async lockEmployee(transaction: Prisma.TransactionClient, userId: string): Promise<void> {
-    await transaction.$queryRaw`SELECT "id" FROM "User" WHERE "id" = ${userId}::uuid FOR UPDATE`;
   }
 
   private async assertNoOverlap(

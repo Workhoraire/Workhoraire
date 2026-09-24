@@ -25,6 +25,11 @@ export function formatMailDate(instant: Date, timeZone: string): string {
   }).format(instant));
 }
 
+/** "08:00" */
+export function formatMailTime(instant: Date, timeZone: string): string {
+  return formatTime(instant, timeZone);
+}
+
 function formatTime(instant: Date, timeZone: string): string {
   return new Intl.DateTimeFormat('fr-FR', {
     timeZone,
@@ -42,6 +47,12 @@ export function formatMailPeriod(
   const start = formatTime(new Date(period.startAt), timeZone);
   const end = period.endAt ? formatTime(new Date(period.endAt), timeZone) : 'en cours';
   return `${start} – ${end}`;
+}
+
+/** "35 h", "28 h 30" */
+export function formatMailDuration(minutes: number): string {
+  const rest = minutes % 60;
+  return `${Math.floor(minutes / 60)} h${rest ? ` ${String(rest).padStart(2, '0')}` : ''}`;
 }
 
 export function mailName(person: { firstName: string | null; lastName: string | null }): string {
