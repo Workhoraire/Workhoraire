@@ -1,7 +1,7 @@
 # API image. Stages: build (compiles and generates the Prisma client),
 # migrate (one-shot `prisma migrate deploy`, run before each release) and
 # runtime (production dependencies only, non-root user).
-FROM node:24-slim AS base
+FROM node:25-slim AS base
 RUN apt-get update \
   && apt-get install -y --no-install-recommends openssl \
   && rm -rf /var/lib/apt/lists/*
