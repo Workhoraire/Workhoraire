@@ -8,7 +8,7 @@ import {
 import { Reflector } from '@nestjs/core';
 import { UserRole } from '@prisma/client';
 import { KeycloakRequest } from './auth.types';
-import { KEYCLOAK_ROLES_METADATA } from './roles.decorator';
+import { ROLES_METADATA } from './roles.decorator';
 
 @Injectable()
 export class ApplicationRolesGuard implements CanActivate {
@@ -16,7 +16,7 @@ export class ApplicationRolesGuard implements CanActivate {
 
   canActivate(context: ExecutionContext): boolean {
     const requiredRoles = this.reflector.getAllAndOverride<UserRole[]>(
-      KEYCLOAK_ROLES_METADATA,
+      ROLES_METADATA,
       [context.getHandler(), context.getClass()],
     );
 

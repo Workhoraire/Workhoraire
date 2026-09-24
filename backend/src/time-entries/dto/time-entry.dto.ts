@@ -10,9 +10,7 @@ import {
   ValidateIf,
 } from 'class-validator';
 import { PeriodQueryDto } from '../../common/dates/period';
-
-const trimString = ({ value }: { value: unknown }): unknown =>
-  typeof value === 'string' ? value.trim() : value;
+import { trimString } from '../../common/validation/trim-string';
 
 /** ISO 8601 date-time with an explicit offset, e.g. 2026-09-23T08:00:00+02:00. */
 const INSTANT_WITH_OFFSET = /T\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?(Z|[+-]\d{2}:\d{2})$/;

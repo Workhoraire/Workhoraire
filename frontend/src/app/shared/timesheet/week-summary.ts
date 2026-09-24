@@ -18,8 +18,8 @@ import { TimesheetWeek } from '../../core/time/time.models';
             <p class="wh-kpi-label">Heures complémentaires</p>
             <p class="wh-kpi-value">{{ format(complementary()) }}</p>
             <p class="wh-kpi-note">
-              +10 % : {{ format(current.complementary.tier10Minutes) }} · +25 % :
-              {{ format(current.complementary.tier25Minutes) }}
+              +10&nbsp;%&nbsp;: {{ format(current.complementary.tier10Minutes) }} ·
+              +25&nbsp;%&nbsp;: {{ format(current.complementary.tier25Minutes) }}
             </p>
           </div>
         } @else {
@@ -27,12 +27,13 @@ import { TimesheetWeek } from '../../core/time/time.models';
             <p class="wh-kpi-label">Heures supplémentaires</p>
             <p class="wh-kpi-value">{{ format(overtime()) }}</p>
             <p class="wh-kpi-note">
-              +25 % : {{ format(current.overtime.tier25Minutes) }} · +50 % :
+              +25&nbsp;%&nbsp;: {{ format(current.overtime.tier25Minutes) }} · +50&nbsp;%&nbsp;:
               {{ format(current.overtime.tier50Minutes) }}
             </p>
             @if (current.paidLeaveCreditMinutes > 0) {
               <p class="wh-kpi-note">
-                Congés payés comptés dans le seuil de 35 h : {{ format(current.paidLeaveCreditMinutes) }}
+                Congés payés comptés dans le seuil de 35 h&nbsp;:
+                {{ format(current.paidLeaveCreditMinutes) }}
               </p>
             }
           </div>

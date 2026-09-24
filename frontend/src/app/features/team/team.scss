@@ -46,12 +46,18 @@
   font-size: 0.75rem;
 }
 
+/* The holiday's name, written out: a title attribute is out of reach on a phone. */
 .holiday {
   display: block;
+  max-width: 6.5rem;
+  margin-left: auto;
   color: var(--wh-sky-ink);
-  font-size: 0.65rem;
+  font-size: 0.7rem;
+  font-weight: 700;
   letter-spacing: 0;
+  line-height: 1.25;
   text-transform: none;
+  white-space: normal;
 }
 
 .running {
@@ -96,4 +102,51 @@
   height: 0.45rem;
   border-radius: 50%;
   background: #3b9d55;
+}
+
+.alert-count {
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+}
+
+/* Alerts of a row, below it. Sticky on the left: they stay in view on a phone
+   even when the table is scrolled sideways. */
+.alert-row td {
+  padding-top: 0;
+  white-space: normal;
+}
+
+.alert-details {
+  position: sticky;
+  left: 0.75rem;
+  max-width: min(40rem, calc(100vw - 4rem));
+  padding: 0.6rem 0.8rem;
+  border-left: 3px solid var(--wh-coral-ink);
+  border-radius: 0.5rem;
+  background: var(--wh-coral-soft);
+  color: var(--wh-ink);
+  font-size: 0.85rem;
+  line-height: 1.45;
+
+  ul {
+    margin: 0.25rem 0 0;
+    padding-left: 1.1rem;
+  }
+}
+
+.alert-details-title {
+  margin: 0;
+  color: var(--wh-coral-ink);
+  font-weight: 700;
+}
+
+.load-error {
+  flex-wrap: wrap;
+  align-items: center;
+
+  button {
+    margin-left: auto;
+  }
 }

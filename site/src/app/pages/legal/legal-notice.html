@@ -24,12 +24,17 @@
     <p>Le site et l’application WorkHoraire sont édités par&nbsp;:</p>
     <dl class="facts">
       <dt>Dénomination</dt>
-      <dd><app-legal-field [value]="publisher.name" label="dénomination sociale ou nom de l’entrepreneur" /></dd>
+      <dd>
+        <app-legal-field
+          [value]="publisher.name"
+          label="dénomination sociale ou nom de l’entrepreneur"
+        />
+      </dd>
       <dt>Forme juridique</dt>
       <dd><app-legal-field [value]="publisher.legalForm" label="forme juridique" /></dd>
-      @if (publisher.shareCapital) {
+      @if (showShareCapital) {
         <dt>Capital social</dt>
-        <dd>{{ publisher.shareCapital }}</dd>
+        <dd><app-legal-field [value]="publisher.shareCapital" label="capital social" /></dd>
       }
       <dt>Siège</dt>
       <dd><app-legal-field [value]="publisher.address" label="adresse du siège" /></dd>
@@ -57,7 +62,10 @@
 
     <h2>Directeur de la publication</h2>
     <p>
-      <app-legal-field [value]="publisher.publicationDirector" label="nom du directeur de la publication" />
+      <app-legal-field
+        [value]="publisher.publicationDirector"
+        label="nom du directeur de la publication"
+      />
     </p>
 
     <h2>Hébergement</h2>
@@ -70,7 +78,9 @@
       <dt>Téléphone</dt>
       <dd><app-legal-field [value]="hosting.phone" label="téléphone de l’hébergeur" /></dd>
       <dt>Site</dt>
-      <dd><a [href]="hosting.website" rel="noopener">{{ hosting.website }}</a></dd>
+      <dd>
+        <a [href]="hosting.website" rel="noopener">{{ hosting.website }}</a>
+      </dd>
     </dl>
 
     <h2>Propriété intellectuelle</h2>

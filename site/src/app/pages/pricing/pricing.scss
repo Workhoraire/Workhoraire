@@ -69,6 +69,14 @@
   }
 }
 
+.vat-note {
+  max-width: 56rem;
+  margin: 1.25rem auto 0;
+  color: var(--wh-ink-soft);
+  font-size: 0.95rem;
+  text-align: center;
+}
+
 .active-definition {
   max-width: 56rem;
   margin: clamp(1.5rem, 4vw, 2.5rem) auto 0;
@@ -144,11 +152,11 @@
   font-weight: 700;
   line-height: 1;
 
-  &:hover:not(:disabled) {
+  &:hover:not([aria-disabled='true']) {
     background: var(--wh-lime-soft);
   }
 
-  &:disabled {
+  &[aria-disabled='true'] {
     border-color: var(--wh-line);
     color: var(--wh-muted);
     cursor: not-allowed;
@@ -160,6 +168,11 @@
   color: var(--wh-coral-ink);
   font-size: 0.9rem;
   line-height: 1.45;
+
+  /* Kept in the page while empty, so that screen readers announce its next text. */
+  &:empty {
+    margin: 0;
+  }
 }
 
 .result {
@@ -196,7 +209,6 @@
   color: var(--wh-on-ink-muted);
   font-size: 0.95rem;
 }
-
 
 @media (min-width: 60rem) {
   .simulator-layout {

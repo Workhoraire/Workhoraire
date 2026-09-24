@@ -20,6 +20,9 @@
     <loc>http://localhost:4400/guides/heures-supplementaires</loc>
   </url>
   <url>
+    <loc>http://localhost:4400/guides/informer-les-salaries</loc>
+  </url>
+  <url>
     <loc>http://localhost:4400/mentions-legales</loc>
   </url>
   <url>

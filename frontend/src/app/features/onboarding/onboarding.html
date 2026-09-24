@@ -13,7 +13,7 @@
   <main class="onboarding-content">
     <section class="intro" aria-labelledby="onboarding-title">
       <p class="eyebrow">PREMIÈRE ÉTAPE</p>
-      <h1 id="onboarding-title">Créons votre espace d'entreprise.</h1>
+      <h1 id="onboarding-title">Créons votre espace d’entreprise.</h1>
       <p class="intro-copy">
         Quelques informations suffisent pour commencer à organiser vos horaires et votre équipe.
       </p>
@@ -24,15 +24,15 @@
       <div class="invitation-note">
         <mat-icon aria-hidden="true">mail</mat-icon>
         <span>
-          Votre employeur vous a invité ? Ne créez pas d’entreprise : déconnectez-vous, ouvrez le
-          lien reçu et inscrivez-vous avec l’adresse e-mail exacte de l’invitation.
+          Votre employeur vous a invité&nbsp;? Ne créez pas d’entreprise&nbsp;: déconnectez-vous,
+          ouvrez le lien reçu et inscrivez-vous avec l’adresse e-mail exacte de l’invitation.
         </span>
       </div>
     </section>
 
     <mat-card class="form-card">
       <mat-card-header>
-        <mat-card-title>Votre entreprise</mat-card-title>
+        <h2 mat-card-title>Votre entreprise</h2>
         <mat-card-subtitle>Ces informations pourront être complétées plus tard.</mat-card-subtitle>
       </mat-card-header>
 
@@ -41,14 +41,24 @@
           <div class="wh-form-row">
             <mat-form-field appearance="outline">
               <mat-label>Votre prénom</mat-label>
-              <input matInput formControlName="firstName" autocomplete="given-name" maxlength="100" />
+              <input
+                matInput
+                formControlName="firstName"
+                autocomplete="given-name"
+                maxlength="100"
+              />
               @if (form.controls.firstName.invalid) {
                 <mat-error>Indiquez votre prénom.</mat-error>
               }
             </mat-form-field>
             <mat-form-field appearance="outline">
               <mat-label>Votre nom</mat-label>
-              <input matInput formControlName="lastName" autocomplete="family-name" maxlength="100" />
+              <input
+                matInput
+                formControlName="lastName"
+                autocomplete="family-name"
+                maxlength="100"
+              />
               @if (form.controls.lastName.invalid) {
                 <mat-error>Indiquez votre nom.</mat-error>
               }
@@ -56,7 +66,7 @@
           </div>
 
           <mat-form-field appearance="outline">
-            <mat-label>Nom de l'entreprise</mat-label>
+            <mat-label>Nom de l’entreprise</mat-label>
             <input
               matInput
               formControlName="name"
@@ -66,9 +76,9 @@
             />
             <mat-hint>Le nom affiché dans votre espace WorkHoraire.</mat-hint>
             @if (form.controls.name.hasError('required')) {
-              <mat-error>Le nom de l'entreprise est obligatoire.</mat-error>
+              <mat-error>Le nom de l’entreprise est obligatoire.</mat-error>
             } @else if (form.controls.name.hasError('pattern')) {
-              <mat-error>Le nom de l'entreprise ne peut pas être vide.</mat-error>
+              <mat-error>Le nom de l’entreprise ne peut pas être vide.</mat-error>
             } @else if (form.controls.name.hasError('minlength')) {
               <mat-error>Le nom doit contenir au moins 2 caractères.</mat-error>
             }
@@ -80,10 +90,10 @@
               matInput
               formControlName="siret"
               inputmode="numeric"
-              maxlength="14"
+              maxlength="20"
               placeholder="14 chiffres"
             />
-            <mat-hint>Il doit contenir exactement 14 chiffres.</mat-hint>
+            <mat-hint>14 chiffres, espaces acceptés.</mat-hint>
             @if (form.controls.siret.hasError('pattern')) {
               <mat-error>Le SIRET doit contenir exactement 14 chiffres.</mat-error>
             }
@@ -91,29 +101,47 @@
 
           <mat-form-field appearance="outline">
             <mat-label>Fuseau horaire</mat-label>
-            <input matInput formControlName="timezone" autocomplete="off" />
-            <mat-hint>Europe/Paris est utilisé par défaut.</mat-hint>
+            <mat-select formControlName="timezone">
+              @for (zone of timezones; track zone.value) {
+                <mat-option [value]="zone.value">{{ zone.label }}</mat-option>
+              }
+            </mat-select>
+            <mat-hint>Celui de votre établissement&nbsp;: il date les pointages.</mat-hint>
             @if (form.controls.timezone.hasError('required')) {
               <mat-error>Le fuseau horaire est obligatoire.</mat-error>
             }
           </mat-form-field>
 
           <div class="terms">
-            <mat-checkbox formControlName="acceptTerms">
+            <mat-checkbox
+              formControlName="acceptTerms"
+              required
+              [aria-describedby]="
+                form.controls.acceptTerms.touched && form.controls.acceptTerms.invalid
+                  ? 'terms-error'
+                  : ''
+              "
+            >
               J’accepte les
-              <a [href]="legalLinks.terms" target="_blank" rel="noopener">conditions générales de vente</a>
+              <a [href]="legalLinks.terms" target="_blank" rel="noopener"
+                >conditions générales de vente</a
+              >
               et le
-              <a [href]="legalLinks.processing" target="_blank" rel="noopener">contrat de sous-traitance</a>
+              <a [href]="legalLinks.processing" target="_blank" rel="noopener"
+                >contrat de sous-traitance</a
+              >
               (données de vos salariés).
             </mat-checkbox>
             @if (form.controls.acceptTerms.touched && form.controls.acceptTerms.invalid) {
-              <p class="terms-error" role="alert">
+              <p id="terms-error" class="terms-error" role="alert">
                 Acceptez les conditions générales de vente pour créer votre entreprise.
               </p>
             }
             <p class="terms-note">
               Vos données personnelles sont traitées selon notre
-              <a [href]="legalLinks.privacy" target="_blank" rel="noopener">politique de confidentialité</a>.
+              <a [href]="legalLinks.privacy" target="_blank" rel="noopener"
+                >politique de confidentialité</a
+              >.
             </p>
           </div>
 
@@ -127,15 +155,15 @@
           @if (success()) {
             <div class="form-success" role="status">
               <mat-icon aria-hidden="true">check_circle</mat-icon>
-              <span>Entreprise créée. Redirection vers votre espace...</span>
+              <span>Entreprise créée. Redirection vers votre espace…</span>
             </div>
           }
 
           <button mat-flat-button class="submit-button" type="submit" [disabled]="submitting()">
             @if (submitting()) {
               <span class="button-content">
-                <mat-spinner diameter="20"></mat-spinner>
-                <span>Création en cours...</span>
+                <mat-spinner diameter="20" aria-hidden="true"></mat-spinner>
+                <span>Création en cours…</span>
               </span>
             } @else {
               <span class="button-content">

@@ -1,270 +1,275 @@
-<article aria-labelledby="page-title">
-  <header class="wh-page-hero wh-glow">
-    <div class="wh-container">
-      <nav class="breadcrumb" aria-label="Fil d’Ariane">
-        <ol>
-          <li><a routerLink="/">Accueil</a></li>
-          <li><a routerLink="/guides">Guides</a></li>
-          <li aria-current="page">Heures supplémentaires</li>
-        </ol>
-      </nav>
-      <p class="wh-eyebrow">Guide</p>
-      <h1 id="page-title">Heures supplémentaires&nbsp;: le calcul pour une semaine de 35&nbsp;heures</h1>
-      <p class="wh-lead">
-        Semaine civile, taux de majoration, temps partiel et congés payés&nbsp;: les règles à
-        connaître, avec un exemple chiffré.
-      </p>
-      <p class="updated">Mis à jour le <time datetime="2026-09-24">24&nbsp;septembre 2026</time></p>
+<app-guide-layout
+  [path]="path"
+  crumb="Heures supplémentaires"
+  [heading]="heading"
+  [lead]="lead"
+  updatedOn="2026-09-24"
+  [sections]="sections"
+>
+  <p class="wh-note wh-note--coral disclaimer" role="note">
+    <strong
+      >Ce guide est informatif et ne constitue pas un conseil juridique&nbsp;; vérifiez votre
+      convention collective.</strong
+    >
+  </p>
+
+  <section id="definition" tabindex="-1" aria-labelledby="definition-title">
+    <h2 id="definition-title">Qu’est-ce qu’une heure supplémentaire&nbsp;?</h2>
+    <p>
+      La durée légale du travail est de 35&nbsp;heures par semaine. Pour un salarié à temps plein,
+      chaque heure accomplie au-delà de 35&nbsp;heures dans la semaine est une
+      <strong>heure supplémentaire</strong>&nbsp;: elle est payée avec une majoration.
+    </p>
+    <p>
+      Pour un salarié à temps partiel, les heures accomplies au-delà de la durée prévue au contrat
+      sont des <strong>heures complémentaires</strong>, avec leurs propres règles, détaillées plus
+      bas.
+    </p>
+  </section>
+
+  <section id="semaine-civile" tabindex="-1" aria-labelledby="week-title">
+    <h2 id="week-title">Un décompte semaine par semaine</h2>
+    <p>
+      Les heures supplémentaires se calculent sur la semaine, pas sur le mois. À défaut d’accord
+      collectif fixant une autre période de sept jours consécutifs,
+      <strong
+        >la semaine débute le lundi à 0&nbsp;heure et se termine le dimanche à
+        24&nbsp;heures</strong
+      >
+      (<a [href]="articles.l3121_35">article L3121-35 du Code du travail</a>).
+    </p>
+    <p>
+      Conséquence&nbsp;: une semaine chargée ne se compense pas avec une semaine plus légère. Un
+      salarié qui travaille 39&nbsp;heures une semaine et 31&nbsp;heures la suivante a droit à
+      4&nbsp;heures supplémentaires, même si sa moyenne est de 35&nbsp;heures. Il en va autrement
+      seulement si le temps de travail est aménagé sur une période de plusieurs semaines, dans les
+      conditions prévues par le Code du travail.
+    </p>
+  </section>
+
+  <section id="majorations" tabindex="-1" aria-labelledby="rates-title">
+    <h2 id="rates-title">Les taux de majoration&nbsp;: 25&nbsp;% puis 50&nbsp;%</h2>
+    <p>
+      À défaut d’accord collectif, les <strong>8&nbsp;premières heures supplémentaires</strong> de
+      la semaine, de la 36<sup>e</sup> à la 43<sup>e</sup>&nbsp;heure, sont majorées de
+      <strong>25&nbsp;%</strong>. Les heures suivantes, à partir de la 44<sup>e</sup>, sont majorées
+      de <strong>50&nbsp;%</strong> (<a [href]="articles.l3121_36"
+        >article L3121-36 du Code du travail</a
+      >).
+    </p>
+
+    <div class="wh-table-wrap">
+      <table class="wh-table">
+        <caption>
+          Majorations à défaut d’accord, pour une durée de 35&nbsp;heures par semaine
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">Heures travaillées dans la semaine</th>
+            <th scope="col">Majoration</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Jusqu’à la 35<sup>e</sup>&nbsp;heure</td>
+            <td>Aucune (heures normales)</td>
+          </tr>
+          <tr>
+            <td>De la 36<sup>e</sup> à la 43<sup>e</sup>&nbsp;heure</td>
+            <td><strong>+25&nbsp;%</strong></td>
+          </tr>
+          <tr>
+            <td>À partir de la 44<sup>e</sup>&nbsp;heure</td>
+            <td><strong>+50&nbsp;%</strong></td>
+          </tr>
+        </tbody>
+      </table>
     </div>
-  </header>
 
-  <div class="wh-container layout">
-    <nav class="contents" aria-labelledby="contents-title">
-      <h2 id="contents-title">Sommaire</h2>
-      <ol>
-        @for (entry of contents; track entry.id) {
-          <li>
-            <a [routerLink]="path" [fragment]="entry.id">{{ entry.label }}</a>
-          </li>
-        }
-      </ol>
-    </nav>
+    <p>
+      Un accord d’entreprise ou, à défaut, un accord de branche peut prévoir d’autres taux, à
+      condition qu’ils ne soient pas inférieurs à 10&nbsp;%. D’où l’importance de vérifier votre
+      convention collective.
+    </p>
+    <p>
+      Les heures supplémentaires restent limitées par les durées maximales de travail, notamment
+      10&nbsp;heures par jour et 48&nbsp;heures sur une même semaine.
+    </p>
+  </section>
 
-    <div class="wh-prose body">
-      <p class="wh-note wh-note--coral disclaimer" role="note">
-        <strong>Ce guide est informatif et ne constitue pas un conseil juridique&nbsp;; vérifiez
-        votre convention collective.</strong>
-      </p>
+  <section id="exemple" tabindex="-1" aria-labelledby="example-title">
+    <h2 id="example-title">Exemple&nbsp;: 39&nbsp;heures dans une semaine de 35&nbsp;heures</h2>
+    <p>
+      Un salarié à temps plein, sur la base de 35&nbsp;heures, travaille 8&nbsp;heures du lundi au
+      jeudi et 7&nbsp;heures le vendredi.
+    </p>
 
-      <section id="definition" tabindex="-1" aria-labelledby="definition-title">
-        <h2 id="definition-title">Qu’est-ce qu’une heure supplémentaire&nbsp;?</h2>
-        <p>
-          La durée légale du travail est de 35&nbsp;heures par semaine. Pour un salarié à temps
-          plein, chaque heure accomplie au-delà de 35&nbsp;heures dans la semaine est une
-          <strong>heure supplémentaire</strong>&nbsp;: elle est payée avec une majoration.
-        </p>
-        <p>
-          Pour un salarié à temps partiel, les heures accomplies au-delà de la durée prévue au
-          contrat sont des <strong>heures complémentaires</strong>, avec leurs propres règles,
-          détaillées plus bas.
-        </p>
-      </section>
-
-      <section id="semaine-civile" tabindex="-1" aria-labelledby="week-title">
-        <h2 id="week-title">Un décompte semaine par semaine</h2>
-        <p>
-          Les heures supplémentaires se calculent sur la semaine, pas sur le mois. À défaut d’accord
-          collectif fixant une autre période de sept jours consécutifs,
-          <strong>la semaine débute le lundi à 0&nbsp;heure et se termine le dimanche à
-          24&nbsp;heures</strong>
-          (<a [href]="articles.l3121_35">article L3121-35 du Code du travail</a>).
-        </p>
-        <p>
-          Conséquence&nbsp;: une semaine chargée ne se compense pas avec une semaine plus légère. Un
-          salarié qui travaille 39&nbsp;heures une semaine et 31&nbsp;heures la suivante a droit à
-          4&nbsp;heures supplémentaires, même si sa moyenne est de 35&nbsp;heures. Il en va
-          autrement seulement si le temps de travail est aménagé sur une période de plusieurs
-          semaines, dans les conditions prévues par le Code du travail.
-        </p>
-      </section>
-
-      <section id="majorations" tabindex="-1" aria-labelledby="rates-title">
-        <h2 id="rates-title">Les taux de majoration&nbsp;: 25&nbsp;% puis 50&nbsp;%</h2>
-        <p>
-          À défaut d’accord collectif, les <strong>8&nbsp;premières heures supplémentaires</strong>
-          de la semaine, de la 36<sup>e</sup> à la 43<sup>e</sup>&nbsp;heure, sont majorées de
-          <strong>25&nbsp;%</strong>. Les heures suivantes, à partir de la 44<sup>e</sup>, sont
-          majorées de <strong>50&nbsp;%</strong>
-          (<a [href]="articles.l3121_36">article L3121-36 du Code du travail</a>).
-        </p>
-
-        <div class="wh-table-wrap">
-          <table class="wh-table">
-            <caption>Majorations à défaut d’accord, pour une durée de 35&nbsp;heures par semaine</caption>
-            <thead>
-              <tr>
-                <th scope="col">Heures travaillées dans la semaine</th>
-                <th scope="col">Majoration</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>Jusqu’à la 35<sup>e</sup>&nbsp;heure</td>
-                <td>Aucune (heures normales)</td>
-              </tr>
-              <tr>
-                <td>De la 36<sup>e</sup> à la 43<sup>e</sup>&nbsp;heure</td>
-                <td><strong>+25&nbsp;%</strong></td>
-              </tr>
-              <tr>
-                <td>À partir de la 44<sup>e</sup>&nbsp;heure</td>
-                <td><strong>+50&nbsp;%</strong></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <p>
-          Un accord d’entreprise ou, à défaut, un accord de branche peut prévoir d’autres taux, à
-          condition qu’ils ne soient pas inférieurs à 10&nbsp;%. D’où l’importance de vérifier votre
-          convention collective.
-        </p>
-        <p>
-          Les heures supplémentaires restent limitées par les durées maximales de travail,
-          notamment 10&nbsp;heures par jour et 48&nbsp;heures sur une même semaine.
-        </p>
-      </section>
-
-      <section id="exemple" tabindex="-1" aria-labelledby="example-title">
-        <h2 id="example-title">Exemple&nbsp;: 39&nbsp;heures dans une semaine de 35&nbsp;heures</h2>
-        <p>
-          Un salarié à temps plein, sur la base de 35&nbsp;heures, travaille 8&nbsp;heures du lundi
-          au jeudi et 7&nbsp;heures le vendredi.
-        </p>
-
-        <div class="wh-table-wrap">
-          <table class="wh-table">
-            <caption>Heures travaillées du lundi au dimanche</caption>
-            <thead>
-              <tr>
-                <th scope="col">Jour</th>
-                <th scope="col" class="is-num">Heures travaillées</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr><th scope="row">Lundi</th><td class="is-num">8&nbsp;h</td></tr>
-              <tr><th scope="row">Mardi</th><td class="is-num">8&nbsp;h</td></tr>
-              <tr><th scope="row">Mercredi</th><td class="is-num">8&nbsp;h</td></tr>
-              <tr><th scope="row">Jeudi</th><td class="is-num">8&nbsp;h</td></tr>
-              <tr><th scope="row">Vendredi</th><td class="is-num">7&nbsp;h</td></tr>
-              <tr><th scope="row">Samedi et dimanche</th><td class="is-num">0&nbsp;h</td></tr>
-            </tbody>
-            <tfoot>
-              <tr><th scope="row">Total de la semaine</th><td class="is-num">39&nbsp;h</td></tr>
-            </tfoot>
-          </table>
-        </div>
-
-        <ol class="steps">
-          <li>
-            Heures au-delà de la durée légale&nbsp;: 39&nbsp;−&nbsp;35&nbsp;=
-            <strong>4&nbsp;heures supplémentaires</strong>.
-          </li>
-          <li>
-            Ces 4&nbsp;heures font partie des 8&nbsp;premières heures supplémentaires de la
-            semaine&nbsp;: les <strong>4&nbsp;heures sont majorées à 25&nbsp;%</strong>.
-          </li>
-          <li>
-            Avec un taux horaire brut de 14&nbsp;€, pris comme exemple, chaque heure supplémentaire
-            est payée 14&nbsp;€&nbsp;×&nbsp;1,25&nbsp;=&nbsp;17,50&nbsp;€, soit 70&nbsp;€ pour les 4&nbsp;heures au lieu
-            de 56&nbsp;€ sans majoration.
-          </li>
-        </ol>
-
-        <p>
-          Et avec 45&nbsp;heures dans la semaine&nbsp;? Les 8&nbsp;premières heures supplémentaires,
-          de la 36<sup>e</sup> à la 43<sup>e</sup>, sont majorées de 25&nbsp;%, et les
-          2&nbsp;suivantes de 50&nbsp;%.
-        </p>
-      </section>
-
-      <section id="temps-partiel" tabindex="-1" aria-labelledby="part-time-title">
-        <h2 id="part-time-title">Temps partiel&nbsp;: les heures complémentaires</h2>
-        <p>
-          Pour un salarié à temps partiel, les heures accomplies au-delà de la durée prévue au
-          contrat sont des heures complémentaires. Elles ne peuvent pas porter sa durée du travail
-          au niveau de la durée légale de 35&nbsp;heures.
-        </p>
-        <ul>
-          <li>
-            <strong>Limite</strong>&nbsp;: à défaut d’accord collectif, les heures complémentaires
-            ne peuvent pas dépasser le dixième de la durée prévue au contrat
-            (<a [href]="articles.l3123_28">article L3123-28 du Code du travail</a>). Un accord
-            collectif peut relever cette limite, jusqu’au tiers de cette durée.
-          </li>
-          <li>
-            <strong>Majoration</strong>&nbsp;: à défaut d’accord, chaque heure complémentaire est
-            majorée de <strong>10&nbsp;%</strong> jusqu’au dixième de la durée du contrat, puis de
-            <strong>25&nbsp;%</strong> au-delà
-            (<a [href]="articles.l3123_29">article L3123-29 du Code du travail</a>).
-          </li>
-        </ul>
-        <p>
-          <strong>Exemple</strong>&nbsp;: pour un contrat de 24&nbsp;heures par semaine, le dixième
-          représente 2&nbsp;h&nbsp;24. Si le salarié travaille 26&nbsp;heures, ses 2&nbsp;heures
-          complémentaires sont majorées de 10&nbsp;%.
-        </p>
-      </section>
-
-      <section id="conges-payes" tabindex="-1" aria-labelledby="paid-leave-title">
-        <h2 id="paid-leave-title">Les congés payés comptent dans le décompte</h2>
-        <p>
-          Dans un arrêt du 10&nbsp;septembre 2025 (Cour de cassation, chambre sociale,
-          n°&nbsp;23-14.455), la Cour de cassation a jugé qu’un salarié dont la durée du travail
-          est décomptée à la semaine peut prétendre aux majorations d’heures supplémentaires qu’il
-          aurait perçues s’il avait travaillé toute la semaine, même s’il a pris un congé payé.
-        </p>
-        <p>
-          Concrètement, les jours de congé payé pris dans la semaine sont pris en compte pour
-          savoir si le seuil de 35&nbsp;heures est dépassé. Auparavant, seules les heures de travail
-          effectif étaient retenues.
-        </p>
-      </section>
-
-      <section id="workhoraire" tabindex="-1" aria-labelledby="workhoraire-title">
-        <h2 id="workhoraire-title">Ce que WorkHoraire calcule pour vous</h2>
-        <p>WorkHoraire applique ces règles par défaut, à partir des heures pointées&nbsp;:</p>
-        <ul>
-          <li>un décompte par semaine civile, du lundi 0&nbsp;h au dimanche 24&nbsp;h&nbsp;;</li>
-          <li>des heures supplémentaires majorées de 25&nbsp;%, puis de 50&nbsp;%&nbsp;;</li>
-          <li>
-            des heures complémentaires majorées de 10&nbsp;%, puis de 25&nbsp;%, avec une alerte
-            au-delà du dixième du contrat&nbsp;;
-          </li>
-          <li>les congés payés de la semaine comptés dans le seuil des heures supplémentaires.</li>
-        </ul>
-        <p>
-          Les taux appliqués sont les taux légaux par défaut. Si votre convention collective prévoit
-          d’autres taux, tenez-en compte avec votre gestionnaire de paie.
-        </p>
-        <div class="wh-actions">
-          <a class="wh-button wh-button--primary" [href]="links.signUp">Commencer gratuitement</a>
-          <a class="wh-button wh-button--outline" routerLink="/fonctionnalites" fragment="heures-supplementaires">
-            Voir les fonctionnalités
-          </a>
-        </div>
-      </section>
-
-      <section id="sources" tabindex="-1" aria-labelledby="sources-title">
-        <h2 id="sources-title">Sources</h2>
-        <ul class="sources">
-          <li>
-            <a [href]="articles.l3121_35">Article L3121-35 du Code du travail</a>&nbsp;: la semaine
-            civile, du lundi au dimanche
-          </li>
-          <li>
-            <a [href]="articles.l3121_36">Article L3121-36 du Code du travail</a>&nbsp;: les
-            majorations de 25&nbsp;% et 50&nbsp;% à défaut d’accord
-          </li>
-          <li>
-            <a [href]="articles.l3123_28">Article L3123-28 du Code du travail</a>&nbsp;: la limite
-            des heures complémentaires à défaut d’accord
-          </li>
-          <li>
-            <a [href]="articles.l3123_29">Article L3123-29 du Code du travail</a>&nbsp;: les
-            majorations des heures complémentaires à défaut d’accord
-          </li>
-          <li>
-            Cour de cassation, chambre sociale, 10&nbsp;septembre 2025, n°&nbsp;23-14.455&nbsp;: les
-            congés payés dans le décompte des heures supplémentaires
-          </li>
-        </ul>
-      </section>
+    <div class="wh-table-wrap">
+      <table class="wh-table">
+        <caption>
+          Heures travaillées du lundi au dimanche
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">Jour</th>
+            <th scope="col" class="is-num">Heures travaillées</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">Lundi</th>
+            <td class="is-num">8&nbsp;h</td>
+          </tr>
+          <tr>
+            <th scope="row">Mardi</th>
+            <td class="is-num">8&nbsp;h</td>
+          </tr>
+          <tr>
+            <th scope="row">Mercredi</th>
+            <td class="is-num">8&nbsp;h</td>
+          </tr>
+          <tr>
+            <th scope="row">Jeudi</th>
+            <td class="is-num">8&nbsp;h</td>
+          </tr>
+          <tr>
+            <th scope="row">Vendredi</th>
+            <td class="is-num">7&nbsp;h</td>
+          </tr>
+          <tr>
+            <th scope="row">Samedi et dimanche</th>
+            <td class="is-num">0&nbsp;h</td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr>
+            <th scope="row">Total de la semaine</th>
+            <td class="is-num">39&nbsp;h</td>
+          </tr>
+        </tfoot>
+      </table>
     </div>
-  </div>
-</article>
 
-<app-cta-band
-  heading="Laissez WorkHoraire calculer les heures supplémentaires"
-  text="Décompte par semaine civile, majorations légales et congés payés pris en compte. Gratuit jusqu’à 3 salariés actifs."
-/>
+    <ol class="steps">
+      <li>
+        Heures au-delà de la durée légale&nbsp;: 39&nbsp;−&nbsp;35&nbsp;=
+        <strong>4&nbsp;heures supplémentaires</strong>.
+      </li>
+      <li>
+        Ces 4&nbsp;heures font partie des 8&nbsp;premières heures supplémentaires de la
+        semaine&nbsp;: les <strong>4&nbsp;heures sont majorées à 25&nbsp;%</strong>.
+      </li>
+      <li>
+        Avec un taux horaire brut de 14&nbsp;€, pris comme exemple, chaque heure supplémentaire est
+        payée 14&nbsp;€&nbsp;×&nbsp;1,25&nbsp;=&nbsp;17,50&nbsp;€, soit 70&nbsp;€ pour les
+        4&nbsp;heures au lieu de 56&nbsp;€ sans majoration.
+      </li>
+    </ol>
+
+    <p>
+      Et avec 45&nbsp;heures dans la semaine&nbsp;? Les 8&nbsp;premières heures supplémentaires, de
+      la 36<sup>e</sup> à la 43<sup>e</sup>, sont majorées de 25&nbsp;%, et les 2&nbsp;suivantes de
+      50&nbsp;%.
+    </p>
+  </section>
+
+  <section id="temps-partiel" tabindex="-1" aria-labelledby="part-time-title">
+    <h2 id="part-time-title">Temps partiel&nbsp;: les heures complémentaires</h2>
+    <p>
+      Pour un salarié à temps partiel, les heures accomplies au-delà de la durée prévue au contrat
+      sont des heures complémentaires. Elles ne peuvent pas porter sa durée du travail au niveau de
+      la durée légale de 35&nbsp;heures.
+    </p>
+    <ul>
+      <li>
+        <strong>Limite</strong>&nbsp;: à défaut d’accord collectif, les heures complémentaires ne
+        peuvent pas dépasser le dixième de la durée prévue au contrat (<a [href]="articles.l3123_28"
+          >article L3123-28 du Code du travail</a
+        >). Un accord collectif peut relever cette limite, jusqu’au tiers de cette durée.
+      </li>
+      <li>
+        <strong>Majoration</strong>&nbsp;: à défaut d’accord, chaque heure complémentaire est
+        majorée de <strong>10&nbsp;%</strong> jusqu’au dixième de la durée du contrat, puis de
+        <strong>25&nbsp;%</strong> au-delà (<a [href]="articles.l3123_29"
+          >article L3123-29 du Code du travail</a
+        >).
+      </li>
+    </ul>
+    <p>
+      <strong>Exemple</strong>&nbsp;: pour un contrat de 24&nbsp;heures par semaine, le dixième
+      représente 2&nbsp;h&nbsp;24. Si le salarié travaille 26&nbsp;heures, ses 2&nbsp;heures
+      complémentaires sont majorées de 10&nbsp;%.
+    </p>
+  </section>
+
+  <section id="conges-payes" tabindex="-1" aria-labelledby="paid-leave-title">
+    <h2 id="paid-leave-title">Les congés payés comptent dans le décompte</h2>
+    <p>
+      Dans un arrêt du 10&nbsp;septembre 2025 (Cour de cassation, chambre sociale,
+      n°&nbsp;23-14.455), la Cour de cassation a jugé qu’un salarié dont la durée du travail est
+      décomptée à la semaine peut prétendre aux majorations d’heures supplémentaires qu’il aurait
+      perçues s’il avait travaillé toute la semaine, même s’il a pris un congé payé.
+    </p>
+    <p>
+      Concrètement, les jours de congé payé pris dans la semaine sont pris en compte pour savoir si
+      le seuil de 35&nbsp;heures est dépassé. Auparavant, seules les heures de travail effectif
+      étaient retenues.
+    </p>
+  </section>
+
+  <section id="workhoraire" tabindex="-1" aria-labelledby="workhoraire-title">
+    <h2 id="workhoraire-title">Ce que WorkHoraire calcule pour vous</h2>
+    <p>WorkHoraire applique ces règles par défaut, à partir des heures pointées&nbsp;:</p>
+    <ul>
+      <li>un décompte par semaine civile, du lundi 0&nbsp;h au dimanche 24&nbsp;h&nbsp;;</li>
+      <li>des heures supplémentaires majorées de 25&nbsp;%, puis de 50&nbsp;%&nbsp;;</li>
+      <li>
+        des heures complémentaires majorées de 10&nbsp;%, puis de 25&nbsp;%, avec une alerte au-delà
+        du dixième du contrat&nbsp;;
+      </li>
+      <li>les congés payés de la semaine comptés dans le seuil des heures supplémentaires.</li>
+    </ul>
+    <p>
+      Les taux appliqués sont les taux légaux par défaut. Si votre convention collective prévoit
+      d’autres taux, tenez-en compte avec votre gestionnaire de paie.
+    </p>
+    <div class="wh-actions">
+      <a class="wh-button wh-button--primary" [href]="links.signUp">Commencer gratuitement</a>
+      <a
+        class="wh-button wh-button--outline"
+        routerLink="/fonctionnalites"
+        fragment="heures-supplementaires"
+      >
+        Voir les fonctionnalités
+      </a>
+    </div>
+  </section>
+
+  <section id="sources" tabindex="-1" aria-labelledby="sources-title">
+    <h2 id="sources-title">Sources</h2>
+    <ul class="sources">
+      <li>
+        <a [href]="articles.l3121_35">Article L3121-35 du Code du travail</a>&nbsp;: la semaine
+        civile, du lundi au dimanche
+      </li>
+      <li>
+        <a [href]="articles.l3121_36">Article L3121-36 du Code du travail</a>&nbsp;: les majorations
+        de 25&nbsp;% et 50&nbsp;% à défaut d’accord
+      </li>
+      <li>
+        <a [href]="articles.l3123_28">Article L3123-28 du Code du travail</a>&nbsp;: la limite des
+        heures complémentaires à défaut d’accord
+      </li>
+      <li>
+        <a [href]="articles.l3123_29">Article L3123-29 du Code du travail</a>&nbsp;: les majorations
+        des heures complémentaires à défaut d’accord
+      </li>
+      <li>
+        Cour de cassation, chambre sociale, 10&nbsp;septembre 2025, n°&nbsp;23-14.455&nbsp;: les
+        congés payés dans le décompte des heures supplémentaires
+      </li>
+    </ul>
+  </section>
+</app-guide-layout>
+
+<app-cta-band heading="Laissez WorkHoraire calculer les heures supplémentaires" [text]="ctaText" />

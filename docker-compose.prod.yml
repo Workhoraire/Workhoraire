@@ -1,7 +1,9 @@
 # Production on a single server: the "pilots" stage of
 # docs/produit/08-prix-et-hebergement.md. Operations: docs/technique/exploitation.md.
+# Deployed by infrastructure/server/deploy.sh (backup, database roles, build,
+# start, proxy reload and checks):
 #
-#   docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
+#   bash infrastructure/server/deploy.sh
 #
 # Only the proxy is published on the internet (80/443). Keycloak's
 # administration listens on 127.0.0.1 only, for an SSH tunnel.
@@ -9,7 +11,10 @@
 # project (the development stack is "workhoraire-app").
 name: workhoraire-prod
 
-x-database-url: &database-url postgresql://${POSTGRES_USER:?POSTGRES_USER must be set}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB must be set}?schema=public
+# The migrations run as the database owner; the API only reads and writes data
+# (roles created by infrastructure/postgres/init-prod/01-roles.sh).
+x-owner-database-url: &owner-database-url postgresql://${POSTGRES_USER:?POSTGRES_USER must be set}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB must be set}?schema=public
+x-api-database-url: &api-database-url postgresql://workhoraire_api:${API_DB_PASSWORD:?API_DB_PASSWORD must be set}@postgres:5432/${POSTGRES_DB}?schema=public
 
 services:
   proxy:
@@ -26,7 +31,9 @@ services:
       API_HOST: ${API_HOST:?API_HOST must be set}
       AUTH_HOST: ${AUTH_HOST:?AUTH_HOST must be set}
     volumes:
-      - ./infrastructure/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      # The directory, not the file: a file replaced by git stays visible, and
+      # deploy.sh reloads it (caddy reload).
+      - ./infrastructure/caddy:/etc/caddy:ro
       - caddy_data:/data
       - caddy_config:/config
     networks:
@@ -68,12 +75,11 @@ services:
       NODE_ENV: production
       PORT: "3000"
       TRUST_PROXY: "1"
-      DATABASE_URL: *database-url
+      DATABASE_URL: *api-database-url
       FRONTEND_URL: https://${APP_HOST}
       KEYCLOAK_AUTH_SERVER_URL: https://${AUTH_HOST}
       KEYCLOAK_REALM: workhoraire
       KEYCLOAK_CLIENT_ID: workhoraire-api
-      KEYCLOAK_SSL_REQUIRED: external
       KEYCLOAK_REQUIRE_VERIFIED_EMAIL: "true"
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-587}
@@ -96,7 +102,7 @@ services:
       target: migrate
     restart: "no"
     environment:
-      DATABASE_URL: *database-url
+      DATABASE_URL: *owner-database-url
     depends_on:
       postgres:
         condition: service_healthy
@@ -108,8 +114,8 @@ services:
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:?KEYCLOAK_ADMIN must be set}
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?KEYCLOAK_ADMIN_PASSWORD must be set}
       KC_DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
-      KC_DB_USERNAME: ${POSTGRES_USER}
-      KC_DB_PASSWORD: ${POSTGRES_PASSWORD}
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?KEYCLOAK_DB_PASSWORD must be set}
       KC_DB_SCHEMA: keycloak
       KC_HOSTNAME: https://${AUTH_HOST}
       KC_HOSTNAME_ADMIN: http://localhost:${KEYCLOAK_ADMIN_PORT:-8180}
@@ -140,9 +146,13 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      # Read by init-prod/01-roles.sh: on an empty data volume, then at every
+      # deployment (deploy.sh), so that the roles follow .env.production.
+      KEYCLOAK_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
+      API_DB_PASSWORD: ${API_DB_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./infrastructure/postgres/init/01-keycloak-schema.sql:/docker-entrypoint-initdb.d/01-keycloak-schema.sql:ro
+      - ./infrastructure/postgres/init-prod:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
@@ -159,6 +169,20 @@ services:
       PGDATABASE: ${POSTGRES_DB}
       BACKUP_PASSPHRASE: ${BACKUP_PASSPHRASE:?BACKUP_PASSPHRASE must be set}
       BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
+      BACKUP_CRON: ${BACKUP_CRON:-0 3 * * *}
+      # Pinged after each complete backup (dead man's switch), when set.
+      BACKUP_HEARTBEAT_URL: ${BACKUP_HEARTBEAT_URL:-}
+      # Copy of every encrypted dump off the server (S3-compatible storage), when set.
+      BACKUP_OFFSITE: ${BACKUP_OFFSITE:-}
+      BACKUP_OFFSITE_PRUNE: ${BACKUP_OFFSITE_PRUNE:-false}
+      # The remote is described by the variables below, not by a config file.
+      RCLONE_CONFIG: /dev/null
+      RCLONE_CONFIG_OFFSITE_TYPE: s3
+      RCLONE_CONFIG_OFFSITE_PROVIDER: ${OFFSITE_S3_PROVIDER:-Other}
+      RCLONE_CONFIG_OFFSITE_ENDPOINT: ${OFFSITE_S3_ENDPOINT:-}
+      RCLONE_CONFIG_OFFSITE_REGION: ${OFFSITE_S3_REGION:-}
+      RCLONE_CONFIG_OFFSITE_ACCESS_KEY_ID: ${OFFSITE_S3_ACCESS_KEY_ID:-}
+      RCLONE_CONFIG_OFFSITE_SECRET_ACCESS_KEY: ${OFFSITE_S3_SECRET_ACCESS_KEY:-}
     volumes:
       - ${BACKUP_DIR:-./backups}:/backups
     depends_on:

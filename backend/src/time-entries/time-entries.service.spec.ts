@@ -16,8 +16,10 @@ interface TimeEntryDelegateMock {
   create: jest.Mock;
   delete: jest.Mock;
   findFirst: jest.Mock;
+  findMany: jest.Mock;
   findUnique: jest.Mock;
   update: jest.Mock;
+  updateMany: jest.Mock;
 }
 
 describe('TimeEntriesService', () => {
@@ -73,8 +75,10 @@ describe('TimeEntriesService', () => {
       create: jest.fn(),
       delete: jest.fn(),
       findFirst: jest.fn(),
+      findMany: jest.fn().mockResolvedValue([]),
       findUnique: jest.fn(),
       update: jest.fn(),
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
     };
     auditCreate = jest.fn();
     auditFindMany = jest.fn().mockResolvedValue([]);
@@ -169,6 +173,37 @@ describe('TimeEntriesService', () => {
 
       await expect(service.clockOut(employee, {}, now)).rejects.toBeInstanceOf(ConflictException);
       expect(timeEntry.update).not.toHaveBeenCalled();
+    });
+
+    it('reminds a forgotten clock-out once, and again at the next run if the e-mail was not delivered', async () => {
+      mail.enabled = true;
+      const forgotten = {
+        id: 'entry-1',
+        startAt: new Date('2026-09-23T03:00:00.000Z'),
+        user: { email: 'emma@example.com', firstName: 'Emma', isActive: true },
+        company: { timezone: 'Europe/Paris' },
+      };
+      timeEntry.findMany.mockResolvedValue([forgotten]);
+      mail.send.mockResolvedValueOnce(false);
+
+      await expect(service.remindForgottenClockOuts(now)).resolves.toBe(0);
+      // Claimed before sending, released when the e-mail did not leave.
+      expect(timeEntry.updateMany).toHaveBeenNthCalledWith(1, {
+        where: { id: 'entry-1', reminderSentAt: null, endAt: null },
+        data: { reminderSentAt: now },
+      });
+      expect(timeEntry.updateMany).toHaveBeenNthCalledWith(2, {
+        where: { id: 'entry-1', reminderSentAt: now },
+        data: { reminderSentAt: null },
+      });
+
+      timeEntry.updateMany.mockClear();
+      await expect(service.remindForgottenClockOuts(now)).resolves.toBe(1);
+      expect(timeEntry.updateMany).toHaveBeenCalledTimes(1);
+      expect(mail.send).toHaveBeenLastCalledWith(
+        'emma@example.com',
+        expect.objectContaining({ subject: 'Sortie non pointée le mercredi 23 septembre' }),
+      );
     });
 
     it('lets an employee close a forgotten entry with a reason, and audits it', async () => {

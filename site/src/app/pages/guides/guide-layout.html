@@ -1,0 +1,36 @@
+<article aria-labelledby="page-title">
+  <header class="wh-page-hero wh-glow">
+    <div class="wh-container">
+      <nav class="breadcrumb" aria-label="Fil d’Ariane">
+        <ol>
+          <li><a routerLink="/">Accueil</a></li>
+          <li><a routerLink="/guides">Guides</a></li>
+          <li aria-current="page">{{ crumb() }}</li>
+        </ol>
+      </nav>
+      <p class="wh-eyebrow">Guide</p>
+      <h1 id="page-title">{{ heading() }}</h1>
+      <p class="wh-lead">{{ lead() }}</p>
+      <p class="updated">
+        Mis à jour le <time [attr.datetime]="updatedOn()">{{ updatedLabel() }}</time>
+      </p>
+    </div>
+  </header>
+
+  <div class="wh-container layout">
+    <nav class="contents" aria-labelledby="contents-title">
+      <h2 id="contents-title">Sommaire</h2>
+      <ol>
+        @for (section of sections(); track section.id) {
+          <li>
+            <a [routerLink]="path()" [fragment]="section.id">{{ section.label }}</a>
+          </li>
+        }
+      </ol>
+    </nav>
+
+    <div class="wh-prose body">
+      <ng-content />
+    </div>
+  </div>
+</article>

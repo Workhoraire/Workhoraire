@@ -5,7 +5,6 @@ import {
   isValidDateKey,
   isValidTimeZone,
   isoWeekday,
-  localDateTimeToInstant,
   startOfLocalDay,
   startOfWeek,
   timeZoneOffsetMinutes,
@@ -32,15 +31,6 @@ describe('local dates', () => {
     expect(startOfLocalDay('2026-03-30', PARIS).toISOString()).toBe('2026-03-29T22:00:00.000Z');
     expect(startOfLocalDay('2026-10-25', PARIS).toISOString()).toBe('2026-10-24T22:00:00.000Z');
     expect(startOfLocalDay('2026-10-26', PARIS).toISOString()).toBe('2026-10-25T23:00:00.000Z');
-  });
-
-  it('converts a local wall-clock time to an instant', () => {
-    expect(localDateTimeToInstant('2026-09-23', 8 * 60 + 30, PARIS).toISOString()).toBe(
-      '2026-09-23T06:30:00.000Z',
-    );
-    expect(localDateTimeToInstant('2026-12-23', 8 * 60 + 30, PARIS).toISOString()).toBe(
-      '2026-12-23T07:30:00.000Z',
-    );
   });
 
   it('does calendar arithmetic on date keys', () => {

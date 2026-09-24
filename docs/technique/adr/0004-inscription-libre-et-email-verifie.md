@@ -15,6 +15,8 @@ Avant ce changement, l'inscription était désactivée dans le realm Keycloak. U
    - protection anti-brute-force ;
    - politique de mot de passe (12 caractères au moins, différent de l'e-mail et de l'identifiant).
 2. L'API exige un **e-mail vérifié** (`email_verified`) pour accepter une invitation, car l'e-mail sert à prouver l'identité de l'invité. Ce contrôle est actif par défaut (`KEYCLOAK_REQUIRE_VERIFIED_EMAIL`, défaut `true`). Le `.env` local le désactive, faute de serveur SMTP pour envoyer les e-mails de vérification.
+
+   > Mise à jour du 24/09/2026 : le `.env` local ne le désactive plus (`KEYCLOAK_REQUIRE_VERIFIED_EMAIL=true` dans `.env.example`). La raison a disparu : en local, Keycloak envoie ses e-mails de vérification à Mailpit, et le realm exige la vérification (`verifyEmail: true`).
 3. En production : `verifyEmail: true` et SMTP configuré dans Keycloak.
 
 ## Conséquences
@@ -39,3 +41,10 @@ Options écartées :
 - **Invitation envoyée par Keycloak** (e-mail d'action ou fonction « Organizations »). Elle exige un serveur SMTP ; c'est la cible pour la production, où l'e-mail prouvera en plus que la personne possède bien l'adresse.
 
 Le realm n'étant importé qu'à la création de la base Keycloak, la configuration du profil utilisateur doit être reportée à la main sur un environnement existant (voir `architecture.md`, § 6).
+
+## Mise à jour du 24/09/2026 : adresse vérifiée partout, invitation envoyée par l'API
+
+1. L'API exige aussi une adresse **vérifiée** pour **créer une entreprise** (403 sinon), avec le même réglage `KEYCLOAK_REQUIRE_VERIFIED_EMAIL` : les e-mails de l'entreprise (facturation, alertes) partent à cette adresse, qui doit être celle de la personne.
+2. L'adresse d'un utilisateur est reprise du jeton dès que Keycloak l'a vérifiée ; l'administrateur ne peut plus la modifier (revue de sécurité du 24/09/2026, [securite-et-rgpd.md](../securite-et-rgpd.md), § 3 bis).
+3. Le lien d'invitation part par e-mail **depuis l'API** (module `notifications` : Brevo en production, Mailpit en local), et non depuis Keycloak : l'option « invitation envoyée par Keycloak » n'est plus la cible.
+4. Les réglages du realm se reportent sur un Keycloak existant avec `node infrastructure/keycloak/apply-realm-settings.mjs` (voir le [README](../../../README.md#partage-du-realm)), et non plus à la main. En local, Keycloak envoie ses e-mails de vérification à Mailpit.

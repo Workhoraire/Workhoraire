@@ -1,0 +1,109 @@
+/* WorkHoraire branding over Keycloak's v2 login theme (PatternFly 5). */
+:root {
+  --wh-ink: #17211d;
+  --wh-ink-soft: #2d3b34;
+  --wh-paper: #f4f5ef;
+  --wh-lime: #c8ef73;
+  --wh-muted: #68736d;
+  --wh-line: #dfe4dc;
+
+  --pf-v5-global--FontFamily--text: "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+  --pf-v5-global--FontFamily--heading: var(--pf-v5-global--FontFamily--text);
+  --pf-v5-global--primary-color--100: var(--wh-ink);
+  --pf-v5-global--primary-color--200: var(--wh-ink-soft);
+  --pf-v5-global--active-color--100: var(--wh-ink);
+  --pf-v5-global--link--Color: var(--wh-ink);
+  --pf-v5-global--link--Color--hover: var(--wh-ink-soft);
+}
+
+.login-pf body {
+  background: var(--wh-paper);
+}
+
+/* Brand: the "WH" mark and the name, as in the application. */
+#kc-header-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  color: var(--wh-ink) !important;
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  text-transform: none;
+}
+
+#kc-header-wrapper::before {
+  content: "WH";
+  display: inline-grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 0.8rem;
+  background: var(--wh-lime);
+  color: var(--wh-ink);
+  font-size: 0.95rem;
+  letter-spacing: 0;
+}
+
+/* The parent theme fixes the column at 34rem: too wide for a phone. */
+.pf-v5-c-login__container {
+  grid-template-columns: minmax(0, 34rem);
+  width: 100%;
+  max-width: 100%;
+}
+
+.pf-v5-c-login__main {
+  border: 1px solid var(--wh-line);
+  border-radius: 1.25rem;
+  background: #ffffff;
+  box-shadow: 0 20px 50px rgba(23, 33, 29, 0.08);
+}
+
+/* Keycloak 26.7 draws a blue line above the card header. */
+.pf-v5-c-login__main-header {
+  border-top: 0;
+}
+
+#kc-page-title {
+  color: var(--wh-ink);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.pf-v5-c-button {
+  --pf-v5-c-button--BorderRadius: 999px;
+}
+
+.pf-v5-c-button.pf-m-primary {
+  --pf-v5-c-button--m-primary--BackgroundColor: var(--wh-ink);
+  --pf-v5-c-button--m-primary--Color: #f8faf3;
+  --pf-v5-c-button--m-primary--hover--BackgroundColor: var(--wh-ink-soft);
+  --pf-v5-c-button--m-primary--focus--BackgroundColor: var(--wh-ink-soft);
+  --pf-v5-c-button--m-primary--active--BackgroundColor: var(--wh-ink-soft);
+  min-height: 3rem;
+  font-weight: 700;
+}
+
+.pf-v5-c-button:focus-visible,
+.pf-v5-c-form-control:focus-within {
+  outline: 3px solid var(--wh-lime);
+  outline-offset: 2px;
+}
+
+a,
+.pf-v5-c-button.pf-m-link {
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* On a phone the card takes the whole width: no floating corners. */
+@media (max-width: 575px) {
+  .pf-v5-c-login__main {
+    border-width: 1px 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+}

@@ -8,11 +8,13 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSelectModule } from '@angular/material/select';
 import { Router } from '@angular/router';
 
 import { environment } from '../../../environments/environment';
 import { AuthService } from '../../core/auth/auth.service';
 import { takeOffer } from '../../core/billing/chosen-offer';
+import { apiErrorMessage } from '../../core/http/error-message';
 import { OnboardingService } from './onboarding.service';
 
 @Component({
@@ -25,6 +27,7 @@ import { OnboardingService } from './onboarding.service';
     MatIconModule,
     MatInputModule,
     MatProgressSpinnerModule,
+    MatSelectModule,
     ReactiveFormsModule,
   ],
   templateUrl: './onboarding.html',
@@ -54,12 +57,29 @@ export class Onboarding {
     ],
     name: [
       '',
-      [Validators.required, Validators.pattern(/\S/), Validators.minLength(2), Validators.maxLength(120)],
+      [
+        Validators.required,
+        Validators.pattern(/\S/),
+        Validators.minLength(2),
+        Validators.maxLength(120),
+      ],
     ],
-    siret: ['', [Validators.pattern(/^\d{14}$/)]],
-    timezone: ['Europe/Paris', [Validators.required, Validators.pattern(/\S/), Validators.maxLength(64)]],
+    // Spaces are accepted, as printed on a Kbis: "552 100 554 00025".
+    siret: ['', [Validators.pattern(/^\s*(\d\s*){14}$/)]],
+    timezone: ['Europe/Paris', [Validators.required]],
     acceptTerms: [false, Validators.requiredTrue],
   });
+
+  /** Where French labour law applies; overseas collectivities with their own code are left out. */
+  protected readonly timezones = [
+    { value: 'Europe/Paris', label: 'France métropolitaine et Corse' },
+    { value: 'America/Guadeloupe', label: 'Guadeloupe, Saint-Barthélemy, Saint-Martin' },
+    { value: 'America/Martinique', label: 'Martinique' },
+    { value: 'America/Cayenne', label: 'Guyane' },
+    { value: 'Indian/Reunion', label: 'La Réunion' },
+    { value: 'Indian/Mayotte', label: 'Mayotte' },
+    { value: 'America/Miquelon', label: 'Saint-Pierre-et-Miquelon' },
+  ];
 
   /** Legal pages of the website, opened in a new tab. */
   protected readonly legalLinks = {
@@ -69,6 +89,9 @@ export class Onboarding {
   };
 
   protected submit(): void {
+    if (this.submitting()) {
+      return;
+    }
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
@@ -83,8 +106,8 @@ export class Onboarding {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         name: name.trim(),
-        siret: siret || undefined,
-        timezone: timezone.trim(),
+        siret: siret.replace(/\s/g, '') || undefined,
+        timezone,
         acceptTerms: true,
       })
       .subscribe({
@@ -106,26 +129,14 @@ export class Onboarding {
 
   private errorMessage(response: HttpErrorResponse): string {
     if (response.status === 409) {
-      return 'Votre compte est déjà rattaché à une entreprise, ou ce SIRET est déjà utilisé.';
+      return apiErrorMessage(
+        response,
+        'Votre compte est déjà rattaché à une entreprise, ou ce SIRET est déjà utilisé.',
+      );
     }
-
-    if (response.status === 400) {
-      const messages = response.error?.message;
-      if (Array.isArray(messages) && messages.length > 0) {
-        return messages[0];
-      }
-
-      if (typeof messages === 'string') {
-        return messages;
-      }
-
-      return 'Vérifiez les informations saisies puis réessayez.';
+    if (response.status === 0 || response.status >= 500) {
+      return 'L’entreprise n’a pas pu être créée. Réessayez dans quelques instants.';
     }
-
-    if (response.status === 401) {
-      return 'Votre session a expiré. Reconnectez-vous pour continuer.';
-    }
-
-    return "L'entreprise n'a pas pu être créée. Vérifiez que le backend est disponible.";
+    return apiErrorMessage(response, 'Vérifiez les informations saisies puis réessayez.');
   }
 }

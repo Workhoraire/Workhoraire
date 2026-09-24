@@ -1,7 +1,8 @@
 import { SetMetadata } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 
-export const KEYCLOAK_ROLES_METADATA = 'keycloak_roles';
+/** Application roles allowed on a route; they come from the database, not from Keycloak. */
+export const ROLES_METADATA = 'roles';
 
 export const Roles = (...roles: UserRole[]) =>
-  SetMetadata(KEYCLOAK_ROLES_METADATA, roles);
+  SetMetadata(ROLES_METADATA, roles);

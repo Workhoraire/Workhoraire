@@ -1,6 +1,6 @@
 # Moteur de calcul des heures
 
-Code : `backend/src/timesheets/timesheet.calculator.ts` (fonctions pures, sans base de données). Seuils : `backend/src/timesheets/labor-rules.ts`. Tests : `timesheet.calculator.spec.ts` (15 cas), `local-date.spec.ts` (fuseaux, jours fériés).
+Code : `backend/src/timesheets/timesheet.calculator.ts` (fonctions pures, sans base de données). Seuils : `backend/src/timesheets/labor-rules.ts`. Tests : `timesheet.calculator.spec.ts` (dont les exemples du § 4), `local-date.spec.ts` (fuseaux, jours fériés) ; le nombre de tests est suivi dans [tests-et-qualite.md](tests-et-qualite.md).
 
 Les références légales sont détaillées dans [../produit/02-cadre-legal-et-rgpd.md](../produit/02-cadre-legal-et-rgpd.md).
 

@@ -13,7 +13,7 @@
           Voir les fonctionnalités
         </a>
       </div>
-      <p class="hero-note">Gratuit jusqu’à 3&nbsp;salariés actifs · Sans&nbsp;engagement</p>
+      <p class="hero-note">Gratuit jusqu’à {{ pricing.freeLimit }} · Sans&nbsp;engagement</p>
     </div>
 
     <div class="hero-visual">
@@ -71,7 +71,9 @@
       <p class="wh-eyebrow">Pourquoi WorkHoraire</p>
       <h2 id="benefits-title">Des heures fiables, des calculs conformes</h2>
       <p class="wh-lead">
-        Les règles du Code du travail sont appliquées pour vous, et chaque heure peut être justifiée.
+        Les règles légales par défaut du Code du travail sont appliquées pour vous, et chaque heure
+        peut être justifiée. Vérifiez votre convention collective&nbsp;: elle peut prévoir d’autres
+        taux ou d’autres limites.
       </p>
     </div>
 
@@ -121,7 +123,9 @@
         [height]="800"
       />
     </div>
-    <p class="wh-small demo-note">Captures de l’application avec des données de démonstration fictives.</p>
+    <p class="wh-small demo-note">
+      Captures de l’application avec des données de démonstration fictives.
+    </p>
   </div>
 </section>
 
@@ -137,8 +141,8 @@
         <span class="step-number" aria-hidden="true">1</span>
         <h3>Créez votre entreprise</h3>
         <p>
-          Inscrivez-vous avec votre adresse e-mail, puis créez votre entreprise&nbsp;: vous en
-          devenez l’administrateur.
+          Inscrivez-vous avec votre adresse e-mail, confirmez-la, puis créez votre entreprise&nbsp;:
+          vous en devenez l’administrateur.
         </p>
       </li>
       <li class="step">
@@ -146,7 +150,8 @@
         <h3>Invitez l’équipe par un lien</h3>
         <p>
           Chaque salarié reçoit un lien d’invitation par e-mail. Son adresse est déjà
-          renseignée&nbsp;: il n’a plus qu’à choisir son mot de passe.
+          renseignée&nbsp;: il choisit son mot de passe, puis confirme son adresse depuis l’e-mail
+          de vérification.
         </p>
       </li>
       <li class="step">

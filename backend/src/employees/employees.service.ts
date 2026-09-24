@@ -5,6 +5,8 @@ import {
   GoneException,
   Injectable,
   NotFoundException,
+  HttpException,
+  HttpStatus,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Prisma, UserRole } from '@prisma/client';
@@ -18,11 +20,12 @@ import {
 import {
   dateKeyToDateColumn,
   isValidDateKey,
+  startOfLocalDay,
   startOfWeek,
   toDateKey,
 } from '../common/dates/local-date';
-import { formatMailDate, mailName } from '../notifications/mail-format';
-import { invitationMail } from '../notifications/mail-templates';
+import { formatMailDate, formatMailDuration, mailName } from '../notifications/mail-format';
+import { contractChangeMail, invitationMail } from '../notifications/mail-templates';
 import { MailService } from '../notifications/mail.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CONTRACT_HISTORY_START, initialContractPeriod } from './contract-periods';
@@ -49,6 +52,18 @@ const employeeSelect = {
   createdAt: true,
   updatedAt: true,
 } as const;
+
+/** Invitations a company may send in 24 hours. */
+const MAX_INVITATIONS_PER_DAY = 100;
+
+/** A contract change: the contract in force from `effectiveFrom` (a Monday), before and after. */
+interface ContractChange {
+  effectiveFrom: string;
+  before: number;
+  after: number;
+  /** Contract in force this week, after the change. */
+  current: number;
+}
 
 @Injectable()
 export class EmployeesService {
@@ -109,7 +124,7 @@ export class EmployeesService {
   ): Promise<EmployeeResponse> {
     const employee = await this.prisma.user.findFirst({
       where: { id: employeeId, companyId: currentUser.companyId },
-      select: { id: true, role: true, isActive: true, weeklyContractMinutes: true },
+      select: { id: true, role: true, isActive: true, weeklyContractMinutes: true, createdAt: true },
     });
 
     if (!employee) {
@@ -134,15 +149,17 @@ export class EmployeesService {
     if (dto.lastName !== undefined) {
       data.lastName = dto.lastName;
     }
-    if (dto.email !== undefined) {
-      data.email = dto.email;
-    }
     if (dto.role !== undefined) {
       data.role = dto.role;
     }
     if (dto.isActive !== undefined) {
       data.isActive = dto.isActive;
     }
+    // Someone who loses the administrator role, or their access, must not come
+    // back through an invitation they sent before.
+    const losesAdministration =
+      employee.role === UserRole.ADMIN &&
+      (dto.isActive === false || (dto.role !== undefined && dto.role !== UserRole.ADMIN));
     if (dto.payrollId !== undefined) {
       data.payrollId = dto.payrollId || null;
     }
@@ -159,25 +176,50 @@ export class EmployeesService {
       throw new BadRequestException('At least one employee field is required');
     }
 
+    const timezone = currentUser.company.timezone;
+    const thisWeek = startOfWeek(toDateKey(now, timezone));
+    const effectiveFrom = startOfWeek(dto.contractEffectiveFrom ?? thisWeek);
+    // Weeks before the employee joined were never worked under this account.
+    if (contractMinutes !== undefined && effectiveFrom < startOfWeek(toDateKey(employee.createdAt, timezone))) {
+      throw new BadRequestException('The contract cannot change before the week the employee joined');
+    }
+
     try {
-      return await this.prisma.$transaction(async (transaction) => {
-        if (contractMinutes !== undefined) {
-          data.weeklyContractMinutes = await this.changeContract(
-            transaction,
-            currentUser,
-            employee,
-            contractMinutes,
-            dto.contractEffectiveFrom,
-            now,
-          );
+      const { updated, contractChange } = await this.prisma.$transaction(async (transaction) => {
+        const change =
+          contractMinutes === undefined
+            ? null
+            : await this.changeContract(
+                transaction,
+                currentUser.companyId,
+                employee,
+                contractMinutes,
+                effectiveFrom,
+                thisWeek,
+              );
+        if (change) {
+          data.weeklyContractMinutes = change.current;
         }
 
-        return transaction.user.update({
+        if (losesAdministration) {
+          await transaction.employeeInvitation.updateMany({
+            where: { invitedById: employee.id, acceptedAt: null, expiresAt: { gt: now } },
+            data: { expiresAt: now },
+          });
+        }
+
+        const user = await transaction.user.update({
           where: { id: employee.id },
           data,
           select: employeeSelect,
         });
+        return { updated: user, contractChange: change };
       });
+
+      if (contractChange) {
+        this.notifyContractChange(currentUser, updated, contractChange);
+      }
+      return updated;
     } catch (error: unknown) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -190,35 +232,62 @@ export class EmployeesService {
   }
 
   /**
+   * Tells the employee by e-mail that their contractual time changes, in the
+   * background: it never blocks nor undoes the change.
+   */
+  private notifyContractChange(
+    actor: ApplicationUser,
+    employee: EmployeeResponse,
+    change: ContractChange,
+  ): void {
+    // Nobody needs an e-mail about a change they made to their own contract.
+    if (
+      !this.mail.enabled ||
+      change.before === change.after ||
+      employee.id === actor.id ||
+      !employee.isActive ||
+      !employee.email
+    ) {
+      return;
+    }
+    const timezone = actor.company.timezone;
+    void this.mail.send(
+      employee.email,
+      contractChangeMail({
+        firstName: employee.firstName,
+        actorName: mailName(actor),
+        before: formatMailDuration(change.before),
+        after: formatMailDuration(change.after),
+        fromWeek: formatMailDate(startOfLocalDay(change.effectiveFrom, timezone), timezone),
+        link: `${this.appUrl}/my-time`,
+      }),
+    );
+  }
+
+  /**
    * Records a contract change from the Monday of the chosen week (the current
    * week by default), so that past weeks keep the contract they were worked
-   * under. Returns the contract in force this week.
+   * under.
    */
   private async changeContract(
     transaction: Prisma.TransactionClient,
-    currentUser: ApplicationUser,
+    companyId: string,
     employee: { id: string; weeklyContractMinutes: number },
     weeklyContractMinutes: number,
-    effectiveFromInput: string | undefined,
-    now: Date,
-  ): Promise<number> {
-    const thisWeek = startOfWeek(toDateKey(now, currentUser.company.timezone));
-    const effectiveFrom = startOfWeek(effectiveFromInput ?? thisWeek);
-
+    effectiveFrom: string,
+    thisWeek: string,
+  ): Promise<ContractChange> {
     // Employees created before the history existed keep their contract for the past.
     const existingPeriods = await transaction.contractPeriod.count({
       where: { userId: employee.id },
     });
     if (existingPeriods === 0 && effectiveFrom > CONTRACT_HISTORY_START) {
       await transaction.contractPeriod.create({
-        data: initialContractPeriod(
-          currentUser.companyId,
-          employee.id,
-          employee.weeklyContractMinutes,
-        ),
+        data: initialContractPeriod(companyId, employee.id, employee.weeklyContractMinutes),
       });
     }
 
+    const previous = await this.contractInForce(transaction, employee.id, effectiveFrom);
     await transaction.contractPeriod.upsert({
       where: {
         userId_effectiveFrom: {
@@ -227,26 +296,90 @@ export class EmployeesService {
         },
       },
       create: {
-        companyId: currentUser.companyId,
+        companyId,
         userId: employee.id,
         effectiveFrom: dateKeyToDateColumn(effectiveFrom),
         weeklyContractMinutes,
       },
       update: { weeklyContractMinutes },
     });
+    const current = await this.contractInForce(transaction, employee.id, thisWeek);
 
-    const current = await transaction.contractPeriod.findFirst({
-      where: { userId: employee.id, effectiveFrom: { lte: dateKeyToDateColumn(thisWeek) } },
+    return {
+      effectiveFrom,
+      before: previous ?? employee.weeklyContractMinutes,
+      after: weeklyContractMinutes,
+      current: current ?? employee.weeklyContractMinutes,
+    };
+  }
+
+  /** Weekly minutes of the contract in force during the week starting on `weekStart`. */
+  private async contractInForce(
+    transaction: Prisma.TransactionClient,
+    userId: string,
+    weekStart: string,
+  ): Promise<number | null> {
+    const period = await transaction.contractPeriod.findFirst({
+      where: { userId, effectiveFrom: { lte: dateKeyToDateColumn(weekStart) } },
       orderBy: { effectiveFrom: 'desc' },
     });
+    return period?.weeklyContractMinutes ?? null;
+  }
 
-    return current?.weeklyContractMinutes ?? employee.weeklyContractMinutes;
+  /**
+   * Keeps the contract "in force today" of every employee in step with the
+   * dated history, once a change planned for a later week comes into force.
+   * Returns the number of employees updated.
+   */
+  async refreshCurrentContracts(now = new Date()): Promise<number> {
+    const companies = await this.prisma.company.findMany({ select: { id: true, timezone: true } });
+    let updated = 0;
+
+    for (const company of companies) {
+      const thisWeek = startOfWeek(toDateKey(now, company.timezone));
+      const periods = await this.prisma.contractPeriod.findMany({
+        where: { companyId: company.id, effectiveFrom: { lte: dateKeyToDateColumn(thisWeek) } },
+        orderBy: { effectiveFrom: 'desc' },
+        select: { userId: true, weeklyContractMinutes: true, user: { select: { weeklyContractMinutes: true } } },
+      });
+
+      const seen = new Set<string>();
+      for (const period of periods) {
+        // The latest period of each employee is the one in force.
+        if (seen.has(period.userId)) {
+          continue;
+        }
+        seen.add(period.userId);
+        if (period.weeklyContractMinutes === period.user.weeklyContractMinutes) {
+          continue;
+        }
+        // Unless a change was saved meanwhile.
+        const result = await this.prisma.user.updateMany({
+          where: { id: period.userId, weeklyContractMinutes: period.user.weeklyContractMinutes },
+          data: { weeklyContractMinutes: period.weeklyContractMinutes },
+        });
+        updated += result.count;
+      }
+    }
+    return updated;
   }
 
   async createInvitation(
     currentUser: ApplicationUser,
     dto: CreateEmployeeInvitationDto,
   ): Promise<EmployeeInvitationResponse> {
+    // Each invitation sends an e-mail to the address typed: a ceiling keeps
+    // the service from being used to send mass e-mails.
+    const sentToday = await this.prisma.employeeInvitation.count({
+      where: {
+        companyId: currentUser.companyId,
+        createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+      },
+    });
+    if (sentToday >= MAX_INVITATIONS_PER_DAY) {
+      throw new HttpException('Too many invitations today: try again tomorrow', HttpStatus.TOO_MANY_REQUESTS);
+    }
+
     const email = dto.email.trim().toLowerCase();
     const role = dto.role ?? UserRole.EMPLOYEE;
     const token = randomBytes(32).toString('base64url');
@@ -452,6 +585,10 @@ export class EmployeesService {
             user.id,
             invitation.weeklyContractMinutes,
           ),
+        });
+        await transaction.employeeInvitation.update({
+          where: { id: invitation.id },
+          data: { acceptedById: user.id },
         });
 
         return toApplicationUserResponse(user, invitation.company);

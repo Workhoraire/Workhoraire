@@ -8,6 +8,7 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { UserRole } from '@prisma/client';
 import { ApplicationUser } from '../auth/auth.types';
 import { ApplicationRolesGuard } from '../auth/application-roles.guard';
@@ -15,6 +16,7 @@ import { ApplicationUserGuard } from '../auth/application-user.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { KeycloakAuthGuard } from '../auth/keycloak-auth.guard';
 import { Roles } from '../auth/roles.decorator';
+import { AllowedWhenReadOnly } from '../billing/allowed-when-read-only.decorator';
 import { CreateEmployeeInvitationDto } from './dto/create-employee-invitation.dto';
 import { UpdateEmployeeDto } from './dto/update-employee.dto';
 import { EmployeeInvitationResponse, EmployeeResponse } from './employee.types';
@@ -40,6 +42,7 @@ export class EmployeesController {
   }
 
   @Post('invitations')
+  @Throttle({ default: { ttl: 60_000, limit: 20 } })
   createInvitation(
     @CurrentUser() currentUser: ApplicationUser,
     @Body() dto: CreateEmployeeInvitationDto,
@@ -47,7 +50,9 @@ export class EmployeesController {
     return this.employeesService.createInvitation(currentUser, dto);
   }
 
+  /** Also in read-only mode: an unpaid company must still be able to revoke an access. */
   @Patch(':id')
+  @AllowedWhenReadOnly()
   updateEmployee(
     @CurrentUser() currentUser: ApplicationUser,
     @Param('id', ParseUUIDPipe) employeeId: string,

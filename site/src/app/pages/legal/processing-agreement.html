@@ -22,11 +22,11 @@
     <p>
       Le présent contrat est conclu entre le client, employeur qui utilise WorkHoraire
       («&nbsp;responsable du traitement&nbsp;»), et
-      <app-legal-field [value]="publisher.name" label="dénomination de l’éditeur" />,
-      éditeur de WorkHoraire («&nbsp;sous-traitant&nbsp;»). Il fixe les conditions dans lesquelles
-      le sous-traitant traite, pour le compte du client, les données personnelles saisies dans le
-      service. Il fait partie des <a routerLink="/cgv">conditions générales de vente</a> et il
-      est accepté en même temps qu’elles.
+      <app-legal-field [value]="publisher.name" label="dénomination de l’éditeur" />, éditeur de
+      WorkHoraire («&nbsp;sous-traitant&nbsp;»). Il fixe les conditions dans lesquelles le
+      sous-traitant traite, pour le compte du client, les données personnelles saisies dans le
+      service. Il fait partie des <a routerLink="/cgv">conditions générales de vente</a> et il est
+      accepté en même temps qu’elles.
     </p>
 
     <h2>2. Description du traitement</h2>
@@ -37,8 +37,8 @@
       <dd>La durée du contrat, puis le délai de suppression prévu à l’article&nbsp;9.</dd>
       <dt>Opérations</dt>
       <dd>
-        Collecte par l’application, enregistrement, conservation, calcul des heures,
-        consultation, correction tracée, export, envoi d’e-mails de service et suppression.
+        Collecte par l’application, enregistrement, conservation, calcul des heures, consultation,
+        correction tracée, export, envoi d’e-mails de service et suppression.
       </dd>
       <dt>Finalités</dt>
       <dd>
@@ -66,9 +66,9 @@
     <p>
       Le sous-traitant ne traite les données que pour fournir le service et sur instruction
       documentée du client, y compris pour un éventuel transfert hors de l’Union européenne. Les
-      réglages du service et les actions de ses utilisateurs constituent ces instructions. Il ne
-      les utilise jamais pour son propre compte. Il informe immédiatement le client si une
-      instruction lui paraît contraire à la réglementation sur la protection des données.
+      réglages du service et les actions de ses utilisateurs constituent ces instructions. Il ne les
+      utilise jamais pour son propre compte. Il informe immédiatement le client si une instruction
+      lui paraît contraire à la réglementation sur la protection des données.
     </p>
 
     <h2>4. Confidentialité</h2>
@@ -82,22 +82,24 @@
     <p>
       Le sous-traitant met en œuvre les mesures techniques et organisationnelles de
       l’article&nbsp;32 du RGPD, décrites en annexe. Il peut les faire évoluer, sans jamais réduire
-      le niveau de sécurité. Le service est conçu pour ne collecter que ce qu’exige le décompte
-      du temps de travail (article&nbsp;25 du RGPD)&nbsp;: ni géolocalisation, ni biométrie, ni
-      mesure de l’activité.
+      le niveau de sécurité. Le service est conçu pour ne collecter que ce qu’exige le décompte du
+      temps de travail (article&nbsp;25 du RGPD)&nbsp;: ni géolocalisation, ni biométrie, ni mesure
+      de l’activité.
     </p>
 
     <h2>6. Sous-traitants ultérieurs</h2>
     <p>
       Le client autorise le sous-traitant à recourir aux sous-traitants ultérieurs listés
       ci-dessous. Le sous-traitant informe le client par e-mail de tout ajout ou remplacement au
-      moins 30&nbsp;jours à l’avance. Le client peut s’y opposer pour un motif légitime, et
-      résilier le contrat si aucune solution n’est trouvée. Chaque sous-traitant ultérieur est
-      tenu par contrat aux mêmes obligations de protection des données.
+      moins 30&nbsp;jours à l’avance. Le client peut s’y opposer pour un motif légitime, et résilier
+      le contrat si aucune solution n’est trouvée. Chaque sous-traitant ultérieur est tenu par
+      contrat aux mêmes obligations de protection des données.
     </p>
-    <div class="wh-table-wrap">
+    <div class="wh-table-wrap" tabindex="0" role="region" aria-labelledby="subprocessors-caption">
       <table class="wh-table">
-        <caption>Sous-traitants ultérieurs</caption>
+        <caption id="subprocessors-caption">
+          Sous-traitants ultérieurs
+        </caption>
         <thead>
           <tr>
             <th scope="col">Prestataire</th>
@@ -108,24 +110,44 @@
         <tbody>
           <tr>
             <td>{{ hosting.name }}</td>
-            <td>Hébergement du service, de la base de données et des sauvegardes</td>
+            <td>Hébergement du service, de la base de données et de ses sauvegardes chiffrées</td>
             <td>France</td>
           </tr>
+          @if (offsiteBackup; as copy) {
+            <tr>
+              <td>{{ copy.name }}</td>
+              <td>
+                Conservation hors du serveur d’une copie des sauvegardes, chiffrée avant l’envoi
+              </td>
+              <td>{{ copy.location }}</td>
+            </tr>
+          }
           <tr>
             <td>Brevo (Sendinblue SAS, Paris)</td>
-            <td>Envoi des e-mails du service&nbsp;: invitations, notifications de correction</td>
+            <td>
+              Envoi des e-mails du service&nbsp;: invitations, notifications de correction, rappels
+              de sortie non pointée, e-mails de compte (vérification de l’adresse, mot de passe
+              oublié)
+            </td>
             <td>Union européenne</td>
           </tr>
         </tbody>
       </table>
     </div>
     <p>
-      Les données du service sont hébergées en France. Brevo reçoit seulement ce qu’exigent les
-      e-mails (adresse, prénom, nom de l’entreprise, contenu du message) et les héberge dans
-      l’Union européenne. Certains de ses propres prestataires techniques peuvent y accéder
-      depuis les États-Unis, dans le cadre des garanties prévues par le RGPD (cadre de protection
-      des données UE–États-Unis, clauses contractuelles types). Stripe, qui encaisse
-      l’abonnement, ne reçoit aucune donnée des salariés.
+      La base de données du service est hébergée en France, chez {{ hosting.name }}.
+      @if (offsiteBackup; as copy) {
+        Une copie de ses sauvegardes, chiffrée avant l’envoi, est conservée chez {{ copy.name }} ({{
+          copy.location
+        }}).
+      } @else {
+        Ses sauvegardes chiffrées restent chez cet hébergeur.
+      }
+      Brevo reçoit seulement ce qu’exigent les e-mails (adresse, prénom, nom de l’entreprise,
+      contenu du message) et les héberge dans l’Union européenne. Certains de ses propres
+      prestataires techniques peuvent y accéder depuis les États-Unis, dans le cadre des garanties
+      prévues par le RGPD (cadre de protection des données UE–États-Unis, clauses contractuelles
+      types). Stripe, qui encaisse l’abonnement, ne reçoit aucune donnée des salariés.
     </p>
 
     <h2>7. Information et droits des personnes</h2>
@@ -135,48 +157,55 @@
     </p>
     <p>
       Le service permet au client de répondre aux demandes de ses salariés&nbsp;: chacun consulte
-      ses heures et les corrections faites dessus, et le client peut rectifier et exporter les
-      données. Si un salarié s’adresse directement au sous-traitant, celui-ci transmet sa demande
-      au client dans les meilleurs délais et l’aide à y répondre.
+      ses heures et les corrections faites dessus, et télécharge lui-même toutes ses données. Le
+      client corrige les heures, avec un motif tracé, et exporte les heures de son équipe au format
+      CSV. Si un salarié s’adresse directement au sous-traitant, celui-ci transmet sa demande au
+      client dans les meilleurs délais et l’aide à y répondre.
+    </p>
+    <p>
+      À la demande du client, une fois écoulée la durée de conservation qu’il a fixée, le support du
+      sous-traitant supprime ou anonymise les données d’un salarié parti.
     </p>
 
     <h2>8. Violations de données et assistance</h2>
     <p>
-      Le sous-traitant notifie au client toute violation de données personnelles dans les
-      meilleurs délais, et au plus tard 48&nbsp;heures après en avoir pris connaissance, avec les
-      informations utiles pour que le client puisse, le cas échéant, la notifier à la CNIL et
-      informer les personnes concernées (articles&nbsp;33 et&nbsp;34 du RGPD). Il aide le client, à
-      sa demande, pour une analyse d’impact ou une consultation préalable de la CNIL.
+      Le sous-traitant notifie au client toute violation de données personnelles dans les meilleurs
+      délais, et au plus tard 48&nbsp;heures après en avoir pris connaissance, avec les informations
+      utiles pour que le client puisse, le cas échéant, la notifier à la CNIL et informer les
+      personnes concernées (articles&nbsp;33 et&nbsp;34 du RGPD). Il aide le client, à sa demande,
+      pour une analyse d’impact ou une consultation préalable de la CNIL.
     </p>
 
     <h2>9. Fin du contrat</h2>
     <p>
-      Le client peut exporter ses données à tout moment. À la clôture de son compte, le
-      sous-traitant supprime les données dans un délai de 30&nbsp;jours, puis elles disparaissent
-      des sauvegardes au terme de leur rotation de 30&nbsp;jours. Le sous-traitant n’en conserve
-      aucune copie.
+      Pendant le contrat, le client exporte les heures de son équipe au format CSV pour la paie, et
+      chaque utilisateur télécharge ses propres données depuis la page «&nbsp;Mes heures&nbsp;». À
+      la clôture de son compte, le sous-traitant lui remet sur demande l’ensemble de ses données,
+      puis les supprime dans un délai de 30&nbsp;jours. Elles disparaissent ensuite des sauvegardes
+      au terme de leur rotation de 30&nbsp;jours. Le sous-traitant n’en conserve aucune copie.
     </p>
 
     <h2>10. Registre, délégué et documentation</h2>
     <p>
-      Le sous-traitant tient par écrit le registre des catégories d’activités de traitement
-      effectuées pour le compte de ses clients (article&nbsp;30.2 du RGPD). Il n’a pas désigné de
-      délégué à la protection des données&nbsp;: le contact est
+      Le sous-traitant tient un registre des catégories d’activités de traitement effectuées pour le
+      compte de ses clients (article&nbsp;30.2 du RGPD). Il n’a pas désigné de délégué à la
+      protection des données&nbsp;: le contact est
       <app-legal-field [value]="publisher.email" label="adresse e-mail de contact" />.
     </p>
 
     <h2>11. Information et audit</h2>
     <p>
-      Le sous-traitant met à la disposition du client les informations nécessaires pour
-      démontrer le respect de ses obligations. Le client peut faire réaliser un audit, une fois par
-      an au plus, avec un préavis de 30&nbsp;jours, à ses frais, par un auditeur tenu au secret et
-      qui n’est pas un concurrent du sous-traitant. L’audit commence par l’examen de la
-      documentation.
+      Le sous-traitant met à la disposition du client les informations nécessaires pour démontrer le
+      respect de ses obligations. Le client peut faire réaliser un audit, une fois par an au plus,
+      avec un préavis de 30&nbsp;jours, à ses frais, par un auditeur tenu au secret et qui n’est pas
+      un concurrent du sous-traitant. L’audit commence par l’examen de la documentation.
     </p>
 
     <h2>12. Obligations du client</h2>
     <ul>
-      <li>Fournir des données exactes et limitées à ce qui est nécessaire au décompte du temps&nbsp;;</li>
+      <li>
+        Fournir des données exactes et limitées à ce qui est nécessaire au décompte du temps&nbsp;;
+      </li>
       <li>
         informer ses salariés avant le premier pointage (article L1222-4 du Code du travail et
         article&nbsp;13 du RGPD) et, dans les entreprises d’au moins 50&nbsp;salariés, informer et
@@ -187,7 +216,10 @@
 
     <h2>Annexe&nbsp;: mesures de sécurité</h2>
     <ul>
-      <li>Hébergement en France&nbsp;; échanges chiffrés en HTTPS, avec en-têtes de sécurité stricts.</li>
+      <li>
+        Base de données hébergée en France&nbsp;; échanges chiffrés en HTTPS, avec en-têtes de
+        sécurité stricts.
+      </li>
       <li>
         Comptes gérés par un service de connexion dédié (Keycloak)&nbsp;: mots de passe jamais
         stockés en clair, 12&nbsp;caractères au moins, protection contre les attaques par force
@@ -197,18 +229,23 @@
         Droits d’accès par rôle, vérifiés par le serveur, et cloisonnement strict entre les
         entreprises clientes&nbsp;; un manager ne peut pas corriger ses propres heures.
       </li>
-      <li>Piste d’audit en ajout seul de toutes les corrections, visible par le salarié concerné.</li>
+      <li>
+        Piste d’audit en ajout seul de toutes les corrections, visible par le salarié concerné.
+      </li>
       <li>
         Sauvegardes chiffrées (AES-256) chaque nuit, conservées 30&nbsp;jours, avec un test de
         restauration.
+        @if (offsiteBackup; as copy) {
+          Une copie chiffrée est conservée hors du serveur, chez {{ copy.name }}.
+        }
       </li>
       <li>
         Limitation du nombre de requêtes, console d’administration inaccessible depuis Internet,
         accès au serveur par clé SSH uniquement.
       </li>
       <li>
-        Mises à jour de sécurité suivies automatiquement, tests automatisés à chaque modification
-        du code.
+        Mises à jour de sécurité suivies automatiquement, tests automatisés à chaque modification du
+        code.
       </li>
     </ul>
 

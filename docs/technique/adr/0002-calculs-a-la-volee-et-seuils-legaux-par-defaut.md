@@ -16,7 +16,7 @@ Les feuilles de temps, les heures supplémentaires et les alertes dépendent des
 ## Conséquences
 
 - Pas de désynchronisation possible : une correction se répercute immédiatement partout (écran, tableau de bord, export).
-- La fonction pure se teste facilement : 15 scénarios, dont l'heure d'été et la jurisprudence de 2025.
+- La fonction pure se teste facilement, sans base de données : scénarios de référence dans [moteur-de-calcul.md](../moteur-de-calcul.md) (§ 4), dont l'heure d'été et la jurisprudence de 2025.
 - Le coût de calcul reste négligeable pour une TPE (au plus 93 jours × 50 salariés). Au-delà, il faudra mettre en cache ou matérialiser les semaines clôturées.
 - Il n'y a pas d'historique des alertes (« alerte vue ou traitée le… ») : à ajouter avec la validation hebdomadaire (matrice n° 11).
 - Rendre les seuils paramétrables imposera de **versionner les règles avec une date d'effet** (matrice n° 48), pour que le calcul d'une période passée ne change pas. C'est déjà le cas pour le contrat de chaque salarié (ADR 0007).

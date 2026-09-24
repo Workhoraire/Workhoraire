@@ -3,14 +3,15 @@
 :root {
   --wh-ink: #17211d;
   --wh-ink-soft: #2d3b34;
-  --wh-muted: #68736d;
+  /* #5c6761 and #a3472a keep a contrast of 4.5:1 or more on the paper background. */
+  --wh-muted: #5c6761;
   --wh-paper: #f4f5ef;
   --wh-panel: #ffffff;
   --wh-line: #dfe4dc;
   --wh-lime: #c8ef73;
   --wh-lime-soft: #eef8d6;
   --wh-coral: #ff8d67;
-  --wh-coral-ink: #b4502f;
+  --wh-coral-ink: #a3472a;
   --wh-coral-soft: #ffe8df;
   --wh-amber-soft: #fff4d6;
   --wh-amber-ink: #8a5a00;
@@ -44,17 +45,26 @@ html {
       on-primary-container: #17211d,
       secondary-container: #e5e9df,
       on-secondary-container: #17211d,
-      tertiary: #b4502f,
+      tertiary: #a3472a,
       surface: #ffffff,
       on-surface: #17211d,
-      on-surface-variant: #68736d,
-      outline: #9aa59f,
+      on-surface-variant: #5c6761,
+      outline: #7a857f,
       outline-variant: #dfe4dc,
       surface-container-lowest: #ffffff,
       surface-container-low: #fafbf7,
       surface-container: #f4f5ef,
       surface-container-high: #eef0e8,
       surface-container-highest: #e5e9df,
+    )
+  );
+
+  // A visible keyboard focus on every Material component (WCAG 2.4.7).
+  @include mat.strong-focus-indicators(
+    (
+      border-color: #17211d,
+      border-width: 3px,
+      border-radius: 8px,
     )
   );
 }
@@ -187,6 +197,11 @@ p {
   &.wh-kpi-lime {
     border-color: transparent;
     background: var(--wh-lime);
+
+    .wh-kpi-label,
+    .wh-kpi-note {
+      color: var(--wh-ink-soft);
+    }
   }
 
   &.wh-kpi-ink {
@@ -304,6 +319,8 @@ p {
 
 .wh-week-nav {
   display: inline-flex;
+  max-width: 100%;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.25rem;
   padding: 0.25rem;
@@ -312,7 +329,7 @@ p {
   background: var(--wh-panel);
 
   .wh-week-label {
-    min-width: 11rem;
+    min-width: 0;
     padding: 0 0.5rem;
     font-size: 0.9rem;
     font-weight: 700;
@@ -397,4 +414,43 @@ p {
   overflow: hidden;
   clip: rect(0 0 0 0);
   white-space: nowrap;
+}
+
+/* Shown by main.ts when the application cannot start. */
+.wh-startup-error {
+  display: grid;
+  max-width: 32rem;
+  min-height: 100vh;
+  align-content: center;
+  gap: 1rem;
+  margin: 0 auto;
+  padding: 1.5rem;
+  color: var(--wh-ink);
+
+  h1 {
+    margin: 0;
+    font-size: 1.75rem;
+  }
+
+  p {
+    margin: 0;
+    color: var(--wh-muted);
+  }
+
+  button {
+    justify-self: start;
+    padding: 0.75rem 1.5rem;
+    border: 0;
+    border-radius: 999px;
+    background: var(--wh-ink);
+    color: #fff;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  button:focus-visible {
+    outline: 3px solid var(--wh-ink);
+    outline-offset: 3px;
+  }
 }

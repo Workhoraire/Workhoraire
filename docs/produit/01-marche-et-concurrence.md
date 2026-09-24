@@ -47,8 +47,10 @@ Coût mensuel pour 1 établissement (prix publics « dès », calculs de l'équi
 | Combo Time + pointeuse | ≥ 70 € | ≥ 100 € |
 | Shiftbase Basic | 30 € | 86 € |
 | Agendrix (pointage inclus) | 27,50 € | 110 € |
-| Pointeo | ≥ 19 € | grille non publiée |
+| Pointeo Pro (mensuel) | 28,80 € | 72,30 € |
 | Jibble | 0 € | 0 € |
+
+Pointeo : grille relevée le 24/09/2026 ([doc 08](08-prix-et-hebergement.md), § 2.1) : 23 € par mois avec 3 salariés inclus, puis 2,90 € par salarié ; montants calculés par l'équipe.
 
 **Analyse :** pour la TPE moyenne de 2,9 salariés, les offres par établissement reviennent à environ **20 € par salarié et par mois**, contre environ 5,5 € pour une offre par utilisateur. Il existe un **creux tarifaire** entre les gratuits sans paie française et les spécialistes facturés par établissement.
 
@@ -79,4 +81,4 @@ Priorités proposées (Analyse, § 6 de l'annexe) :
 
 - Les rapports de marché payants n'ont été lus qu'en résumé public.
 - Les prix « dès » sont des bornes basses.
-- L'éditeur de Pointeo n'a pas été identifié : **à auditer en priorité** avant toute décision de prix.
+- L'éditeur de Pointeo n'a pas été identifié. Sa grille a été relevée le 24/09/2026 (doc 08, § 2.1) ; restent **à auditer** l'essai et l'éditeur (roadmap).

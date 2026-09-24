@@ -11,9 +11,7 @@ import {
 } from 'class-validator';
 import { AbsenceStatus, AbsenceType } from '@prisma/client';
 import { DATE_KEY_REGEX } from '../../common/dates/period';
-
-const trimString = ({ value }: { value: unknown }): unknown =>
-  typeof value === 'string' ? value.trim() : value;
+import { trimString } from '../../common/validation/trim-string';
 
 export class CreateAbsenceRequestDto {
   @IsEnum(AbsenceType)

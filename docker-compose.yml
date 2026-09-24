@@ -1,3 +1,5 @@
+# Development stack. Every port listens on this computer only (127.0.0.1),
+# never on the local network.
 services:
   postgres:
     image: postgres:16-alpine
@@ -6,7 +8,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER must be set in .env}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./infrastructure/postgres/init:/docker-entrypoint-initdb.d:ro
@@ -21,7 +23,7 @@ services:
       retries: 5
 
   keycloak:
-    image: quay.io/keycloak/keycloak:26.1.1
+    image: quay.io/keycloak/keycloak:26.7.4
     command: start-dev --import-realm
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:?KEYCLOAK_ADMIN must be set in .env}
@@ -34,20 +36,22 @@ services:
       # Read by the realm file on its first import (redirect URIs of the application).
       WORKHORAIRE_APP_URL: ${WORKHORAIRE_APP_URL:-http://localhost:4200}
     ports:
-      - "${KEYCLOAK_PORT:-8180}:8080"
+      - "127.0.0.1:${KEYCLOAK_PORT:-8180}:8080"
     depends_on:
       postgres:
         condition: service_healthy
     volumes:
       - ./infrastructure/keycloak/realms:/opt/keycloak/data/import:ro
+      # WorkHoraire's sign-in pages; start-dev does not cache themes, edits show at once.
+      - ./infrastructure/keycloak/themes:/opt/keycloak/themes:ro
 
   # Test mailbox: every e-mail of the development stack lands here (web interface
   # on http://localhost:8025), none reaches a real address.
   mailpit:
     image: axllent/mailpit:v1.27
     ports:
-      - "${MAILPIT_SMTP_PORT:-2525}:1025"
-      - "${MAILPIT_UI_PORT:-8025}:8025"
+      - "127.0.0.1:${MAILPIT_SMTP_PORT:-2525}:1025"
+      - "127.0.0.1:${MAILPIT_UI_PORT:-8025}:8025"
 
 volumes:
   postgres_data:

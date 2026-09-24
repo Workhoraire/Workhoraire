@@ -24,7 +24,6 @@ export interface CreateEmployeeInvitationRequest {
 export interface UpdateEmployeeRequest {
   firstName?: string;
   lastName?: string;
-  email?: string;
   role?: UserRole;
   isActive?: boolean;
   weeklyContractMinutes?: number;

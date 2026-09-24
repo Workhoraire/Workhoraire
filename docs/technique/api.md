@@ -1,23 +1,32 @@
 # API REST
 
-Toutes les routes, sauf `/health`, l'aperçu d'invitation et le webhook Stripe, exigent un jeton Keycloak (`Authorization: Bearer …`), puis un utilisateur applicatif actif. Le `companyId` n'est **jamais** fourni par le client.
+Toutes les routes, sauf `GET /health`, l'aperçu d'invitation et le webhook Stripe, exigent un jeton Keycloak (`Authorization: Bearer …`). Toutes, sauf les deux routes marquées « Keycloak seul » (création de l'entreprise, acceptation d'une invitation), exigent aussi un utilisateur applicatif actif, rattaché à une entreprise. Le `companyId` n'est **jamais** fourni par le client.
 
-- **Lecture seule** : quand l'abonnement d'une entreprise est impayé depuis plus de 30 jours (et seulement si le paiement en ligne est configuré), toute route `POST`, `PUT`, `PATCH` ou `DELETE` répond **402**, sauf le pointage (`/time-clock/*`) et le paiement (`/billing/checkout`, `/billing/portal`). Les lectures et les exports restent ouverts.
-- **Limite de requêtes** : 300 par minute et par adresse IP (`THROTTLE_LIMIT_PER_MINUTE`), 20 par minute pour l'aperçu d'invitation ; au-delà, **429**.
+- **Adresse e-mail** : celle de l'utilisateur applicatif est reprise du jeton dès que Keycloak l'a vérifiée. Aucune route ne permet de la modifier.
+- **Lecture seule** : quand l'abonnement d'une entreprise est impayé depuis plus de 30 jours (et seulement si le paiement en ligne est configuré), toute route `POST`, `PUT`, `PATCH` ou `DELETE` répond **402**, sauf le pointage (`/time-clock/*`) et le paiement (`/billing/checkout`, `/billing/portal`). Les lectures et les exports restent ouverts. Les routes sans utilisateur applicatif (création de l'entreprise, acceptation d'une invitation, webhook Stripe) ne sont pas concernées.
+- **Limite de requêtes** : 300 par minute et par adresse IP (`THROTTLE_LIMIT_PER_MINUTE`), 20 par minute pour l'aperçu d'invitation et pour la création d'invitations ; au-delà, **429**. `GET /health` et le webhook Stripe ne sont pas limités.
 
 - **Dates** : les jours sont au format `YYYY-MM-DD` ; les instants sont en ISO 8601 **avec fuseau** (`2026-09-23T08:00:00+02:00` ou `…Z`).
+- **Validation** : un champ inconnu ou mal formé répond **400**. Les prénoms, les noms et le nom de l'entreprise refusent les adresses web (`://` ou `www.`), car ils sont recopiés dans les e-mails.
 - **Erreurs** : format NestJS (`statusCode`, `message`). Les messages métier sont en anglais et traduits par le frontend (`core/http/error-message.ts`).
 
 Colonne « Rôles » : **Tous** = ADMIN, MANAGER et EMPLOYEE ; **Équipe** = ADMIN et MANAGER.
+
+## Santé
+
+| Méthode et route | Rôles | Description |
+|---|---|---|
+| `GET /health` | **Public** | Répond `{"status":"ok"}`. Sert de contrôle de santé à l'image Docker de l'API et à la surveillance externe |
 
 ## Compte
 
 | Méthode et route | Rôles | Description |
 |---|---|---|
 | `GET /me` | Tous | Profil : rôle, contrat, entreprise (dont le fuseau) |
-| `POST /onboarding/company` | Keycloak seul | Crée l'entreprise et son ADMIN (`name`, `siret?`, `timezone?`, `firstName?`, `lastName?` : le nom de l'administrateur est saisi dans le formulaire, Keycloak ne le demande plus). `acceptTerms: true` est obligatoire : l'API enregistre la date et la version des CGV et du contrat de sous-traitance acceptés |
+| `GET /me/data-export` | Tous | Fichier JSON de toutes les données de la personne connectée : profil, contrats, pointages, absences, corrections (articles 15 et 20 du RGPD). Uniquement les siennes |
+| `POST /onboarding/company` | Keycloak seul | Crée l'entreprise et son ADMIN (`name`, `siret?`, `timezone?`, `firstName?`, `lastName?` : le nom de l'administrateur est saisi dans le formulaire, Keycloak ne le demande plus). `acceptTerms: true` est obligatoire : l'API enregistre la date et la version des CGV et du contrat de sous-traitance acceptés. 400 si le nom (2 à 120 caractères), le SIRET (14 chiffres) ou le fuseau sont invalides ; 403 si l'adresse du compte n'est pas vérifiée par Keycloak (quand `KEYCLOAK_REQUIRE_VERIFIED_EMAIL=true`, valeur par défaut) ; 409 si le compte est déjà rattaché à une entreprise ou si le SIRET est déjà utilisé |
 | `GET /employee-invitations/:token` | **Public** (le lien suffit) | Aperçu de l'invitation pour la page d'accueil : prénom, nom, e-mail, rôle, entreprise, expiration. 404 si le lien est inconnu, 409 s'il a déjà servi, 410 s'il a expiré ou a été remplacé |
-| `POST /employee-invitations/:token/accept` | Keycloak seul | Accepte une invitation. Exige l'e-mail invité (403 sinon), vérifié si `KEYCLOAK_REQUIRE_VERIFIED_EMAIL=true` ; 410 si le lien a expiré ou a été remplacé |
+| `POST /employee-invitations/:token/accept` | Keycloak seul | Accepte une invitation. Exige l'e-mail invité (403 sinon), vérifié si `KEYCLOAK_REQUIRE_VERIFIED_EMAIL=true` ; 404 si le lien est inconnu ; 409 s'il a déjà servi ou si le compte est déjà rattaché à une entreprise ; 410 s'il a expiré ou a été remplacé |
 
 ## Salariés (ADMIN)
 
@@ -25,8 +34,8 @@ Colonne « Rôles » : **Tous** = ADMIN, MANAGER et EMPLOYEE ; **Équipe** = ADM
 |---|---|
 | `GET /employees` | Liste des salariés de l'entreprise |
 | `GET /employees/:id` | Détail d'un salarié |
-| `PATCH /employees/:id` | Modifie `firstName`, `lastName`, `email`, `role`, `isActive`, `payrollId` (chaîne vide pour l'effacer ; 409 s'il est déjà attribué dans l'entreprise) et `weeklyContractMinutes` (60 à 2880). Le contrat est **historisé** : il s'applique à partir du lundi de la semaine de `contractEffectiveFrom` (`YYYY-MM-DD`, semaine en cours par défaut), et les semaines précédentes gardent l'ancien contrat (ADR 0007) |
-| `POST /employees/invitations` | Crée une invitation (`firstName`, `lastName`, `email`, `role?`, `weeklyContractMinutes?`) et renvoie le jeton une seule fois. Une nouvelle invitation pour la même adresse **remplace** la précédente, dont le lien cesse de fonctionner (`replacesPrevious: true`) |
+| `PATCH /employees/:id` | Modifie `firstName`, `lastName`, `role`, `isActive`, `payrollId` (chaîne vide pour l'effacer ; 409 s'il est déjà attribué dans l'entreprise) et `weeklyContractMinutes` (60 à 2880). L'adresse e-mail n'est pas modifiable : c'est celle du compte de connexion, reprise de Keycloak. Le contrat est **historisé** : il s'applique à partir du lundi de la semaine de `contractEffectiveFrom` (`YYYY-MM-DD`, semaine en cours par défaut), et les semaines précédentes gardent l'ancien contrat (ADR 0007). 400 si `contractEffectiveFrom` est envoyé sans `weeklyContractMinutes` ou si aucun champ n'est envoyé ; 403 si un administrateur se désactive ou se retire le rôle ADMIN ; 404 pour un salarié d'une autre entreprise. Un administrateur qui perd ce rôle ou son accès voit expirer les invitations qu'il avait envoyées |
+| `POST /employees/invitations` | Crée une invitation (`firstName`, `lastName`, `email`, `role?`, `weeklyContractMinutes?`) et renvoie le jeton une seule fois. Quand un serveur SMTP est configuré, le lien part aussi par e-mail à l'adresse invitée : `emailSent` indique si le serveur l'a accepté. Une nouvelle invitation pour la même adresse **remplace** la précédente, dont le lien cesse de fonctionner (`replacesPrevious: true`). 400 si un nom contient une adresse web ; 409 si l'adresse est déjà celle d'un salarié de l'entreprise ; 429 au-delà de 20 invitations par minute ou de 100 par 24 h pour l'entreprise |
 
 ## Pointage du salarié
 
@@ -90,5 +99,5 @@ Si deux demandes qui se chevauchent sont envoyées en même temps, une seule est
 |---|---|---|
 | `GET /billing` | ADMIN | Offre, statut, salariés actifs du mois et du mois précédent, montants estimés, échéance du délai de paiement, lecture seule, paiement en ligne ouvert ou non |
 | `POST /billing/checkout` | ADMIN | Renvoie l'adresse d'une page Stripe Checkout pour souscrire l'offre Essentiel. 409 si un abonnement est déjà en cours, 503 si le paiement en ligne n'est pas configuré |
-| `POST /billing/portal` | ADMIN | Renvoie l'adresse de l'espace client Stripe : factures, moyen de paiement, résiliation. 409 s'il n'y a pas encore de client Stripe |
-| `POST /billing/webhook` | **Stripe** (signature `Stripe-Signature`) | Événements d'abonnement et de facture. 400 si la signature est absente ou fausse ; un événement déjà traité est ignoré |
+| `POST /billing/portal` | ADMIN | Renvoie l'adresse de l'espace client Stripe : factures, moyen de paiement, résiliation. 409 s'il n'y a pas encore de client Stripe, 503 si le paiement en ligne n'est pas configuré |
+| `POST /billing/webhook` | **Stripe** (signature `Stripe-Signature`) | Événements d'abonnement et de facture. 400 si la signature est absente ou fausse, 503 si le paiement en ligne n'est pas configuré ; un événement déjà traité est ignoré |

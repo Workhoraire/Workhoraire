@@ -1,11 +1,15 @@
-# Continuous integration: every pull request and every push on main or a
-# feature branch runs the tests and builds every Docker image (without pushing).
+# Continuous integration: every pull request and every push on main runs the
+# tests, checks the infrastructure files and builds every Docker image
+# (without pushing). Not every push of a feature branch: with its pull request
+# open, that would run everything twice, and a private repository has 2,000
+# free minutes a month (GitHub Free). The deployment workflow only deploys a
+# commit whose CI succeeded.
 name: CI
 
 on:
   pull_request:
   push:
-    branches: [main, "feature/**"]
+    branches: [main]
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -18,6 +22,7 @@ jobs:
   backend:
     name: API (unitaires + e2e)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     services:
       postgres:
         image: postgres:16-alpine
@@ -53,6 +58,7 @@ jobs:
   frontend:
     name: Application (tests + build)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: frontend
@@ -70,6 +76,7 @@ jobs:
   site:
     name: Site vitrine (tests + build prérendu)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: site
@@ -84,10 +91,41 @@ jobs:
       - run: npx ng test --watch=false --browsers=ChromeHeadless
       - run: npm run build
 
+  infra:
+    name: Infrastructure (Compose, scripts, Caddy, workflows)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: Fichiers Compose
+        run: |
+          docker compose --env-file .env.example config -q
+          docker compose -f docker-compose.prod.yml --env-file .env.production.example config -q
+          docker compose -f docker-compose.prod.yml -f docker-compose.prod.local.yml \
+            --env-file .env.production.example config -q
+      - name: Scripts shell
+        run: |
+          for script in infrastructure/server/*.sh; do bash -n "$script"; done
+          for script in infrastructure/backup/*.sh infrastructure/postgres/init-prod/*.sh frontend/docker/entrypoint.sh; do
+            sh -n "$script"
+          done
+          docker run --rm -v "$PWD:/mnt" -w /mnt koalaman/shellcheck:v0.11.0 -S warning \
+            infrastructure/server/*.sh infrastructure/backup/*.sh \
+            infrastructure/postgres/init-prod/*.sh frontend/docker/entrypoint.sh
+      - name: Configurations Caddy
+        run: |
+          docker run --rm -v "$PWD:/w:ro" \
+            -e ACME_EMAIL=ci@example.com -e SITE_HOST=example.com -e APP_HOST=app.example.com \
+            -e API_HOST=api.example.com -e AUTH_HOST=auth.example.com \
+            caddy:2-alpine sh -c 'for file in /w/infrastructure/caddy/Caddyfile /w/frontend/docker/Caddyfile /w/site/docker/Caddyfile; do caddy validate --config "$file" --adapter caddyfile || exit 1; done'
+      - name: Workflows GitHub Actions
+        run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.12 -color
+
   images:
     name: Images Docker
     runs-on: ubuntu-latest
-    needs: [backend, frontend, site]
+    timeout-minutes: 30
+    needs: [backend, frontend, site, infra]
     strategy:
       fail-fast: false
       matrix:

@@ -44,6 +44,28 @@ describe('App', () => {
       ),
     ).map((link) => link.getAttribute('href'));
 
-    expect(legalLinks).toEqual(['/mentions-legales', '/confidentialite', '/cgv', '/sous-traitance']);
+    expect(legalLinks).toEqual([
+      '/mentions-legales',
+      '/confidentialite',
+      '/cgv',
+      '/sous-traitance',
+    ]);
+  });
+
+  it('links to every guide from the footer', () => {
+    const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+
+    const links = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLAnchorElement>(
+        'footer a[href^="/guides"]',
+      ),
+    ).map((link) => link.getAttribute('href'));
+
+    expect(links).toEqual([
+      '/guides',
+      '/guides/heures-supplementaires',
+      '/guides/informer-les-salaries',
+    ]);
   });
 });

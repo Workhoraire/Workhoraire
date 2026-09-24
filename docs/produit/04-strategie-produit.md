@@ -41,7 +41,7 @@ Trois promesses vérifiables dans le produit :
 
 Constats (doc 01) : les offres par établissement coûtent environ 20 € par salarié et par mois pour une TPE de 3 salariés ; les offres par utilisateur, 3 à 7 € ; Pointeo est gratuit jusqu'à 3 salariés, puis dès 19 €/mois.
 
-**Hypothèse de grille** (à confronter à 20 à 30 prospects et aux pilotes) :
+**Hypothèse de grille initiale**, ci-dessous. La grille retenue, que l'application applique, est celle du [doc 08](08-prix-et-hebergement.md) (§ 2.2) ; elle est à valider auprès de 5 à 10 prospects avant le lancement (doc 08, § 4).
 
 | Offre | Prix | Contenu |
 |---|---|---|
@@ -49,7 +49,7 @@ Constats (doc 01) : les offres par établissement coûtent environ 20 € par sa
 | Essentiel | 3 € HT par salarié actif et par mois, **sans minimum par établissement**, sans engagement | Idem, sans limite de salariés, support par e-mail |
 | Cabinet | Remise ou commission pour les experts-comptables prescripteurs | Accès multi-dossiers (roadmap) |
 
-- **Salarié actif** : salarié qui a au moins un pointage ou une absence dans le mois. Définition à afficher publiquement, comme le fait Combo.
+- **Salarié actif** : salarié qui a pointé, ou qui a eu une absence validée, dans le mois. La définition est affichée sur la page Tarifs du site, comme le fait Combo.
 - **Garde-fous** : pas d'option payante pour l'export paie ni pour la piste d'audit. Ce sont les deux reproches principaux faits aux concurrents.
 
 ## 6. Mise sur le marché

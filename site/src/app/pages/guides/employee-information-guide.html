@@ -1,0 +1,187 @@
+<app-guide-layout
+  [path]="path"
+  crumb="Informer vos salariés"
+  [heading]="heading"
+  [lead]="lead"
+  updatedOn="2026-09-24"
+  [sections]="sections"
+>
+  <p class="wh-note wh-note--coral disclaimer" role="note">
+    <strong
+      >Ce guide est informatif et ne constitue pas un conseil juridique. Adaptez le modèle à votre
+      entreprise.</strong
+    >
+  </p>
+
+  <section id="pourquoi" tabindex="-1" aria-labelledby="why-title">
+    <h2 id="why-title">Pourquoi informer avant le premier pointage</h2>
+    <p>
+      Le Code du travail interdit de collecter une information concernant personnellement un salarié
+      par un dispositif qui n’a pas été porté préalablement à sa connaissance (<a
+        [href]="sources.l1222_4"
+        >article L1222-4 du Code du travail</a
+      >). Le RGPD impose en plus de lui dire qui traite ses données, pourquoi, combien de temps et
+      quels sont ses droits (<a [href]="sources.gdpr13">article 13 du RGPD</a>).
+    </p>
+    <p>
+      Dans WorkHoraire, c’est vous, l’employeur, qui êtes responsable de ce traitement. Informez
+      donc chaque salarié <strong>par écrit</strong>, avant qu’il ne pointe pour la première fois,
+      et ajoutez le décompte du temps de travail à votre registre des traitements.
+    </p>
+  </section>
+
+  <section id="cse" tabindex="-1" aria-labelledby="cse-title">
+    <h2 id="cse-title">Le comité social et économique</h2>
+    <p>
+      Dans les entreprises d’au moins 50&nbsp;salariés, le comité social et économique doit être
+      informé et consulté <strong>avant</strong> la décision de mettre en œuvre des moyens
+      permettant un contrôle de l’activité des salariés (<a [href]="sources.l2312_38"
+        >article L2312-38 du Code du travail</a
+      >). Entre 11 et 49&nbsp;salariés, informer les représentants du personnel reste une bonne
+      pratique.
+    </p>
+  </section>
+
+  <section id="modele" tabindex="-1" aria-labelledby="model-title">
+    <h2 id="model-title">Le modèle de note d’information</h2>
+    <p>Complétez les passages entre crochets, puis remettez la note à chaque salarié.</p>
+    <div class="wh-note model">
+      <p>
+        <strong
+          >Objet&nbsp;: mise en place d’un outil de décompte du temps de travail
+          (WorkHoraire)</strong
+        >
+      </p>
+      <p>
+        À compter du [date], [raison sociale, adresse] («&nbsp;l’employeur&nbsp;») enregistre le
+        temps de travail au moyen de l’application WorkHoraire.
+      </p>
+      <p><strong>Pourquoi&nbsp;?</strong></p>
+      <ul>
+        <li>
+          Décompter la durée du travail, comme l’impose le Code du travail (articles L3171-2 et
+          D3171-8).
+        </li>
+        <li>Calculer la rémunération, les heures supplémentaires et les heures complémentaires.</li>
+        <li>Gérer les demandes d’absence.</li>
+        <li>Vérifier le respect des durées maximales de travail et des temps de repos.</li>
+      </ul>
+      <p>
+        <strong>Sur quelle base&nbsp;?</strong> Une obligation légale (le décompte du temps de
+        travail), l’exécution de votre contrat de travail (la paie) et l’intérêt légitime de
+        l’employeur (l’organisation du travail).
+      </p>
+      <p><strong>Quelles données&nbsp;?</strong></p>
+      <ul>
+        <li>Nom, prénom, adresse e-mail, rôle, durée contractuelle et matricule de paie.</li>
+        <li>Heures d’arrivée et de départ, et les notes que vous saisissez.</li>
+        <li>Les corrections apportées à vos pointages, avec leur auteur et leur motif.</li>
+        <li>
+          Les demandes d’absence (type, dates, commentaire facultatif). N’indiquez jamais
+          d’information médicale.
+        </li>
+      </ul>
+      <p>
+        L’heure enregistrée est celle du serveur, pas celle de votre appareil. Seule une sortie
+        oubliée se déclare après coup, avec un motif, et cette déclaration est tracée. Aucune donnée
+        biométrique, aucune photo et aucune donnée de localisation n’est collectée. L’application ne
+        mesure pas votre activité.
+      </p>
+      <p><strong>Qui y a accès&nbsp;?</strong></p>
+      <ul>
+        <li>Les personnes habilitées de l’entreprise&nbsp;: [fonctions].</li>
+        <li>Le gestionnaire de paie ou l’expert-comptable [nom], pour la paie.</li>
+        <li>
+          L’éditeur de WorkHoraire, en qualité de sous-traitant, pour le fonctionnement technique du
+          service. La base de données est hébergée en France.
+          @if (offsiteBackup; as copy) {
+            Une copie chiffrée des sauvegardes est conservée chez {{ copy.name }} ({{
+              copy.location
+            }}).
+          }
+        </li>
+        <li>
+          Brevo, le prestataire d’envoi des e-mails de WorkHoraire (invitation, corrections,
+          rappels, e-mails de compte), qui héberge ces données dans l’Union européenne. Certains de
+          ses prestataires techniques peuvent y accéder depuis les États-Unis, avec les garanties
+          prévues par le RGPD.
+        </li>
+      </ul>
+      <p>
+        <strong>Combien de temps&nbsp;?</strong> Pendant votre contrat, puis pendant [durée] après
+        votre départ. Ensuite, à la demande de l’employeur, le support de l’éditeur de WorkHoraire
+        supprime ou anonymise vos données.
+      </p>
+      <p><strong>Vos droits</strong></p>
+      <ul>
+        <li>
+          Vous consultez à tout moment vos heures et l’historique des corrections qui vous
+          concernent, et vous téléchargez toutes vos données, dans «&nbsp;Mes heures&nbsp;».
+        </li>
+        <li>
+          Vous disposez d’un droit d’accès, de rectification, d’effacement et de limitation, d’un
+          droit à la portabilité des données traitées pour l’exécution de votre contrat, et d’un
+          droit d’opposition aux traitements fondés sur l’intérêt légitime. L’effacement ne
+          s’applique pas aux données que la loi impose de conserver.
+        </li>
+        <li>Pour les exercer, écrivez à [contact].</li>
+        <li>Vous pouvez aussi adresser une réclamation à la CNIL (www.cnil.fr).</li>
+      </ul>
+      <p>
+        Aucune décision n’est prise à votre égard de manière entièrement automatisée. Les alertes
+        (dépassement de durée, pause, repos) servent à l’employeur à respecter ses obligations.
+      </p>
+      <p>
+        Fait à [lieu], le [date]. Remis à [nom du salarié], qui en accuse réception&nbsp;:
+        [signature et date].
+      </p>
+    </div>
+  </section>
+
+  <section id="preuve" tabindex="-1" aria-labelledby="proof-title">
+    <h2 id="proof-title">Garder une preuve de la remise</h2>
+    <p>
+      Faites signer et dater la note, ou envoyez-la par un moyen qui garde une trace, par exemple un
+      e-mail avec accusé de réception. En cas de contrôle ou de litige, vous pourrez montrer que le
+      salarié a été informé avant son premier pointage.
+    </p>
+  </section>
+
+  <section id="workhoraire" tabindex="-1" aria-labelledby="workhoraire-title">
+    <h2 id="workhoraire-title">Ce que WorkHoraire prévoit déjà</h2>
+    <ul>
+      <li>
+        L’heure du serveur fait foi&nbsp;: le salarié ne peut pas antidater un pointage. Seule une
+        sortie oubliée se déclare après coup, avec un motif, et reste tracée.
+      </li>
+      <li>Chaque correction est tracée avec son motif, et le salarié la voit.</li>
+      <li>Ni géolocalisation, ni biométrie, ni mesure de l’activité.</li>
+      <li>Chaque salarié télécharge lui-même toutes ses données.</li>
+      <li>
+        Après la durée de conservation que vous fixez, le support de l’éditeur supprime ou
+        anonymise, à votre demande, les données d’un salarié parti.
+      </li>
+      <li>
+        WorkHoraire traite les données pour votre compte, selon le
+        <a routerLink="/sous-traitance">contrat de sous-traitance</a>.
+      </li>
+    </ul>
+  </section>
+
+  <section class="sources" aria-labelledby="sources-title">
+    <h2 id="sources-title">Sources</h2>
+    <ul>
+      <li>
+        <a [href]="sources.l1222_4">Article L1222-4 du Code du travail</a>&nbsp;: l’information
+        préalable du salarié
+      </li>
+      <li>
+        <a [href]="sources.l2312_38">Article L2312-38 du Code du travail</a>&nbsp;: la consultation
+        du comité social et économique
+      </li>
+      <li><a [href]="sources.gdpr13">Article 13 du RGPD</a>&nbsp;: les informations à fournir</li>
+    </ul>
+  </section>
+</app-guide-layout>
+
+<app-cta-band heading="Un pointage transparent, pensé pour la confiance" [text]="ctaText" />

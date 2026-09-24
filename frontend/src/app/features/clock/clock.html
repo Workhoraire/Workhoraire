@@ -16,7 +16,7 @@
 
   @if (loading() && !status()) {
     <div class="wh-loading" role="status">
-      <mat-spinner diameter="32" />
+      <mat-spinner diameter="32" aria-hidden="true" />
       <span>Chargement de votre journée…</span>
     </div>
   }
@@ -31,13 +31,17 @@
         <p>
           Vous avez pointé votre arrivée le {{ openEntryDayLabel() }} à
           {{ formatTime(entry.startAt, timezone()) }} sans pointer de sortie. Indiquez l’heure à
-          laquelle vous avez réellement terminé : votre responsable verra que l’heure a été déclarée.
+          laquelle vous avez réellement terminé&nbsp;: votre responsable verra que l’heure a été
+          déclarée.
         </p>
         <form class="wh-form" [formGroup]="forgottenForm" (ngSubmit)="closeForgottenEntry()">
           <div class="wh-form-row">
             <mat-form-field>
               <mat-label>Date de sortie</mat-label>
               <input matInput type="date" formControlName="date" required />
+              @if (forgottenForm.controls.date.hasError('required')) {
+                <mat-error>La date est obligatoire.</mat-error>
+              }
             </mat-form-field>
             <mat-form-field>
               <mat-label>Heure de sortie</mat-label>
@@ -49,15 +53,20 @@
           </div>
           <mat-form-field>
             <mat-label>Motif</mat-label>
-            <input matInput formControlName="reason" maxlength="500" />
+            <input matInput formControlName="reason" maxlength="500" required />
+            @if (forgottenForm.controls.reason.hasError('required')) {
+              <mat-error>Le motif est obligatoire.</mat-error>
+            }
           </mat-form-field>
           <div class="wh-actions">
-            <button mat-flat-button type="submit" [disabled]="busy()">Enregistrer ma sortie</button>
+            <button mat-flat-button type="submit" disabledInteractive [disabled]="busy()">
+              Enregistrer ma sortie
+            </button>
           </div>
         </form>
       </section>
     } @else {
-      <section class="clock-card" [class.working]="isWorking()" aria-live="polite">
+      <section class="clock-card" [class.working]="isWorking()" aria-label="Mon pointage">
         <div class="clock-state">
           <span class="state-dot" aria-hidden="true"></span>
           <span>{{ isWorking() ? 'En poste' : 'Hors poste' }}</span>
@@ -69,18 +78,20 @@
         </p>
 
         @if (sessionClock(); as clock) {
-          <p class="session">Session en cours : <strong>{{ clock }}</strong></p>
+          <p class="session">
+            Session en cours&nbsp;: <strong>{{ clock }}</strong>
+          </p>
         }
 
         <button
           type="button"
           class="clock-button"
           [class.clock-out]="isWorking()"
-          [disabled]="busy()"
+          [attr.aria-disabled]="busy() ? true : null"
           (click)="toggleClock()"
         >
           @if (busy()) {
-            <mat-spinner diameter="26" />
+            <mat-spinner diameter="26" aria-hidden="true" />
           } @else {
             <mat-icon aria-hidden="true">{{ isWorking() ? 'logout' : 'login' }}</mat-icon>
           }
@@ -91,6 +102,7 @@
           <mat-form-field class="note-field">
             <mat-label>Note (facultative)</mat-label>
             <textarea
+              #noteField
               matInput
               rows="2"
               maxlength="500"
@@ -99,12 +111,14 @@
             ></textarea>
           </mat-form-field>
         } @else {
-          <button mat-button type="button" class="note-toggle" (click)="showNote.set(true)">
+          <button mat-button type="button" class="note-toggle" (click)="openNote()">
             <mat-icon aria-hidden="true">edit_note</mat-icon>
             Ajouter une note
           </button>
         }
-        <p class="server-time-note">L’heure enregistrée est celle du serveur, pas celle de votre appareil.</p>
+        <p class="server-time-note">
+          L’heure enregistrée est celle du serveur, pas celle de votre appareil.
+        </p>
       </section>
     }
 
@@ -113,7 +127,7 @@
         <h2 id="today-title">Aujourd’hui</h2>
 
         @if (currentStatus.today.publicHoliday; as holiday) {
-          <p class="wh-chip wh-chip-sky">Jour férié : {{ holiday }}</p>
+          <p class="wh-chip wh-chip-sky">Jour férié&nbsp;: {{ holiday }}</p>
         }
         @for (absence of currentStatus.today.absences; track absence.id) {
           <p class="wh-chip wh-chip-lime">
@@ -145,7 +159,9 @@
             }
           </ol>
           @if (currentStatus.today.breakMinutes > 0) {
-            <p class="wh-muted">Pauses et coupures : {{ formatDuration(currentStatus.today.breakMinutes) }}</p>
+            <p class="wh-muted">
+              Pauses et coupures&nbsp;: {{ formatDuration(currentStatus.today.breakMinutes) }}
+            </p>
           }
         }
 
@@ -161,23 +177,32 @@
         <h2 id="week-title">Ma semaine</h2>
         <p class="week-total">
           <strong>{{ formatDuration(weekMinutes()) }}</strong>
-          <span class="wh-muted"> / {{ formatDuration(currentStatus.week.contractMinutes) }} prévues au contrat</span>
+          <span class="wh-muted">
+            / {{ formatDuration(currentStatus.week.contractMinutes) }} prévues au contrat</span
+          >
         </p>
         @if (weekExtraLabel(); as extra) {
           <p class="wh-chip wh-chip-coral">{{ extra }}</p>
         }
 
-        <div class="bars" role="img" [attr.aria-label]="'Heures travaillées par jour cette semaine'">
+        <ul class="bars" aria-label="Heures travaillées par jour cette semaine">
           @for (bar of weekBars(); track bar.date) {
-            <div class="bar" [class.today]="bar.isToday" [title]="bar.label + ' : ' + formatDuration(bar.minutes)">
-              <span class="bar-value">{{ bar.minutes > 0 ? formatDuration(bar.minutes) : (bar.isAbsent ? 'abs.' : '') }}</span>
-              <span class="bar-track">
+            <li
+              class="bar"
+              [class.today]="bar.isToday"
+              [title]="bar.label + ' : ' + formatDuration(bar.minutes)"
+            >
+              <span class="wh-visually-hidden">{{ bar.spoken }}</span>
+              <span class="bar-value" aria-hidden="true">{{
+                bar.minutes > 0 ? formatDuration(bar.minutes) : bar.isAbsent ? 'abs.' : ''
+              }}</span>
+              <span class="bar-track" aria-hidden="true">
                 <span class="bar-fill" [style.height.%]="bar.percent"></span>
               </span>
-              <span class="bar-label">{{ bar.label }}</span>
-            </div>
+              <span class="bar-label" aria-hidden="true">{{ bar.label }}</span>
+            </li>
           }
-        </div>
+        </ul>
 
         @for (alert of currentStatus.week.alerts; track alert.code) {
           <div class="wh-message wh-message-warning">

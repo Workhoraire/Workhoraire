@@ -1,3 +1,4 @@
+/* Public pages (invitation link, disabled account): a centred card on the brand background. */
 :host {
   display: block;
 }
@@ -83,7 +84,7 @@
 
 .eyebrow {
   margin: 0 0 0.8rem;
-  color: #ca5e3e;
+  color: var(--wh-coral-ink);
   font-size: 0.68rem;
   font-weight: 800;
   letter-spacing: 0.16em;

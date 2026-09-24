@@ -13,7 +13,16 @@
 	@unhashed not path_regexp -[A-Z0-9]{8}\.(js|css|woff2?)$
 	header @unhashed Cache-Control "no-cache"
 
-	# Single-page application: unknown paths are Angular routes.
-	try_files {path} /index.html
-	file_server
+	# Single-page application: a path without an extension is an Angular route,
+	# answered with index.html. A missing file with an extension (a hashed chunk
+	# of the previous version after a deployment) is a real 404: the application
+	# then reloads, instead of receiving index.html as JavaScript.
+	@route not path_regexp \.[A-Za-z0-9]+$
+	handle @route {
+		try_files {path} /index.html
+		file_server
+	}
+	handle {
+		file_server
+	}
 }

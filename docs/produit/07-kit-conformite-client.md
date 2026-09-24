@@ -11,9 +11,11 @@
 - [ ] Désigner les personnes **habilitées** : administrateurs et managers, avec le moins d'administrateurs possible.
 - [ ] Renseigner la **durée contractuelle** et le **matricule paie** de chaque salarié.
 - [ ] Vérifier la **convention collective** : WorkHoraire applique les seuils légaux par défaut, et un accord peut prévoir d'autres taux ou limites.
-- [ ] Signer le **contrat de sous-traitance** (art. 28 RGPD) avec l'éditeur.
+- [ ] Accepter le **contrat de sous-traitance** (art. 28 RGPD) : publié sur le site, il est accepté avec les CGV à la création de l'entreprise (§ 4).
 
 ## 2. Modèle : note d'information des salariés
+
+Même texte que le guide du site, page `/guides/informer-les-salaries` ([source](../../site/src/app/pages/guides/employee-information-guide.html)) : modifier les deux ensemble.
 
 > **Objet : mise en place d'un outil de décompte du temps de travail (WorkHoraire)**
 >
@@ -33,20 +35,19 @@
 > - Corrections apportées à vos pointages, avec leur auteur et leur motif.
 > - Demandes d'absence (type, dates, commentaire facultatif). **N'indiquez jamais d'information médicale.**
 >
-> L'heure enregistrée est celle du serveur, pas celle de votre appareil. **Aucune donnée biométrique, aucune photo et aucune donnée de localisation n'est collectée.** L'application ne mesure pas votre activité.
+> L'heure enregistrée est celle du serveur, pas celle de votre appareil. Seule une sortie oubliée se déclare après coup, avec un motif, et cette déclaration est tracée. **Aucune donnée biométrique, aucune photo et aucune donnée de localisation n'est collectée.** L'application ne mesure pas votre activité.
 >
 > **Qui y a accès ?**
 > - Les personnes habilitées de l'entreprise : **[fonctions]**.
 > - Le gestionnaire de paie ou l'expert-comptable **[nom]**, pour la paie.
-> - L'éditeur de WorkHoraire, en qualité de sous-traitant, pour le fonctionnement technique du service.
+> - L'éditeur de WorkHoraire, en qualité de sous-traitant, pour le fonctionnement technique du service. La base de données est hébergée en France. *(Si l'éditeur indique une copie des sauvegardes hors du serveur, ajoutez : « Une copie chiffrée des sauvegardes est conservée chez [prestataire] ([lieu]). »)*
+> - Brevo, le prestataire d'envoi des e-mails de WorkHoraire (invitation, corrections, rappels, e-mails de compte), qui héberge ces données dans l'Union européenne. Certains de ses prestataires techniques peuvent y accéder depuis les États-Unis, avec les garanties prévues par le RGPD.
 >
-> Les données sont hébergées **[pays ou Union européenne]**.
->
-> **Combien de temps ?** Jusqu'à l'établissement de la paie de la période, puis en archive pendant **[3 ans]**, avant suppression.
+> **Combien de temps ?** Pendant votre contrat, puis pendant **[durée]** après votre départ. Ensuite, à la demande de l'employeur, le support de l'éditeur de WorkHoraire supprime ou anonymise vos données.
 >
 > **Vos droits.**
-> - Vous consultez à tout moment vos heures, vos heures supplémentaires et l'historique des corrections qui vous concernent, dans « Mes heures ».
-> - Vous disposez d'un droit d'accès, de rectification et de limitation, et d'un droit d'opposition pour les traitements fondés sur l'intérêt légitime.
+> - Vous consultez à tout moment vos heures, vos heures supplémentaires et l'historique des corrections qui vous concernent, et vous téléchargez toutes vos données, dans « Mes heures ».
+> - Vous disposez d'un droit d'accès, de rectification, d'effacement et de limitation, d'un droit à la portabilité des données traitées pour l'exécution de votre contrat, et d'un droit d'opposition aux traitements fondés sur l'intérêt légitime. L'effacement ne s'applique pas aux données que la loi impose de conserver.
 > - Pour les exercer, écrivez à **[contact ou DPO]**.
 > - Vous pouvez aussi adresser une réclamation à la CNIL (www.cnil.fr).
 >
@@ -75,6 +76,6 @@ Ces engagements sont formalisés dans le contrat de sous-traitance, publié sur 
 
 - Le contrat de sous-traitance (art. 28) et la liste des sous-traitants ultérieurs (hébergeur, envoi d'e-mails).
 - La description des mesures de sécurité : [../technique/securite-et-rgpd.md](../technique/securite-et-rgpd.md).
-- L'aide à l'exercice des droits : l'espace salarié permet déjà de consulter ses heures ; un export des données personnelles est prévu dans la roadmap.
+- L'aide à l'exercice des droits : chaque salarié consulte ses heures et les corrections faites dessus, et télécharge toutes ses données au format JSON depuis « Mes heures » (droits d'accès et de portabilité, articles 15 et 20 du RGPD).
 - La notification de toute violation de données dans les meilleurs délais (art. 33 § 2).
 - La restitution et la suppression des données en fin de contrat.

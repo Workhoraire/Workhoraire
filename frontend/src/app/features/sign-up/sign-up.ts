@@ -15,7 +15,7 @@ import { rememberOffer } from '../../core/billing/chosen-offer';
   imports: [MatProgressSpinnerModule],
   template: `
     <div class="wh-loading" role="status">
-      <mat-spinner diameter="28" />
+      <mat-spinner diameter="28" aria-hidden="true" />
       <span>Ouverture de l’inscription…</span>
     </div>
   `,

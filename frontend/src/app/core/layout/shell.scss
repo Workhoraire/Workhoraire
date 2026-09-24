@@ -114,10 +114,22 @@
   }
 }
 
+.account-link {
+  width: 100%;
+  margin-top: auto;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 600;
+  text-align: left;
+}
+
 .legal-links {
   display: flex;
   gap: 0.4rem;
-  margin: auto 0 0.75rem;
+  margin: 0.5rem 0 0.75rem;
   padding: 0 0.75rem;
   color: #8f9b94;
   font-size: 0.78rem;
@@ -143,6 +155,7 @@
   border-top: 1px solid rgba(255, 255, 255, 0.1);
 
   button {
+    flex: 0 0 auto;
     margin-left: auto;
     color: #dfe6e0;
   }
@@ -153,15 +166,16 @@
   min-width: 0;
   flex-direction: column;
 
-  strong,
   span {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
+  /* Long names wrap instead of being cut. */
   strong {
     font-size: 0.88rem;
+    overflow-wrap: anywhere;
   }
 
   span {
@@ -282,4 +296,48 @@
     margin-left: 16rem;
     padding-bottom: 0;
   }
+}
+
+/* Keyboard focus on the dark sidebar and top bar: lime instead of ink. */
+.sidebar,
+.mobile-topbar {
+  --mat-focus-indicator-border-color: var(--wh-lime);
+}
+
+/* Visible only when focused, first stop of the keyboard. */
+.skip-link {
+  position: fixed;
+  z-index: 100;
+  top: 0.75rem;
+  left: 0.75rem;
+  padding: 0.6rem 1rem;
+  border-radius: 999px;
+  background: var(--wh-lime);
+  color: var(--wh-ink);
+  font-weight: 800;
+  text-decoration: none;
+  transform: translateY(-200%);
+
+  &:focus {
+    transform: none;
+    outline: 3px solid var(--wh-ink);
+  }
+}
+
+.content:focus {
+  outline: none;
+}
+
+.user-error {
+  flex-wrap: wrap;
+  margin: 1rem;
+
+  button {
+    margin-left: auto;
+  }
+}
+
+/* Current page inside the "Plus" menu. */
+.active-item {
+  font-weight: 700;
 }

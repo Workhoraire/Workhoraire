@@ -1,5 +1,7 @@
+<a class="skip-link" href="#contenu" (click)="focusContent($event)">Aller au contenu</a>
+
 <div class="shell">
-  <aside class="sidebar" aria-label="Navigation principale">
+  <aside class="sidebar">
     <a class="brand" routerLink="/" aria-label="WorkHoraire, accueil">
       <span class="brand-mark" aria-hidden="true">WH</span>
       <span class="brand-name">WorkHoraire</span>
@@ -9,7 +11,7 @@
       <p class="company-name" title="Entreprise">{{ currentUser.company.name }}</p>
     }
 
-    <nav class="side-nav">
+    <nav class="side-nav" aria-label="Navigation principale">
       @for (section of sections(); track section.title) {
         <p class="nav-section">{{ section.title }}</p>
         @for (item of section.items; track item.path) {
@@ -26,10 +28,21 @@
       }
     </nav>
 
+    @if (user()) {
+      <button type="button" class="nav-link account-link" (click)="openAccount()">
+        <mat-icon aria-hidden="true">manage_accounts</mat-icon>
+        <span>Mot de passe et sécurité</span>
+      </button>
+    }
+
     <p class="legal-links">
-      <a [href]="legalLinks.privacy" target="_blank" rel="noopener">Confidentialité</a>
+      <a [href]="legalLinks.privacy" target="_blank" rel="noopener"
+        >Confidentialité<span class="wh-visually-hidden"> (nouvel onglet)</span></a
+      >
       <span aria-hidden="true">·</span>
-      <a [href]="legalLinks.terms" target="_blank" rel="noopener">CGV</a>
+      <a [href]="legalLinks.terms" target="_blank" rel="noopener"
+        >CGV<span class="wh-visually-hidden"> (nouvel onglet)</span></a
+      >
     </p>
 
     @if (user(); as currentUser) {
@@ -39,7 +52,13 @@
           <strong>{{ fullName(currentUser) }}</strong>
           <span>{{ roleLabels[currentUser.role] }}</span>
         </div>
-        <button mat-icon-button type="button" aria-label="Se déconnecter" (click)="logout()">
+        <button
+          mat-icon-button
+          type="button"
+          aria-label="Se déconnecter"
+          title="Se déconnecter"
+          (click)="logout()"
+        >
           <mat-icon aria-hidden="true">logout</mat-icon>
         </button>
       </div>
@@ -71,9 +90,17 @@
           <strong>{{ fullName(currentUser) }}</strong>
           <span>{{ roleLabels[currentUser.role] }} · {{ currentUser.company.name }}</span>
         </div>
+        <button mat-menu-item type="button" (click)="openAccount()">
+          <mat-icon aria-hidden="true">manage_accounts</mat-icon>
+          <span>Mot de passe et sécurité</span>
+        </button>
         <a mat-menu-item [href]="legalLinks.privacy" target="_blank" rel="noopener">
           <mat-icon aria-hidden="true">policy</mat-icon>
-          <span>Confidentialité</span>
+          <span>Confidentialité<span class="wh-visually-hidden"> (nouvel onglet)</span></span>
+        </a>
+        <a mat-menu-item [href]="legalLinks.terms" target="_blank" rel="noopener">
+          <mat-icon aria-hidden="true">gavel</mat-icon>
+          <span>CGV<span class="wh-visually-hidden"> (nouvel onglet)</span></span>
         </a>
         <button mat-menu-item type="button" (click)="logout()">
           <mat-icon aria-hidden="true">logout</mat-icon>
@@ -83,7 +110,14 @@
     }
   </header>
 
-  <main class="content" id="contenu">
+  <main class="content" id="contenu" tabindex="-1" #content>
+    @if (userError()) {
+      <div class="wh-message wh-message-error user-error" role="alert">
+        <mat-icon aria-hidden="true">error_outline</mat-icon>
+        <span>Votre profil n’a pas pu être chargé. Vérifiez votre connexion, puis réessayez.</span>
+        <button mat-stroked-button type="button" (click)="loadUser()">Réessayer</button>
+      </div>
+    }
     <router-outlet />
   </main>
 
@@ -100,13 +134,23 @@
       </a>
     }
     @if (moreItems().length > 0) {
-      <button type="button" class="bottom-link" [matMenuTriggerFor]="moreMenu">
+      <button
+        type="button"
+        class="bottom-link"
+        [class.active]="moreActive()"
+        [matMenuTriggerFor]="moreMenu"
+      >
         <mat-icon aria-hidden="true">more_horiz</mat-icon>
         <span>Plus</span>
       </button>
       <mat-menu #moreMenu="matMenu" yPosition="above">
         @for (item of moreItems(); track item.path) {
-          <a mat-menu-item [routerLink]="item.path">
+          <a
+            mat-menu-item
+            [routerLink]="item.path"
+            routerLinkActive="active-item"
+            ariaCurrentWhenActive="page"
+          >
             <mat-icon aria-hidden="true">{{ item.icon }}</mat-icon>
             <span>{{ item.label }}</span>
           </a>

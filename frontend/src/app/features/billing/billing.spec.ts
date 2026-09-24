@@ -56,9 +56,10 @@ async function render(data: Partial<BillingOverview> = {}) {
 describe('Billing', () => {
   it('shows the usage, the estimate and the deadline to pay', async () => {
     const { element, buttons } = await render();
-    const text = element.textContent ?? '';
+    // Non-breaking spaces (typography) compared as plain spaces.
+    const text = (element.textContent ?? '').replace(/\s/g, ' ');
 
-    expect(text).toContain('Salariés actifs en septembre 2026');
+    expect(text).toContain('Utilisateurs actifs en septembre 2026');
     expect(text).toContain('24 € HT');
     expect(text).toContain('avant le 1er octobre 2026');
     expect(buttons()).toContain('credit_card Choisir l’offre Essentiel');

@@ -3,6 +3,13 @@
 #
 #   docker compose -f docker-compose.prod.yml -f docker-compose.prod.local.yml \
 #     --env-file .env.prod-local up -d --build
+#
+# deploy.sh is not used here: after a change of infrastructure/postgres/init-prod,
+# apply the database roles by hand (the same command as deploy.sh):
+#   docker compose -f docker-compose.prod.yml -f docker-compose.prod.local.yml \
+#     --env-file .env.prod-local exec -T postgres sh /docker-entrypoint-initdb.d/01-roles.sh
+# A volume created before the separate database roles cannot be converted:
+# start again from empty volumes (`down -v`, rehearsal data only).
 services:
   proxy:
     environment:

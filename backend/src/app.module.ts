@@ -7,12 +7,14 @@ import { resolve } from 'node:path';
 import { AbsencesModule } from './absences/absences.module';
 import { AuthModule } from './auth/auth.module';
 import { BillingModule } from './billing/billing.module';
+import { validateConfig } from './common/config/validate-config';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { EmployeesModule } from './employees/employees.module';
 import { ExportsModule } from './exports/exports.module';
 import { HealthController } from './health/health.controller';
 import { OnboardingModule } from './onboarding/onboarding.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { PrivacyModule } from './privacy/privacy.module';
 import { TimeEntriesModule } from './time-entries/time-entries.module';
 import { TimesheetsModule } from './timesheets/timesheets.module';
 
@@ -21,6 +23,7 @@ import { TimesheetsModule } from './timesheets/timesheets.module';
     ConfigModule.forRoot({
       envFilePath: resolve(__dirname, '../../.env'),
       isGlobal: true,
+      validate: validateConfig,
     }),
     // Requests per client IP and per minute: a brake on abuse, far above normal use.
     ThrottlerModule.forRootAsync({
@@ -40,6 +43,7 @@ import { TimesheetsModule } from './timesheets/timesheets.module';
     ExportsModule,
     OnboardingModule,
     PrismaModule,
+    PrivacyModule,
     TimeEntriesModule,
     TimesheetsModule,
   ],

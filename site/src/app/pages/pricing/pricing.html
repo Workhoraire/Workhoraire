@@ -1,10 +1,11 @@
 <section class="wh-page-hero wh-glow" aria-labelledby="page-title">
   <div class="wh-container">
     <p class="wh-eyebrow">Tarifs</p>
-    <h1 id="page-title">Payez seulement les salariés qui travaillent</h1>
+    <h1 id="page-title">Un prix par utilisateur actif, sans abonnement de base</h1>
     <p class="wh-lead">
-      Gratuit jusqu’à 3&nbsp;salariés actifs. Au-delà, 3&nbsp;€&nbsp;HT par salarié actif et par
-      mois, sans abonnement de base et sans engagement.
+      Gratuit jusqu’à {{ pricing.freeLimit }}. Au-delà, chacun est compté&nbsp;:
+      {{ pricing.unitPrice }} par utilisateur actif et par mois, sans abonnement de base et sans
+      engagement.
     </p>
   </div>
 </section>
@@ -17,7 +18,7 @@
       <li class="plan">
         <h3>Découverte</h3>
         <p class="plan-price">0&nbsp;€</p>
-        <p class="plan-unit">jusqu’à 3&nbsp;salariés actifs</p>
+        <p class="plan-unit">jusqu’à {{ pricing.freeLimit }}</p>
         <ul class="wh-checklist" role="list">
           <li>Toutes les fonctions de WorkHoraire</li>
           <li>Pointage, feuilles de temps et corrections tracées</li>
@@ -31,11 +32,13 @@
 
       <li class="plan plan-featured">
         <h3>Essentiel</h3>
-        <p class="plan-price">3&nbsp;€&nbsp;<span class="plan-tax">HT</span></p>
-        <p class="plan-unit">par salarié actif et par mois</p>
+        <p class="plan-price">{{ pricing.unitPriceEuros }}&nbsp;<span class="plan-tax">HT</span></p>
+        <p class="plan-unit">par utilisateur actif et par mois</p>
         <ul class="wh-checklist" role="list">
           <li>Toutes les fonctions de WorkHoraire</li>
-          <li>Au-delà de 3&nbsp;salariés actifs</li>
+          <li>
+            Dès {{ pricing.firstPaidTeam }}, tous comptés ({{ pricing.firstPaidPrice }} par mois)
+          </li>
           <li>Sans abonnement de base</li>
           <li>Sans engagement</li>
         </ul>
@@ -45,9 +48,28 @@
       </li>
     </ul>
 
+    <p class="vat-note">
+      @switch (vatExempt) {
+        @case (true) {
+          Prix hors taxes (HT). TVA non applicable, art.&nbsp;293&nbsp;B du CGI.
+        }
+        @case (false) {
+          Prix hors taxes (HT)&nbsp;: + TVA 20&nbsp;%.
+        }
+        @default {
+          Prix hors taxes (HT). <app-legal-field label="régime de TVA" />
+        }
+      }
+    </p>
+
     <p class="active-definition">
-      <strong>Un salarié actif est un salarié qui a pointé, ou qui a eu une absence validée, dans
-      le mois&nbsp;: vous ne payez pas les saisonniers les mois où ils ne travaillent pas.</strong>
+      <strong>
+        Un utilisateur actif est une personne de l’équipe (salarié, manager ou dirigeant) qui a,
+        dans le mois, des heures pointées ou ajoutées à sa feuille de temps, ou une absence validée.
+        Au-delà de {{ pricing.freeLimit }}, tous sont comptés&nbsp;:
+        {{ pricing.firstPaidTeam }} font {{ pricing.firstPaidPrice }} par mois. Un saisonnier sans
+        heures ni absence dans le mois n’est pas compté.
+      </strong>
     </p>
   </div>
 </section>
@@ -58,21 +80,21 @@
       <p class="wh-eyebrow">Simulateur</p>
       <h2 id="simulator-title">Estimez votre prix</h2>
       <p class="wh-lead">
-        Indiquez le nombre de salariés actifs dans le mois&nbsp;: le prix mensuel hors taxes
+        Indiquez le nombre d’utilisateurs actifs dans le mois&nbsp;: le prix mensuel hors taxes
         s’affiche aussitôt.
       </p>
     </div>
 
     <div class="simulator">
       <div class="field">
-        <label class="field-label" for="employees">Nombre de salariés actifs</label>
+        <label class="field-label" for="employees">Nombre d’utilisateurs actifs</label>
         <div class="stepper">
           <button
             type="button"
             class="step"
-            aria-label="Un salarié de moins"
+            aria-label="Un utilisateur de moins"
             aria-controls="employees"
-            [disabled]="estimate().activeEmployees <= 0"
+            [attr.aria-disabled]="estimate().activeEmployees <= 0 ? true : null"
             (click)="changeEmployees(-1)"
           >
             <span aria-hidden="true">−</span>
@@ -88,28 +110,30 @@
             [attr.aria-describedby]="hint() ? 'employees-hint' : null"
             [attr.aria-invalid]="hint() ? true : null"
             (input)="onEmployeesInput($event)"
-            (change)="onEmployeesChange()"
+            (change)="onEmployeesChange($event)"
           />
           <button
             type="button"
             class="step"
-            aria-label="Un salarié de plus"
+            aria-label="Un utilisateur de plus"
             aria-controls="employees"
-            [disabled]="estimate().activeEmployees >= maxEmployees"
+            [attr.aria-disabled]="estimate().activeEmployees >= maxEmployees ? true : null"
             (click)="changeEmployees(1)"
           >
             <span aria-hidden="true">+</span>
           </button>
         </div>
-        @if (hint(); as text) {
-          <p id="employees-hint" class="field-hint" role="status">{{ text }}</p>
-        }
+        <!-- Always rendered: a live region only announces changes made after it exists. -->
+        <p id="employees-hint" class="field-hint" role="status">{{ hint() }}</p>
       </div>
 
       <!-- Trailing spaces keep the words apart in the text announced by screen readers. -->
       <output class="result" for="employees" aria-live="polite">
         <span class="result-label">Votre prix </span>
-        <span class="result-price"><span class="result-amount">{{ price() }}</span> HT par mois </span>
+        <span class="result-price"
+          ><span class="result-amount">{{ price() }}</span
+          >&nbsp;HT par mois
+        </span>
         <span class="result-detail">{{ detail() }}</span>
       </output>
 

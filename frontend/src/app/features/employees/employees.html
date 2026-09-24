@@ -10,7 +10,7 @@
       </div>
       <div class="team-count">
         <span class="count-value">{{ employees().length }}</span>
-        <span class="count-label">collaborateur{{ employees().length > 1 ? 's' : '' }}</span>
+        <span class="count-label">membre{{ employees().length > 1 ? 's' : '' }}</span>
       </div>
     </section>
 
@@ -31,11 +31,18 @@
     <section class="employees-layout">
       <mat-card class="invite-card">
         <div class="card-kicker">NOUVEAU MEMBRE</div>
-        <mat-card-title>Inviter un employé</mat-card-title>
-        <mat-card-subtitle>Un lien sécurisé sera généré pour son compte Keycloak.</mat-card-subtitle>
+        <h2 mat-card-title>Inviter un salarié</h2>
+        <mat-card-subtitle
+          >Il recevra un lien personnel pour choisir son mot de passe.</mat-card-subtitle
+        >
 
         <mat-card-content>
-          <form [formGroup]="inviteForm" #inviteFormRef="ngForm" (ngSubmit)="inviteEmployee(inviteFormRef)" novalidate>
+          <form
+            [formGroup]="inviteForm"
+            #inviteFormRef="ngForm"
+            (ngSubmit)="inviteEmployee(inviteFormRef)"
+            novalidate
+          >
             <div class="form-row">
               <mat-form-field appearance="outline">
                 <mat-label>Prénom</mat-label>
@@ -74,7 +81,14 @@
               </mat-form-field>
               <mat-form-field appearance="outline">
                 <mat-label>Heures / semaine</mat-label>
-                <input matInput type="number" min="1" max="48" step="0.5" formControlName="weeklyHours" />
+                <input
+                  matInput
+                  type="number"
+                  min="1"
+                  max="48"
+                  step="0.5"
+                  formControlName="weeklyHours"
+                />
                 <mat-hint>35 h = temps plein</mat-hint>
                 @if (inviteForm.controls.weeklyHours.invalid) {
                   <mat-error>Entre 1 et 48 heures.</mat-error>
@@ -82,11 +96,17 @@
               </mat-form-field>
             </div>
 
-            <button mat-flat-button class="invite-button" type="submit" [disabled]="saving()">
+            <button
+              mat-flat-button
+              class="invite-button"
+              type="submit"
+              disabledInteractive
+              [disabled]="saving()"
+            >
               @if (saving()) {
                 <span class="button-content">
-                  <mat-spinner diameter="20"></mat-spinner>
-                  <span>Création du lien...</span>
+                  <mat-spinner diameter="20" aria-hidden="true"></mat-spinner>
+                  <span>Création du lien…</span>
                 </span>
               } @else {
                 <span class="button-content">
@@ -114,9 +134,8 @@
                   <mat-icon aria-hidden="true">content_copy</mat-icon>
                 </button>
               </div>
-              @if (copied()) {
-                <p class="copied-label">Lien copié.</p>
-              }
+              <!-- Always present, so that "Lien copié." is announced. -->
+              <p class="copied-label" role="status">{{ copied() ? 'Lien copié.' : '' }}</p>
               <p class="result-note">
                 L’invitation expire dans 7 jours. Le salarié devra se connecter avec l’adresse
                 indiquée.
@@ -130,17 +149,22 @@
         <div class="list-heading">
           <div>
             <p class="card-kicker">MEMBRES DE L’ENTREPRISE</p>
-            <h2 id="team-list-title">Tous les employés</h2>
+            <h2 id="team-list-title">Tous les salariés</h2>
           </div>
-          <button mat-icon-button type="button" aria-label="Actualiser la liste" (click)="loadEmployees()">
+          <button
+            mat-icon-button
+            type="button"
+            aria-label="Actualiser la liste"
+            (click)="loadEmployees()"
+          >
             <mat-icon aria-hidden="true">refresh</mat-icon>
           </button>
         </div>
 
         @if (loading()) {
-          <div class="list-loading" role="status" aria-label="Chargement des employés">
-            <mat-spinner diameter="32"></mat-spinner>
-            <span>Chargement de l’équipe...</span>
+          <div class="list-loading" role="status" aria-label="Chargement des salariés">
+            <mat-spinner diameter="32" aria-hidden="true"></mat-spinner>
+            <span>Chargement de l’équipe…</span>
           </div>
         } @else if (employees().length === 0) {
           <mat-card class="empty-card">
@@ -153,27 +177,46 @@
             @for (employee of employees(); track employee.id) {
               <mat-card class="employee-card">
                 @if (editingId() === employee.id) {
-                  <form class="edit-form" [formGroup]="editForm" (ngSubmit)="saveEmployee(employee)" novalidate>
+                  <form
+                    class="edit-form"
+                    [formGroup]="editForm"
+                    (ngSubmit)="saveEmployee(employee)"
+                    novalidate
+                  >
                     <div class="edit-heading">
                       <span>Modifier le profil</span>
-                      <button mat-icon-button type="button" aria-label="Annuler la modification" (click)="cancelEditing()">
+                      <button
+                        mat-icon-button
+                        type="button"
+                        aria-label="Annuler la modification"
+                        (click)="cancelEditing()"
+                      >
                         <mat-icon aria-hidden="true">close</mat-icon>
                       </button>
                     </div>
                     <div class="form-row">
                       <mat-form-field appearance="outline">
                         <mat-label>Prénom</mat-label>
-                        <input matInput formControlName="firstName" />
+                        <input matInput formControlName="firstName" required />
+                        @if (editForm.controls.firstName.hasError('required')) {
+                          <mat-error>Le prénom est obligatoire.</mat-error>
+                        }
                       </mat-form-field>
                       <mat-form-field appearance="outline">
                         <mat-label>Nom</mat-label>
-                        <input matInput formControlName="lastName" />
+                        <input matInput formControlName="lastName" required />
+                        @if (editForm.controls.lastName.hasError('required')) {
+                          <mat-error>Le nom est obligatoire.</mat-error>
+                        }
                       </mat-form-field>
                     </div>
-                    <mat-form-field appearance="outline">
-                      <mat-label>Adresse e-mail</mat-label>
-                      <input matInput formControlName="email" type="email" />
-                    </mat-form-field>
+                    <p class="email-note">
+                      <mat-icon aria-hidden="true">alternate_email</mat-icon>
+                      <span>
+                        {{ employee.email ?? 'E-mail non renseigné' }}&nbsp;: c’est l’adresse de son
+                        compte de connexion, qu’il est seul à pouvoir changer.
+                      </span>
+                    </p>
                     <div class="form-row">
                       <mat-form-field appearance="outline">
                         <mat-label>Rôle</mat-label>
@@ -185,13 +228,25 @@
                       </mat-form-field>
                       <mat-form-field appearance="outline">
                         <mat-label>Heures / semaine</mat-label>
-                        <input matInput type="number" min="1" max="48" step="0.5" formControlName="weeklyHours" />
+                        <input
+                          matInput
+                          type="number"
+                          min="1"
+                          max="48"
+                          step="0.5"
+                          formControlName="weeklyHours"
+                        />
+                        @if (editForm.controls.weeklyHours.invalid) {
+                          <mat-error>Entre 1 et 48 heures.</mat-error>
+                        }
                       </mat-form-field>
                     </div>
                     <mat-form-field appearance="outline">
                       <mat-label>Contrat applicable à partir du (facultatif)</mat-label>
                       <input matInput type="date" formControlName="contractFrom" />
-                      <mat-hint>Dès le lundi de la semaine choisie (vide : cette semaine)</mat-hint>
+                      <mat-hint
+                        >Dès le lundi de la semaine choisie (vide&nbsp;: cette semaine)</mat-hint
+                      >
                     </mat-form-field>
                     <mat-form-field appearance="outline">
                       <mat-label>Matricule paie (facultatif)</mat-label>
@@ -200,7 +255,12 @@
                     </mat-form-field>
                     <div class="edit-actions">
                       <button mat-button type="button" (click)="cancelEditing()">Annuler</button>
-                      <button mat-flat-button type="submit" [disabled]="savingEmployeeId() === employee.id">
+                      <button
+                        mat-flat-button
+                        type="submit"
+                        disabledInteractive
+                        [disabled]="savingEmployeeId() === employee.id"
+                      >
                         Enregistrer
                       </button>
                     </div>
@@ -220,21 +280,28 @@
                   </div>
                   <div class="employee-bottomline">
                     <span class="role-tag">
-                      {{ roleLabel(employee.role) }} · {{ contractLabel(employee.weeklyContractMinutes) }}
+                      {{ roleLabel(employee.role) }} ·
+                      {{ contractLabel(employee.weeklyContractMinutes) }}
                       @if (employee.payrollId) {
                         · matricule {{ employee.payrollId }}
                       }
                     </span>
                     <div class="employee-actions">
-                      <button mat-button type="button" (click)="startEditing(employee)">Modifier</button>
-                      <button
-                        mat-stroked-button
-                        type="button"
-                        [disabled]="savingEmployeeId() === employee.id"
-                        (click)="toggleActive(employee)"
-                      >
-                        {{ employee.isActive ? 'Désactiver' : 'Réactiver' }}
+                      <button mat-button type="button" (click)="startEditing(employee)">
+                        Modifier
                       </button>
+                      <!-- The API refuses to deactivate oneself: no button on one's own card. -->
+                      @if (employee.id !== currentUserId()) {
+                        <button
+                          mat-stroked-button
+                          type="button"
+                          disabledInteractive
+                          [disabled]="savingEmployeeId() === employee.id"
+                          (click)="toggleActive(employee)"
+                        >
+                          {{ employee.isActive ? 'Désactiver' : 'Réactiver' }}
+                        </button>
+                      }
                     </div>
                   </div>
                 }

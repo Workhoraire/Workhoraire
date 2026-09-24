@@ -23,8 +23,13 @@ export class AuthService {
   private readonly authenticatedState = signal(false);
   readonly authenticated = this.authenticatedState.asReadonly();
 
+  /**
+   * Back from Keycloak on the same page, query string included: the offer chosen
+   * on the website (?offre=) and Stripe's return (?paiement=) survive the round trip.
+   * Keycloak answers in the fragment, so the query string holds none of its parameters.
+   */
   private redirectUri(): string {
-    return `${window.location.origin}${window.location.pathname}`;
+    return `${window.location.origin}${window.location.pathname}${window.location.search}`;
   }
 
   async init(): Promise<void> {
@@ -62,6 +67,14 @@ export class AuthService {
     });
   }
 
+  /**
+   * Keycloak's account page: password, two-factor authentication, sessions.
+   * Its "back" link returns to the current page.
+   */
+  accountUrl(): string {
+    return this.keycloak.createAccountUrl({ redirectUri: window.location.href });
+  }
+
   /** E-mail of the signed-in Keycloak account, to tell the person which account is in use. */
   email(): string | null {
     const token = this.keycloak.tokenParsed as { email?: string } | undefined;
@@ -71,8 +84,7 @@ export class AuthService {
   /** Name known by Keycloak, if any: accounts created from an invitation have none. */
   names(): { firstName: string | null; lastName: string | null } {
     const token = this.keycloak.tokenParsed as
-      | { given_name?: string; family_name?: string }
-      | undefined;
+      { given_name?: string; family_name?: string } | undefined;
     return { firstName: token?.given_name ?? null, lastName: token?.family_name ?? null };
   }
 
@@ -85,9 +97,13 @@ export class AuthService {
       await this.keycloak.updateToken(30);
       return this.keycloak.token ?? null;
     } catch {
-      this.keycloak.clearToken();
-      this.authenticatedState.set(false);
-      return null;
+      // keycloak-js drops the tokens itself when the session is over (HTTP 400).
+      // Offline or timed out, the session stays: the request fails and says so.
+      if (!this.keycloak.refreshToken) {
+        this.authenticatedState.set(false);
+        return null;
+      }
+      return this.keycloak.token ?? null;
     }
   }
 }

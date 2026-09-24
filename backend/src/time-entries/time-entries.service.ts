@@ -23,9 +23,10 @@ import {
   toDateKey,
 } from '../common/dates/local-date';
 import { assertValidPeriod } from '../common/dates/period';
-import { formatMailDay, formatMailPeriod, mailName } from '../notifications/mail-format';
-import { correctionMail } from '../notifications/mail-templates';
+import { formatMailDay, formatMailPeriod, formatMailTime, mailName } from '../notifications/mail-format';
+import { correctionMail, forgottenClockOutMail } from '../notifications/mail-templates';
 import { MailService } from '../notifications/mail.service';
+import { lockEmployee } from '../prisma/lock-employee';
 import { PrismaService } from '../prisma/prisma.service';
 import { LABOR_RULES } from '../timesheets/labor-rules';
 import { TimesheetsService } from '../timesheets/timesheets.service';
@@ -172,6 +173,62 @@ export class TimeEntriesService {
     }
   }
 
+  /**
+   * E-mails the employees whose entry has been open for more than 12 hours:
+   * they most likely forgot to clock out, and must declare the real time.
+   * Each entry is claimed before the e-mail, so that it is reminded once,
+   * even with several instances of the API.
+   */
+  async remindForgottenClockOuts(now = new Date()): Promise<number> {
+    if (!this.mail.enabled) {
+      return 0;
+    }
+    const entries = await this.prisma.timeEntry.findMany({
+      where: {
+        openUserId: { not: null },
+        reminderSentAt: null,
+        startAt: { lt: new Date(now.getTime() - MAX_CLOCK_OUT_MS) },
+      },
+      select: {
+        id: true,
+        startAt: true,
+        user: { select: { email: true, firstName: true, isActive: true } },
+        company: { select: { timezone: true } },
+      },
+      take: 500,
+    });
+
+    let sent = 0;
+    for (const entry of entries) {
+      const claim = await this.prisma.timeEntry.updateMany({
+        where: { id: entry.id, reminderSentAt: null, endAt: null },
+        data: { reminderSentAt: now },
+      });
+      if (claim.count !== 1 || !entry.user.isActive || !entry.user.email) {
+        continue;
+      }
+      const delivered = await this.mail.send(
+        entry.user.email,
+        forgottenClockOutMail({
+          firstName: entry.user.firstName,
+          day: formatMailDay(entry.startAt, entry.company.timezone),
+          start: formatMailTime(entry.startAt, entry.company.timezone),
+          link: `${this.appUrl}/clock`,
+        }),
+      );
+      if (delivered) {
+        sent += 1;
+      } else {
+        // Not delivered: the next run tries again.
+        await this.prisma.timeEntry.updateMany({
+          where: { id: entry.id, reminderSentAt: now },
+          data: { reminderSentAt: null },
+        });
+      }
+    }
+    return sent;
+  }
+
   /** The employee declares the end of a forgotten entry; the change is audited. */
   async closeOwnOpenEntry(
     user: ApplicationUser,
@@ -236,7 +293,7 @@ export class TimeEntriesService {
     this.assertValidInterval(startAt, endAt, now);
 
     const created = await this.prisma.$transaction(async (transaction) => {
-      await this.lockEmployee(transaction, employee.id);
+      await lockEmployee(transaction, employee.id);
       await this.assertNoOverlap(transaction, employee.id, startAt, endAt, now);
 
       const entry = await transaction.timeEntry.create({
@@ -306,7 +363,7 @@ export class TimeEntriesService {
 
     const updated = await this.guardConcurrentChange(() =>
       this.prisma.$transaction(async (transaction) => {
-        await this.lockEmployee(transaction, existing.userId);
+        await lockEmployee(transaction, existing.userId);
         await this.assertNoOverlap(transaction, existing.userId, startAt, endAt ?? now, now, existing.id);
 
         // Only update the version that was checked: a concurrent clock-out or
@@ -379,7 +436,8 @@ export class TimeEntriesService {
    * saved, in the background: it never blocks nor undoes the correction.
    */
   private notifyCorrection(actor: ApplicationUser, notice: CorrectionNotice): void {
-    if (!this.mail.enabled) {
+    // Nobody needs an e-mail about their own correction.
+    if (!this.mail.enabled || notice.employeeId === actor.id) {
       return;
     }
     void this.sendCorrectionMail(actor, notice).catch((error: unknown) =>
@@ -491,14 +549,6 @@ export class TimeEntriesService {
       }
       throw error;
     }
-  }
-
-  /**
-   * Serialises the changes of one employee's entries (row lock on the user),
-   * so that two concurrent corrections cannot both pass the overlap check.
-   */
-  private async lockEmployee(transaction: Transaction, userId: string): Promise<void> {
-    await transaction.$queryRaw`SELECT "id" FROM "User" WHERE "id" = ${userId}::uuid FOR UPDATE`;
   }
 
   private assertValidOpenStart(startAt: Date, now: Date): void {

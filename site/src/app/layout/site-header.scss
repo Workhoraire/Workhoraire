@@ -56,6 +56,7 @@ ul {
 
   &.active {
     background: var(--wh-lime-soft);
+    box-shadow: inset 0 -3px 0 var(--wh-ink);
     color: var(--wh-ink);
   }
 }

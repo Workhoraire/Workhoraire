@@ -16,6 +16,8 @@ describe('SiteHeader', () => {
         provideRouter([
           { path: '', component: Blank },
           { path: 'tarifs', component: Blank },
+          { path: 'guides', component: Blank },
+          { path: 'guides/heures-supplementaires', component: Blank },
         ]),
       ],
     }).compileComponents();
@@ -46,6 +48,31 @@ describe('SiteHeader', () => {
     expect(element.querySelector('.start')?.getAttribute('href')).toBe(
       `${environment.appUrl}/inscription?offre=decouverte`,
     );
+  });
+
+  it('highlights the section of a sub-page, but only announces the page itself as current', async () => {
+    const fixture = TestBed.createComponent(SiteHeader);
+    const guides = (): HTMLAnchorElement =>
+      (fixture.nativeElement as HTMLElement).querySelector<HTMLAnchorElement>(
+        '.nav-desktop a[href="/guides"]',
+      )!;
+    const router = TestBed.inject(Router);
+
+    async function navigate(url: string): Promise<void> {
+      await router.navigateByUrl(url);
+      fixture.detectChanges();
+      // routerLinkActive updates its classes in a microtask.
+      await fixture.whenStable();
+      fixture.detectChanges();
+    }
+
+    await navigate('/guides/heures-supplementaires');
+    expect(guides().classList).toContain('active');
+    expect(guides().getAttribute('aria-current')).toBeNull();
+
+    await navigate('/guides');
+    expect(guides().classList).toContain('active');
+    expect(guides().getAttribute('aria-current')).toBe('page');
   });
 
   it('closes the phone menu after a navigation', async () => {

@@ -1,14 +1,17 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Prisma, UserRole } from '@prisma/client';
 import {
   ApplicationUserResponse,
   KeycloakUser,
   toApplicationUserResponse,
 } from '../auth/auth.types';
+import { isValidTimeZone } from '../common/dates/local-date';
 import { initialContractPeriod } from '../employees/contract-periods';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCompanyDto } from './dto/create-company.dto';
@@ -18,7 +21,14 @@ const DEFAULT_TIMEZONE = 'Europe/Paris';
 
 @Injectable()
 export class OnboardingService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly requireVerifiedEmail: boolean;
+
+  constructor(
+    private readonly prisma: PrismaService,
+    config: ConfigService,
+  ) {
+    this.requireVerifiedEmail = config.get<string>('KEYCLOAK_REQUIRE_VERIFIED_EMAIL', 'true') !== 'false';
+  }
 
   async createCompanyForUser(
     keycloakUser: KeycloakUser,
@@ -29,6 +39,11 @@ export class OnboardingService {
     const timezone = dto.timezone?.trim() || DEFAULT_TIMEZONE;
 
     this.validateCompanyData(name, siret, timezone);
+
+    // The company's e-mails (billing, alerts) go to this address: it must be the person's.
+    if (this.requireVerifiedEmail && keycloakUser.email_verified !== true) {
+      throw new ForbiddenException('Verify your e-mail address before creating a company');
+    }
 
     try {
       return await this.prisma.$transaction(async (transaction) => {
@@ -106,9 +121,7 @@ export class OnboardingService {
       throw new BadRequestException('SIRET must contain exactly 14 digits');
     }
 
-    try {
-      new Intl.DateTimeFormat('en-US', { timeZone: timezone }).format();
-    } catch {
+    if (!isValidTimeZone(timezone)) {
       throw new BadRequestException('Timezone must be a valid IANA timezone');
     }
   }

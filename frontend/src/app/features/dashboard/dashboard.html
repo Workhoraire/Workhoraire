@@ -1,7 +1,9 @@
 <section class="wh-page">
   <header class="wh-page-header">
     <div>
-      <p class="wh-eyebrow">{{ dashboard() ? formatLongDate(dashboard()!.date) : 'Tableau de bord' }}</p>
+      <p class="wh-eyebrow">
+        {{ dashboard() ? formatLongDate(dashboard()!.date) : 'Tableau de bord' }}
+      </p>
       <h1>Votre équipe aujourd’hui</h1>
       <p>Qui est là, qui est absent, et ce qui mérite votre attention cette semaine.</p>
     </div>
@@ -20,9 +22,32 @@
 
   @if (loading() && !dashboard()) {
     <div class="wh-loading" role="status">
-      <mat-spinner diameter="32" />
+      <mat-spinner diameter="32" aria-hidden="true" />
       <span>Chargement…</span>
     </div>
+  }
+
+  @if (showFirstSteps()) {
+    <section class="wh-card first-steps" aria-labelledby="first-steps-title">
+      <h2 id="first-steps-title">Premiers pas</h2>
+      <ol>
+        <li>
+          <strong>Invitez vos salariés.</strong> Chacun reçoit un lien par e-mail et choisit son mot
+          de passe. <a routerLink="/employees">Inviter un salarié</a>
+        </li>
+        <li>
+          <strong>Informez-les avant leur premier pointage</strong>, comme l’exige le Code du
+          travail.
+          <a [href]="informationGuideUrl" target="_blank" rel="noopener"
+            >Modèle de note d’information</a
+          >
+        </li>
+        <li>
+          <strong>Essayez le pointage</strong> vous-même, depuis votre téléphone.
+          <a routerLink="/clock">Pointer</a>
+        </li>
+      </ol>
+    </section>
   }
 
   @if (dashboard(); as board) {
@@ -31,9 +56,11 @@
         <p class="wh-kpi-label">Présents maintenant</p>
         <p class="wh-kpi-value">{{ present().length }} / {{ board.activeEmployees }}</p>
         <p class="wh-kpi-note">
-          salariés actifs
+          {{ board.activeEmployees > 1 ? 'salariés actifs' : 'salarié actif' }}
           @if (overdue().length > 0) {
-            · {{ overdue().length }} sortie{{ overdue().length > 1 ? 's' : '' }} non pointée{{ overdue().length > 1 ? 's' : '' }}
+            · {{ overdue().length }} sortie{{ overdue().length > 1 ? 's' : '' }} non pointée{{
+              overdue().length > 1 ? 's' : ''
+            }}
           }
         </p>
       </div>
@@ -42,7 +69,11 @@
         <p class="wh-kpi-value">{{ formatDuration(board.todayWorkedMinutes) }}</p>
         <p class="wh-kpi-note">toute l’équipe</p>
       </div>
-      <a class="wh-kpi kpi-link" [class.wh-kpi-lime]="board.pendingAbsenceRequests > 0" routerLink="/absences">
+      <a
+        class="wh-kpi kpi-link"
+        [class.wh-kpi-lime]="board.pendingAbsenceRequests > 0"
+        routerLink="/absences"
+      >
         <p class="wh-kpi-label">Demandes d’absence</p>
         <p class="wh-kpi-value">{{ board.pendingAbsenceRequests }}</p>
         <p class="wh-kpi-note">en attente de validation</p>
@@ -84,7 +115,8 @@
                 <span class="avatar muted" aria-hidden="true">{{ initials(item.employee) }}</span>
                 <a [routerLink]="['/team', item.employee.id]">{{ fullName(item.employee) }}</a>
                 <span class="wh-chip wh-chip-coral">
-                  entrée {{ sinceDay(item.since, board.timezone) }} à {{ formatTime(item.since, board.timezone) }}
+                  entrée {{ sinceDay(item.since, board.timezone) }} à
+                  {{ formatTime(item.since, board.timezone) }}
                 </span>
               </li>
             }
@@ -123,7 +155,7 @@
       @if (board.alerts.length === 0) {
         <p class="wh-muted">
           <mat-icon aria-hidden="true" class="ok-icon">verified</mat-icon>
-          Aucune alerte : durées maximales, pauses et repos sont respectés.
+          Aucune alerte&nbsp;: durées maximales, pauses et repos sont respectés.
         </p>
       } @else {
         <ul class="alert-list">
@@ -132,15 +164,20 @@
               <mat-icon aria-hidden="true">warning_amber</mat-icon>
               <div>
                 <a [routerLink]="['/team', item.employee.id]">{{ fullName(item.employee) }}</a>
-                <span class="wh-muted"> · {{ item.alert.scope === 'WEEK' ? 'semaine' : formatDayLabel(item.alert.date) }}</span>
+                <span class="wh-muted">
+                  ·
+                  {{
+                    item.alert.scope === 'WEEK' ? 'semaine' : formatDayLabel(item.alert.date)
+                  }}</span
+                >
                 <p>{{ describeAlert(item.alert) }}</p>
               </div>
             </li>
           }
         </ul>
         <p class="legal-note">
-          Ces alertes reprennent les seuils légaux par défaut du Code du travail. Un accord collectif
-          peut prévoir d’autres limites : vérifiez votre convention.
+          Ces alertes reprennent les seuils légaux par défaut du Code du travail. Un accord
+          collectif peut prévoir d’autres limites&nbsp;: vérifiez votre convention.
         </p>
       }
     </section>

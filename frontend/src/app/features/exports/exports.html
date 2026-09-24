@@ -4,8 +4,8 @@
       <p class="wh-eyebrow">Paie</p>
       <h1>Exports pour la paie</h1>
       <p>
-        Transmettez les heures à votre gestionnaire de paie ou à votre expert-comptable. Les fichiers
-        CSV s’ouvrent directement dans Excel ou LibreOffice.
+        Transmettez les heures à votre gestionnaire de paie ou à votre expert-comptable. Les
+        fichiers CSV s’ouvrent directement dans Excel ou LibreOffice.
       </p>
     </div>
   </header>
@@ -34,7 +34,11 @@
         @if (mode() === 'month') {
           <mat-form-field>
             <mat-label>Mois</mat-label>
-            <input matInput type="month" formControlName="month" />
+            <mat-select formControlName="month">
+              @for (month of months(); track month.value) {
+                <mat-option [value]="month.value">{{ month.label }}</mat-option>
+              }
+            </mat-select>
           </mat-form-field>
         } @else {
           <div class="wh-form-row">
@@ -50,7 +54,7 @@
         }
       </form>
       @if (periodLabel(); as label) {
-        <p class="wh-muted">Période sélectionnée : {{ label }}.</p>
+        <p class="wh-muted">Période sélectionnée&nbsp;: {{ label }}.</p>
       }
     </section>
 
@@ -61,14 +65,19 @@
         <div>
           <h3>Synthèse hebdomadaire</h3>
           <p>
-            Une ligne par salarié et par semaine civile : heures travaillées, heures supplémentaires
-            à +25 % et +50 %, heures complémentaires, jours d’absence par type et alertes. C’est le
-            fichier à transmettre pour la paie.
+            Une ligne par salarié et par semaine civile&nbsp;: heures travaillées, heures
+            supplémentaires à +25 % et +50 %, heures complémentaires, jours d’absence par type et
+            alertes. C’est le fichier à transmettre pour la paie.
           </p>
         </div>
-        <button mat-flat-button type="button" [disabled]="!period() || downloading() !== null" (click)="download('week')">
+        <button
+          mat-flat-button
+          type="button"
+          [disabled]="!period() || downloading() !== null"
+          (click)="download('week')"
+        >
           @if (downloading() === 'week') {
-            <mat-spinner diameter="18" />
+            <mat-spinner diameter="18" aria-hidden="true" />
           } @else {
             <mat-icon aria-hidden="true">download</mat-icon>
           }
@@ -80,13 +89,19 @@
         <div>
           <h3>Détail journalier</h3>
           <p>
-            Une ligne par salarié et par jour travaillé ou absent : première entrée, dernière sortie,
-            pauses, heures travaillées. Utile en cas de contrôle ou de question d’un salarié.
+            Une ligne par salarié et par jour travaillé ou absent&nbsp;: première entrée, dernière
+            sortie, pauses, heures travaillées. Utile en cas de contrôle ou de question d’un
+            salarié.
           </p>
         </div>
-        <button mat-stroked-button type="button" [disabled]="!period() || downloading() !== null" (click)="download('day')">
+        <button
+          mat-stroked-button
+          type="button"
+          [disabled]="!period() || downloading() !== null"
+          (click)="download('day')"
+        >
           @if (downloading() === 'day') {
-            <mat-spinner diameter="18" />
+            <mat-spinner diameter="18" aria-hidden="true" />
           } @else {
             <mat-icon aria-hidden="true">download</mat-icon>
           }
@@ -101,7 +116,7 @@
     <ul>
       <li>
         Les heures supplémentaires se calculent par semaine civile (du lundi au dimanche). Une
-        semaine à cheval sur deux mois apparaît en entier dans la synthèse : indiquez à votre
+        semaine à cheval sur deux mois apparaît en entier dans la synthèse&nbsp;: indiquez à votre
         gestionnaire de paie sur quel mois la rattacher.
       </li>
       <li>
@@ -109,7 +124,9 @@
         un accord d’entreprise peut prévoir d’autres taux.
       </li>
       <li>Les heures sont en décimales (7,50 = 7 h 30), les absences en jours ouvrés.</li>
-      <li>Un export couvre au plus 62 jours. Il ne contient que les salariés de votre entreprise.</li>
+      <li>
+        Un export couvre au plus 62 jours. Il ne contient que les salariés de votre entreprise.
+      </li>
     </ul>
   </section>
 </section>

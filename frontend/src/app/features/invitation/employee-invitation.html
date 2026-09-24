@@ -15,22 +15,26 @@
   <main class="invitation-content">
     <mat-card class="invitation-card">
       @if (state() === 'loading') {
-        <mat-spinner diameter="42"></mat-spinner>
+        <mat-spinner diameter="42" aria-label="Chargement de l’invitation"></mat-spinner>
         <p class="eyebrow">INVITATION</p>
         <h1>Vérification en cours.</h1>
         <p>Nous préparons votre accès à l’entreprise.</p>
       } @else if (state() === 'welcome') {
         @if (preview(); as invitation) {
-          <div class="state-icon success-icon"><mat-icon aria-hidden="true">waving_hand</mat-icon></div>
+          <div class="state-icon success-icon">
+            <mat-icon aria-hidden="true">waving_hand</mat-icon>
+          </div>
           <p class="eyebrow">INVITATION</p>
           <h1>Bonjour {{ invitation.firstName }}.</h1>
           <p>
             <strong>{{ invitation.companyName }}</strong> vous invite à pointer vos heures sur
-            WorkHoraire. Il ne reste qu’à choisir votre mot de passe : votre adresse
+            WorkHoraire. Il ne reste qu’à choisir votre mot de passe&nbsp;: votre adresse
             <strong>{{ invitation.email }}</strong> est déjà renseignée.
           </p>
           <div class="invitation-actions">
-            <button mat-flat-button type="button" (click)="createPassword()">Créer mon mot de passe</button>
+            <button mat-flat-button type="button" (click)="createPassword()">
+              Créer mon mot de passe
+            </button>
             <button mat-button type="button" (click)="signIn()">J’ai déjà un compte</button>
           </div>
         }
@@ -38,7 +42,7 @@
         <div class="state-icon success-icon"><mat-icon aria-hidden="true">check</mat-icon></div>
         <p class="eyebrow">BIENVENUE DANS L’ÉQUIPE</p>
         <h1>Votre accès est prêt.</h1>
-        <p>Votre compte a été rattaché. Redirection vers votre espace...</p>
+        <p>Votre compte a été rattaché. Redirection vers votre espace…</p>
       } @else if (problem(); as issue) {
         <div class="state-icon error-icon"><mat-icon aria-hidden="true">link_off</mat-icon></div>
         <p class="eyebrow">INVITATION</p>
@@ -47,7 +51,9 @@
         <div class="invitation-actions">
           @if (issue.canSwitchAccount) {
             @if (authenticated()) {
-              <button mat-flat-button type="button" (click)="switchAccount()">Changer de compte</button>
+              <button mat-flat-button type="button" (click)="switchAccount()">
+                Changer de compte
+              </button>
             } @else {
               <button mat-flat-button type="button" (click)="signIn()">Me connecter</button>
             }

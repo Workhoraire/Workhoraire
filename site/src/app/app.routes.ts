@@ -1,6 +1,8 @@
 import { Route, Routes } from '@angular/router';
 
+import { FREE_ACTIVE_EMPLOYEES, PRICING_TEXT, formatEuros } from './core/pricing';
 import { PageMeta } from './core/seo/page-meta';
+import { NBSP } from './core/text';
 
 const notFound: Omit<Route, 'path'> = {
   title: 'Page introuvable · WorkHoraire',
@@ -15,7 +17,7 @@ const notFound: Omit<Route, 'path'> = {
 
 /**
  * Every route is prerendered at build time. When adding an indexable page,
- * also add it to `public/sitemap.xml`.
+ * also add it to `public/sitemap.xml` (seo-title-strategy.spec.ts checks it).
  */
 export const routes: Routes = [
   {
@@ -24,15 +26,14 @@ export const routes: Routes = [
     title: 'WorkHoraire · Le pointage simple et conforme pour les TPE',
     data: {
       page: {
-        description:
-          'Pointage sur téléphone à l’heure du serveur, heures supplémentaires calculées, alertes légales et exports pour la paie. Gratuit jusqu’à 3 salariés actifs.',
+        description: `Pointage sur téléphone à l’heure du serveur, heures supplémentaires calculées, alertes légales et exports pour la paie. Gratuit jusqu’à ${PRICING_TEXT.freeLimit}.`,
       } satisfies PageMeta,
     },
     loadComponent: () => import('./pages/home/home').then(({ Home }) => Home),
   },
   {
     path: 'fonctionnalites',
-    title: 'Fonctionnalités : pointage, heures sup, alertes · WorkHoraire',
+    title: 'Fonctionnalités : pointage et heures sup · WorkHoraire',
     data: {
       page: {
         description:
@@ -43,11 +44,10 @@ export const routes: Routes = [
   },
   {
     path: 'tarifs',
-    title: 'Tarifs : gratuit jusqu’à 3 salariés · WorkHoraire',
+    title: `Tarifs : gratuit jusqu’à ${FREE_ACTIVE_EMPLOYEES} utilisateurs · WorkHoraire`,
     data: {
       page: {
-        description:
-          'Découverte : 0 € jusqu’à 3 salariés actifs. Essentiel : 3 € HT par salarié actif et par mois, sans abonnement de base ni engagement. Simulez votre prix.',
+        description: `Découverte${NBSP}: ${formatEuros(0)} jusqu’à ${PRICING_TEXT.freeLimit}. Essentiel${NBSP}: ${PRICING_TEXT.unitPrice} par utilisateur actif et par mois, tous comptés, sans abonnement de base ni engagement.`,
       } satisfies PageMeta,
     },
     loadComponent: () => import('./pages/pricing/pricing').then(({ Pricing }) => Pricing),
@@ -58,7 +58,7 @@ export const routes: Routes = [
     data: {
       page: {
         description:
-          'Hébergement en France, échanges chiffrés, piste d’audit visible par le salarié, sauvegardes chiffrées chaque nuit, aucun traceur publicitaire.',
+          'Base de données hébergée en France, échanges chiffrés, piste d’audit visible par le salarié, sauvegardes chiffrées chaque nuit, aucun traceur publicitaire.',
       } satisfies PageMeta,
     },
     loadComponent: () => import('./pages/security/security').then(({ Security }) => Security),
@@ -69,7 +69,7 @@ export const routes: Routes = [
     data: {
       page: {
         description:
-          'Guides pratiques sur les règles du temps de travail en France : heures supplémentaires, majorations, temps partiel et congés payés.',
+          'Guides pratiques du temps de travail en France : heures supplémentaires, temps partiel, congés payés et information des salariés avant le pointage.',
       } satisfies PageMeta,
     },
     loadComponent: () => import('./pages/guides/guides').then(({ Guides }) => Guides),
@@ -86,6 +86,21 @@ export const routes: Routes = [
     },
     loadComponent: () =>
       import('./pages/guides/overtime-guide').then(({ OvertimeGuide }) => OvertimeGuide),
+  },
+  {
+    path: 'guides/informer-les-salaries',
+    title: 'Informer vos salariés du pointage · WorkHoraire',
+    data: {
+      page: {
+        description:
+          'Informer chaque salarié avant le premier pointage (L1222-4), consulter le CSE dès 50 salariés : les règles et un modèle de note d’information prêt à compléter.',
+        ogType: 'article',
+      } satisfies PageMeta,
+    },
+    loadComponent: () =>
+      import('./pages/guides/employee-information-guide').then(
+        ({ EmployeeInformationGuide }) => EmployeeInformationGuide,
+      ),
   },
   {
     path: 'mentions-legales',
@@ -105,7 +120,7 @@ export const routes: Routes = [
     data: {
       page: {
         description:
-          'Aucun cookie ni traceur sur le site. Données de l’application hébergées en France et traitées pour le compte de l’employeur. Vos droits et comment les exercer.',
+          'Aucun cookie ni traceur sur le site. Données traitées pour le compte de l’employeur, base de données hébergée en France. Vos droits et comment les exercer.',
       } satisfies PageMeta,
     },
     loadComponent: () => import('./pages/legal/privacy').then(({ Privacy }) => Privacy),

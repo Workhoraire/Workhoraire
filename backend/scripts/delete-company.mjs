@@ -1,12 +1,16 @@
 // Deletes a company and all its data when its account is closed (terms of
 // sale, article 11: within 30 days of the closure). Invoices stay at Stripe,
-// which keeps them for the 10 years of accounting retention.
+// which keeps them for the 10 years of accounting retention. The proof that
+// the company accepted the terms and the data processing agreement is kept
+// 5 years in TermsAcceptanceArchive (purged by the API's daily job).
 //
 // Without --confirm, only shows what would be deleted:
 //   node --env-file=../.env scripts/delete-company.mjs <companyId>
 //   node --env-file=../.env scripts/delete-company.mjs <companyId> --confirm
-// In production: docker compose -f docker-compose.prod.yml --env-file .env.production
-//   exec api node scripts/delete-company.mjs <companyId> [--confirm]
+// In production, with the database owner's connection (the API's role may not
+// delete the audit trail), through the migrate service:
+//   docker compose -f docker-compose.prod.yml --env-file .env.production run --rm --no-deps migrate node scripts/delete-company.mjs <companyId> [--confirm]
+// The script uses the DATABASE_URL it is given.
 import { PrismaClient } from '@prisma/client';
 
 const [companyId, flag] = process.argv.slice(2);
@@ -20,7 +24,7 @@ try {
   const company = await prisma.company.findUnique({
     where: { id: companyId },
     include: {
-      users: { select: { keycloakSubject: true, email: true } },
+      users: { select: { keycloakSubject: true, email: true, role: true } },
       subscription: { select: { stripeCustomerId: true, status: true } },
       _count: {
         select: {
@@ -46,11 +50,30 @@ try {
     process.exit(1);
   }
 
+  const acceptance = company.termsAcceptedAt
+    ? {
+        companyId: company.id,
+        companyName: company.name,
+        siret: company.siret,
+        administratorEmails: company.users
+          .filter((user) => user.role === 'ADMIN' && user.email)
+          .map((user) => user.email),
+        termsAcceptedAt: company.termsAcceptedAt,
+        termsVersion: company.termsVersion,
+      }
+    : null;
+  console.log(
+    acceptance
+      ? `Terms accepted on ${acceptance.termsAcceptedAt.toISOString()} (version ${acceptance.termsVersion}): kept 5 years.`
+      : 'No terms acceptance recorded: nothing to keep.',
+  );
+
   if (flag !== '--confirm') {
     console.log('Dry run: nothing deleted. Add --confirm to delete.');
   } else {
     const where = { companyId };
     await prisma.$transaction([
+      ...(acceptance ? [prisma.termsAcceptanceArchive.create({ data: acceptance })] : []),
       prisma.timeEntryAuditLog.deleteMany({ where }),
       prisma.timeEntry.deleteMany({ where }),
       prisma.absenceRequest.deleteMany({ where }),
