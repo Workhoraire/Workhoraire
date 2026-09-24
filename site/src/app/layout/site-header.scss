@@ -1,0 +1,212 @@
+:host {
+  position: sticky;
+  z-index: 50;
+  top: 0;
+  display: block;
+}
+
+.header {
+  position: relative;
+  border-bottom: 1px solid var(--wh-line);
+  background: rgba(244, 245, 239, 0.94);
+  -webkit-backdrop-filter: saturate(1.4) blur(12px);
+  backdrop-filter: saturate(1.4) blur(12px);
+}
+
+.bar {
+  display: flex;
+  min-height: var(--wh-header-height);
+  align-items: center;
+  gap: 0.75rem;
+}
+
+app-brand-logo {
+  margin-right: auto;
+}
+
+ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* ---------- Desktop navigation ---------- */
+
+.nav-desktop {
+  display: none;
+
+  ul {
+    display: flex;
+    gap: 0.25rem;
+  }
+}
+
+.nav-link {
+  display: inline-flex;
+  padding: 0.5rem 0.85rem;
+  border-radius: 999px;
+  color: var(--wh-ink-soft);
+  font-weight: 650;
+  text-decoration: none;
+
+  &:hover {
+    background: rgba(23, 33, 29, 0.06);
+    color: var(--wh-ink);
+  }
+
+  &.active {
+    background: var(--wh-lime-soft);
+    color: var(--wh-ink);
+  }
+}
+
+.actions {
+  display: none;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.sign-in {
+  display: none;
+  padding: 0.5rem 0.25rem;
+  font-weight: 700;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+/* ---------- Phone and tablet menu ---------- */
+
+.menu-toggle {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--wh-line);
+  border-radius: 999px;
+  background: var(--wh-panel);
+  cursor: pointer;
+  font-weight: 700;
+  list-style: none;
+  user-select: none;
+
+  &::-webkit-details-marker {
+    display: none;
+  }
+
+  &::marker {
+    content: '';
+  }
+}
+
+.menu-icon {
+  position: relative;
+  width: 1.1rem;
+  height: 2px;
+  border-radius: 2px;
+  background: currentColor;
+
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    border-radius: 2px;
+    background: currentColor;
+    transition: transform 150ms ease;
+  }
+
+  &::before {
+    top: -6px;
+  }
+
+  &::after {
+    top: 6px;
+  }
+}
+
+.menu[open] .menu-icon {
+  background: transparent;
+
+  &::before {
+    top: 0;
+    transform: rotate(45deg);
+  }
+
+  &::after {
+    top: 0;
+    transform: rotate(-45deg);
+  }
+}
+
+.menu-panel {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  left: 0;
+  max-height: calc(100vh - var(--wh-header-height));
+  padding: 0.5rem var(--wh-gutter) 1.5rem;
+  overflow-y: auto;
+  border-bottom: 1px solid var(--wh-line);
+  background: var(--wh-paper);
+  box-shadow: 0 24px 40px rgba(23, 33, 29, 0.12);
+
+  ul {
+    margin-bottom: 1.25rem;
+  }
+}
+
+.menu-link {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.9rem 0.25rem;
+  border-bottom: 1px solid var(--wh-line);
+  font-size: 1.15rem;
+  font-weight: 700;
+  text-decoration: none;
+
+  &.active::after {
+    content: '';
+    width: 0.55rem;
+    height: 0.55rem;
+    border-radius: 50%;
+    background: var(--wh-coral);
+  }
+}
+
+.menu-actions {
+  display: grid;
+  gap: 0.75rem;
+}
+
+/* Tablets: the main call to action moves out of the menu. */
+@media (min-width: 36rem) {
+  .actions {
+    display: flex;
+  }
+}
+
+@media (min-width: 64rem) {
+  app-brand-logo {
+    margin-right: 0;
+  }
+
+  .nav-desktop {
+    display: block;
+    margin: 0 auto 0 1.5rem;
+  }
+
+  .sign-in {
+    display: inline-flex;
+  }
+
+  .menu {
+    display: none;
+  }
+}

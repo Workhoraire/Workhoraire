@@ -1,0 +1,62 @@
+<header class="header">
+  <div class="wh-container bar">
+    <app-brand-logo />
+
+    <nav class="nav-desktop" aria-label="Navigation principale">
+      <ul>
+        @for (item of items; track item.path) {
+          <li>
+            <a
+              class="nav-link"
+              [routerLink]="item.path"
+              routerLinkActive="active"
+              ariaCurrentWhenActive="page"
+            >{{ item.label }}</a>
+          </li>
+        }
+      </ul>
+    </nav>
+
+    <div class="actions">
+      <a class="sign-in" [href]="links.signIn">Se connecter</a>
+      <a class="wh-button wh-button--primary wh-button--small start" [href]="links.signUp">
+        Commencer gratuitement
+      </a>
+    </div>
+
+    <details
+      #menu
+      class="menu"
+      [open]="menuOpen()"
+      (toggle)="onMenuToggle(menu)"
+      (keydown.escape)="closeMenu(toggle)"
+    >
+      <summary #toggle class="menu-toggle">
+        <span class="menu-icon" aria-hidden="true"></span>
+        <span>Menu</span>
+      </summary>
+      <div class="menu-panel">
+        <nav aria-label="Navigation principale">
+          <ul>
+            @for (item of items; track item.path) {
+              <li>
+                <a
+                  class="menu-link"
+                  [routerLink]="item.path"
+                  routerLinkActive="active"
+                  ariaCurrentWhenActive="page"
+                >{{ item.label }}</a>
+              </li>
+            }
+          </ul>
+        </nav>
+        <div class="menu-actions">
+          <a class="wh-button wh-button--outline wh-button--block" [href]="links.signIn">Se connecter</a>
+          <a class="wh-button wh-button--primary wh-button--block" [href]="links.signUp">
+            Commencer gratuitement
+          </a>
+        </div>
+      </div>
+    </details>
+  </div>
+</header>

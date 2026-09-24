@@ -1,0 +1,267 @@
+<section class="wh-page-hero wh-glow" aria-labelledby="page-title">
+  <div class="wh-container">
+    <p class="wh-eyebrow">Fonctionnalités</p>
+    <h1 id="page-title">Tout pour suivre les heures, rien de superflu</h1>
+    <p class="wh-lead">
+      Du pointage sur téléphone à l’export pour la paie, WorkHoraire couvre le suivi du temps de
+      travail d’une petite entreprise en appliquant les règles du Code du travail.
+    </p>
+
+    <nav class="toc" aria-label="Sur cette page">
+      <ul role="list">
+        @for (section of sections; track section.id) {
+          <li>
+            <a routerLink="/fonctionnalites" [fragment]="section.id">{{ section.label }}</a>
+          </li>
+        }
+      </ul>
+    </nav>
+  </div>
+</section>
+
+<section id="pointage" class="wh-section feature" tabindex="-1" aria-labelledby="pointage-title">
+  <div class="wh-container feature-grid">
+    <div class="feature-text">
+      <p class="wh-eyebrow">Pointage</p>
+      <h2 id="pointage-title">Pointer en un geste depuis son téléphone</h2>
+      <p>
+        Le salarié ouvre WorkHoraire et pointe son arrivée ou sa sortie d’un seul geste. L’heure
+        enregistrée est celle du serveur, pas celle de l’appareil&nbsp;: elle ne dépend pas de
+        l’horloge du téléphone.
+      </p>
+      <ul class="wh-checklist" role="list">
+        <li>Journée et semaine en cours toujours visibles</li>
+        <li>Une note possible à chaque pointage</li>
+        <li>Une sortie oubliée se déclare après coup, et reste tracée</li>
+      </ul>
+    </div>
+    <div class="feature-visual is-phone">
+      <app-screenshot
+        device="phone"
+        src="/captures/pointer-mobile.png"
+        alt="Page « Pointer » sur téléphone : 9 h 30 travaillées aujourd’hui, session en cours depuis 1 h 30 et bouton « Pointer ma sortie »"
+        [width]="780"
+        [height]="1688"
+      />
+    </div>
+  </div>
+</section>
+
+<section
+  id="feuille-de-temps"
+  class="wh-section wh-section--panel feature"
+  tabindex="-1"
+  aria-labelledby="timesheet-title"
+>
+  <div class="wh-container feature-grid is-reversed">
+    <div class="feature-text">
+      <p class="wh-eyebrow">Feuille de temps</p>
+      <h2 id="timesheet-title">Des corrections tracées, visibles par le salarié</h2>
+      <p>
+        Un oubli&nbsp;? Le manager corrige la feuille de temps en indiquant un motif. Chaque
+        correction est conservée dans l’historique avec son motif, et le salarié la voit depuis son
+        espace.
+      </p>
+      <ul class="wh-checklist" role="list">
+        <li>Un motif obligatoire pour chaque correction</li>
+        <li>Un historique en ajout seul&nbsp;: rien ne s’efface</li>
+        <li>Un manager ne corrige pas ses propres heures</li>
+      </ul>
+    </div>
+    <div class="feature-visual">
+      <app-screenshot
+        src="/captures/feuille-de-temps.png"
+        alt="Feuille de temps d’une salariée : résumé de la semaine, périodes de chaque jour et une période marquée « Corrigé » avec son motif « Livraison tardive »"
+        [width]="1280"
+        [height]="900"
+      />
+    </div>
+  </div>
+</section>
+
+<section id="alertes" class="wh-section feature" tabindex="-1" aria-labelledby="alerts-title">
+  <div class="wh-container">
+    <div class="wh-section-header">
+      <p class="wh-eyebrow">Alertes légales</p>
+      <h2 id="alerts-title">Les seuils légaux surveillés pour vous</h2>
+      <p class="wh-lead">
+        WorkHoraire signale les dépassements dans le tableau de bord et dans les heures de
+        l’équipe, avec la règle concernée.
+      </p>
+    </div>
+
+    <ul class="limits" role="list">
+      @for (limit of limits; track limit.value) {
+        <li class="limit">
+          <strong>{{ limit.value }}</strong>
+          <span>{{ limit.label }}</span>
+        </li>
+      }
+    </ul>
+
+    <p class="wh-note limits-note">
+      Les alertes reprennent les seuils légaux par défaut du Code du travail. Elles informent sans
+      bloquer&nbsp;: une convention ou un accord collectif peut prévoir d’autres limites.
+    </p>
+
+    <div class="alerts-visual">
+      <app-screenshot
+        src="/captures/tableau-de-bord.png"
+        alt="Tableau de bord d’un manager avec la rubrique « Points de vigilance » : une sortie non pointée signalée pour un salarié"
+        [width]="1280"
+        [height]="900"
+      />
+    </div>
+  </div>
+</section>
+
+<section
+  id="heures-supplementaires"
+  class="wh-section wh-section--panel feature"
+  tabindex="-1"
+  aria-labelledby="overtime-title"
+>
+  <div class="wh-container feature-grid">
+    <div class="feature-text">
+      <p class="wh-eyebrow">Calcul des heures</p>
+      <h2 id="overtime-title">Heures supplémentaires et complémentaires calculées pour vous</h2>
+      <p>
+        Les heures sont décomptées par semaine civile, du lundi au dimanche. Pour un temps plein,
+        les heures au-delà de 35&nbsp;heures sont majorées de 25&nbsp;% pour les 8&nbsp;premières,
+        puis de 50&nbsp;%. Pour un temps partiel, les heures complémentaires sont majorées de
+        10&nbsp;% jusqu’au dixième du contrat, puis de 25&nbsp;%.
+      </p>
+      <p>
+        Les congés payés pris dans la semaine comptent dans le seuil de déclenchement des heures
+        supplémentaires, comme l’a jugé la Cour de cassation le 10&nbsp;septembre 2025.
+      </p>
+      <p>
+        <a class="text-link" routerLink="/guides/heures-supplementaires">
+          Lire le guide des heures supplémentaires
+        </a>
+      </p>
+    </div>
+    <div class="feature-visual">
+      <figure class="week wh-card">
+        <figcaption>Exemple&nbsp;: contrat de 35&nbsp;h, semaine du lundi au dimanche</figcaption>
+        <table class="wh-table">
+          <thead>
+            <tr>
+              <th scope="col">Jour</th>
+              <th scope="col" class="is-num">Heures</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><th scope="row">Lundi</th><td class="is-num">8&nbsp;h</td></tr>
+            <tr><th scope="row">Mardi</th><td class="is-num">8&nbsp;h</td></tr>
+            <tr><th scope="row">Mercredi</th><td class="is-num">8&nbsp;h</td></tr>
+            <tr><th scope="row">Jeudi</th><td class="is-num">8&nbsp;h</td></tr>
+            <tr><th scope="row">Vendredi</th><td class="is-num">7&nbsp;h</td></tr>
+          </tbody>
+          <tfoot>
+            <tr><th scope="row">Total</th><td class="is-num">39&nbsp;h</td></tr>
+          </tfoot>
+        </table>
+        <p class="week-result">
+          <strong>4&nbsp;heures supplémentaires</strong>, majorées de 25&nbsp;%
+        </p>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<section id="absences" class="wh-section feature" tabindex="-1" aria-labelledby="absences-title">
+  <div class="wh-container feature-grid is-reversed">
+    <div class="feature-text">
+      <p class="wh-eyebrow">Absences</p>
+      <h2 id="absences-title">Des absences posées en demi-journées</h2>
+      <p>
+        Le salarié demande ses congés, RTT et absences depuis l’application, à la journée ou à la
+        demi-journée. Le manager accepte ou refuse la demande, et l’absence apparaît dans les heures
+        de l’équipe.
+      </p>
+      <ul class="wh-checklist" role="list">
+        <li>Congés payés, RTT, arrêt maladie, congé sans solde, événement familial</li>
+        <li>Décompte en jours ouvrés, jours fériés exclus</li>
+        <li>Une absence acceptée peut être annulée</li>
+      </ul>
+    </div>
+    <div class="feature-visual">
+      <app-screenshot
+        src="/captures/absences.png"
+        alt="Demandes d’absence à valider : une RTT d’une demi-journée et une semaine de congés payés, avec les boutons Refuser et Accepter"
+        [width]="1280"
+        [height]="800"
+      />
+    </div>
+  </div>
+</section>
+
+<section
+  id="exports"
+  class="wh-section wh-section--panel feature"
+  tabindex="-1"
+  aria-labelledby="exports-title"
+>
+  <div class="wh-container feature-grid">
+    <div class="feature-text">
+      <p class="wh-eyebrow">Paie</p>
+      <h2 id="exports-title">Des exports CSV prêts pour la paie</h2>
+      <p>
+        Choisissez un mois ou une période, puis téléchargez les heures à transmettre à votre
+        gestionnaire de paie ou à votre expert-comptable. Les fichiers s’ouvrent directement dans
+        Excel.
+      </p>
+      <ul class="wh-checklist" role="list">
+        <li>
+          Synthèse par salarié et par semaine&nbsp;: heures travaillées, heures supplémentaires à
+          +25&nbsp;% et +50&nbsp;%, heures complémentaires, absences par type
+        </li>
+        <li>Détail journalier&nbsp;: première entrée, dernière sortie, pauses</li>
+        <li>Le matricule de paie de chaque salarié</li>
+      </ul>
+    </div>
+    <div class="feature-visual">
+      <app-screenshot
+        src="/captures/exports.png"
+        alt="Page des exports pour la paie : choix du mois, puis téléchargement de la synthèse hebdomadaire et du détail journalier au format CSV"
+        [width]="1280"
+        [height]="800"
+      />
+    </div>
+  </div>
+</section>
+
+<section id="invitation" class="wh-section feature" tabindex="-1" aria-labelledby="invitation-title">
+  <div class="wh-container feature-grid is-reversed">
+    <div class="feature-text">
+      <p class="wh-eyebrow">Équipe</p>
+      <h2 id="invitation-title">Une invitation par lien, un mot de passe à choisir</h2>
+      <p>
+        Invitez un salarié&nbsp;: WorkHoraire lui envoie un lien par e-mail, que vous pouvez aussi
+        copier et lui transmettre vous-même. Il voit quelle entreprise l’invite et son adresse est
+        déjà renseignée&nbsp;: il ne lui reste qu’à choisir son mot de passe.
+      </p>
+      <ul class="wh-checklist" role="list">
+        <li>Rôle et durée du contrat renseignés dans l’invitation</li>
+        <li>Trois rôles&nbsp;: administrateur, manager et employé</li>
+        <li>Un lien perdu se régénère, et l’ancien cesse de fonctionner</li>
+      </ul>
+    </div>
+    <div class="feature-visual">
+      <app-screenshot
+        src="/captures/invitation-accueil.png"
+        alt="Page d’invitation reçue par une salariée : « Bonjour Nora », l’entreprise qui l’invite, son adresse déjà renseignée et le bouton « Créer mon mot de passe »"
+        [width]="1280"
+        [height]="800"
+      />
+    </div>
+  </div>
+  <div class="wh-container">
+    <p class="wh-small demo-note">
+      Captures de l’application avec des données de démonstration fictives.
+    </p>
+  </div>
+</section>
+
+<app-cta-band heading="Essayez WorkHoraire avec votre équipe" />

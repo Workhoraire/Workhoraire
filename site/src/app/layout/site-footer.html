@@ -1,0 +1,46 @@
+<footer class="footer">
+  <div class="wh-container top">
+    <div class="about">
+      <app-brand-logo tone="ink" />
+      <p>Le pointage simple et conforme pour les TPE.</p>
+      <p class="no-tracking">Ce site n’utilise ni cookie ni traceur.</p>
+    </div>
+
+    <nav class="columns" aria-label="Plan du site">
+      <div>
+        <h2>Produit</h2>
+        <ul>
+          <li><a routerLink="/fonctionnalites">Fonctionnalités</a></li>
+          <li><a routerLink="/tarifs">Tarifs</a></li>
+          <li><a routerLink="/securite">Sécurité</a></li>
+        </ul>
+      </div>
+      <div>
+        <h2>Ressources</h2>
+        <ul>
+          <li><a routerLink="/guides">Guides</a></li>
+          <li><a routerLink="/guides/heures-supplementaires">Calculer les heures supplémentaires</a></li>
+        </ul>
+      </div>
+      <div>
+        <h2>Compte</h2>
+        <ul>
+          <li><a [href]="links.signIn">Se connecter</a></li>
+          <li><a [href]="links.signUp">Commencer gratuitement</a></li>
+        </ul>
+      </div>
+    </nav>
+  </div>
+
+  <div class="wh-container bottom">
+    <p>WorkHoraire · Pointage et suivi des heures pour les TPE et PME</p>
+    <nav aria-label="Informations légales">
+      <ul>
+        <li><a routerLink="/mentions-legales">Mentions légales</a></li>
+        <li><a routerLink="/confidentialite">Confidentialité</a></li>
+        <li><a routerLink="/cgv">CGV</a></li>
+        <li><a routerLink="/sous-traitance">Sous-traitance RGPD</a></li>
+      </ul>
+    </nav>
+  </div>
+</footer>

@@ -1,0 +1,32 @@
+<section class="wh-page-hero wh-glow" aria-labelledby="page-title">
+  <div class="wh-container">
+    <p class="wh-eyebrow">Guides</p>
+    <h1 id="page-title">Les règles du temps de travail, expliquées simplement</h1>
+    <p class="wh-lead">
+      Des guides pratiques pour appliquer le Code du travail au suivi des heures de votre équipe.
+    </p>
+  </div>
+</section>
+
+<section class="wh-section wh-section--tight guides-section" aria-labelledby="guides-title">
+  <div class="wh-container">
+    <h2 id="guides-title" class="wh-visually-hidden">Tous les guides</h2>
+
+    <ul class="wh-grid" role="list">
+      @for (guide of guides; track guide.path) {
+        <li class="wh-card guide">
+          <p class="wh-eyebrow">Guide</p>
+          <h3>
+            <a class="guide-link" [routerLink]="guide.path">{{ guide.title }}</a>
+          </h3>
+          <p>{{ guide.description }}</p>
+          <span class="read-more" aria-hidden="true">
+            Lire le guide <app-icon name="arrow" [size]="20" />
+          </span>
+        </li>
+      }
+    </ul>
+  </div>
+</section>
+
+<app-cta-band />

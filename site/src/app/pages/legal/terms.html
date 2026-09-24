@@ -1,0 +1,276 @@
+<section class="wh-page-hero wh-glow" aria-labelledby="page-title">
+  <div class="wh-container">
+    <p class="wh-eyebrow">Informations légales</p>
+    <h1 id="page-title">Conditions générales de vente</h1>
+    <p class="wh-lead">Version du {{ updatedOn }}, réservée aux professionnels.</p>
+  </div>
+</section>
+
+<div class="wh-container legal">
+  <div class="wh-prose">
+    @if (draft) {
+      <p class="wh-note wh-note--coral draft-notice" role="note">
+        L’identité de l’éditeur sera complétée à l’immatriculation de la société, avant l’ouverture
+        du service au public.
+      </p>
+    }
+
+    <h2>1. Objet et acceptation</h2>
+    <p>
+      Les présentes conditions générales de vente (les «&nbsp;CGV&nbsp;») régissent l’accès au
+      service en ligne WorkHoraire et son utilisation par le client. Elles sont acceptées par une
+      case à cocher lors de la création de l’entreprise dans l’application. La date de
+      l’acceptation et la version acceptée sont enregistrées.
+    </p>
+    <p>
+      Le service est réservé aux <strong>professionnels</strong>&nbsp;: entreprises, associations
+      et autres employeurs, pour les besoins de leur activité. Les règles propres aux contrats
+      conclus avec des consommateurs ne s’appliquent donc pas.
+    </p>
+    <p>
+      Le contrat se compose, par ordre de priorité, du
+      <a routerLink="/sous-traitance">contrat de sous-traitance</a> pour tout ce qui concerne les
+      données personnelles, des présentes CGV et des prix publiés sur la page
+      <a routerLink="/tarifs">Tarifs</a>. Les CGV prévalent sur les conditions d’achat du client.
+    </p>
+
+    <h2>2. Prestataire</h2>
+    <p>
+      Le service est fourni par
+      <app-legal-field [value]="publisher.name" label="dénomination de l’éditeur" />,
+      <app-legal-field [value]="publisher.legalForm" label="forme juridique" />,
+      dont le siège est
+      <app-legal-field [value]="publisher.address" label="adresse du siège" />,
+      <app-legal-field [value]="publisher.registration" label="numéro RCS ou SIREN" />
+      (le «&nbsp;prestataire&nbsp;»). Contact&nbsp;:
+      <app-legal-field [value]="publisher.email" label="adresse e-mail de contact" />.
+    </p>
+
+    <h2>3. Définitions</h2>
+    <dl class="facts">
+      <dt>Client</dt>
+      <dd>Le professionnel qui crée une entreprise dans WorkHoraire.</dd>
+      <dt>Administrateur</dt>
+      <dd>La personne qui a créé l’entreprise, ou toute personne à qui ce rôle est donné.</dd>
+      <dt>Utilisateurs</dt>
+      <dd>Les administrateurs, managers et salariés invités par le client.</dd>
+      <dt>Salarié actif</dt>
+      <dd>
+        Un utilisateur qui a pointé, ou qui a eu une absence validée, au cours d’un mois civil,
+        dans le fuseau horaire de l’entreprise.
+      </dd>
+      <dt>Données du client</dt>
+      <dd>Les informations saisies dans le service par le client et ses utilisateurs.</dd>
+    </dl>
+
+    <h2>4. Description du service</h2>
+    <p>
+      WorkHoraire est un logiciel accessible en ligne de pointage et de suivi du temps de travail.
+      Il permet notamment de pointer, de consulter et de corriger les heures avec une piste
+      d’audit, de gérer les absences, de calculer les heures supplémentaires et complémentaires,
+      de signaler les dépassements des durées maximales et d’exporter les heures pour la paie. Les
+      fonctions disponibles sont décrites sur la page
+      <a routerLink="/fonctionnalites">Fonctionnalités</a>.
+    </p>
+    <p>
+      Les calculs appliquent les règles du Code du travail par défaut. Ils ne tiennent pas compte
+      des stipulations d’une convention ou d’un accord collectif. Ils constituent une aide et non
+      un conseil juridique&nbsp;: le client vérifie les éléments qu’il transmet à la paie.
+    </p>
+    <p>
+      Le prestataire peut faire évoluer le service pour l’améliorer ou l’adapter à la
+      réglementation, sans réduire de façon substantielle les fonctions essentielles de l’offre
+      souscrite.
+    </p>
+
+    <h2>5. Compte et accès</h2>
+    <p>
+      Le client crée son compte en ligne et en devient l’administrateur. Il invite ses
+      utilisateurs et leur attribue un rôle. Les identifiants sont personnels et confidentiels.
+      Le client répond de l’utilisation du service par ses utilisateurs et prévient sans délai le
+      prestataire de toute utilisation non autorisée de son compte.
+    </p>
+
+    <h2>6. Offres et prix</h2>
+    <ul>
+      <li>
+        <strong>Découverte</strong>&nbsp;: gratuite, tant que l’entreprise compte au plus
+        3&nbsp;salariés actifs dans le mois.
+      </li>
+      <li>
+        <strong>Essentiel</strong>&nbsp;: 3&nbsp;€ hors taxes par salarié actif et par mois, tous
+        les salariés actifs du mois étant comptés, sans abonnement de base ni durée minimale.
+      </li>
+    </ul>
+    <p>
+      Les prix sont exprimés en euros et hors taxes.
+      @if (publisher.vatExempt === true) {
+        Le prestataire bénéficie de la franchise en base de TVA&nbsp;: ses factures portent la
+        mention «&nbsp;TVA non applicable, art.&nbsp;293&nbsp;B du CGI&nbsp;».
+      } @else if (publisher.vatExempt === false) {
+        La TVA au taux en vigueur s’y ajoute.
+      } @else {
+        <app-legal-field label="régime de TVA : taux applicable ou franchise en base" />
+      }
+    </p>
+    <p>
+      Le prestataire peut modifier ses prix. Tout changement est annoncé par e-mail aux
+      administrateurs au moins 30&nbsp;jours à l’avance. Le client qui le refuse peut résilier
+      avant son entrée en vigueur.
+    </p>
+
+    <h2>7. Dépassement de l’offre gratuite</h2>
+    <p>
+      Lorsqu’une entreprise sur l’offre Découverte compte plus de 3&nbsp;salariés actifs dans le
+      mois, ses administrateurs sont prévenus par e-mail. Ils disposent de 30&nbsp;jours pour
+      souscrire l’offre Essentiel. Passé ce délai, et tant que l’abonnement n’est pas souscrit,
+      le service passe en <strong>lecture seule</strong> dans les conditions de l’article&nbsp;9.
+    </p>
+
+    <h2>8. Facturation et paiement</h2>
+    <p>
+      L’offre Essentiel est facturée chaque mois, d’après le nombre de salariés actifs du mois
+      écoulé. Le paiement se fait par prélèvement SEPA ou par carte bancaire, par l’intermédiaire
+      du prestataire de paiement Stripe&nbsp;: le client enregistre son moyen de paiement sur une
+      page sécurisée de Stripe, et le prestataire n’a jamais accès à ses coordonnées bancaires. Les
+      factures sont payables à réception, par le prélèvement ou le débit automatique du moyen de
+      paiement enregistré. Aucun escompte n’est accordé pour paiement anticipé, et aucune remise
+      n’est consentie en dehors des offres publiées.
+    </p>
+    <p>
+      Tout retard de paiement entraîne de plein droit, sans rappel préalable, des pénalités de
+      retard au taux appliqué par la Banque centrale européenne à son opération de refinancement
+      la plus récente, majoré de 10&nbsp;points de pourcentage, ainsi qu’une indemnité forfaitaire
+      pour frais de recouvrement de 40&nbsp;€ (articles L441-10 et D441-5 du Code de commerce).
+      Si les frais de recouvrement exposés sont supérieurs, une indemnisation complémentaire peut
+      être demandée sur justification.
+    </p>
+
+    <h2>9. Défaut de paiement et lecture seule</h2>
+    <p>
+      En cas d’échec d’un paiement, Stripe relance automatiquement le moyen de paiement et les
+      administrateurs sont prévenus. Si la facture reste impayée 30&nbsp;jours après le premier
+      échec, le service passe en lecture seule jusqu’au paiement. En lecture seule&nbsp;:
+    </p>
+    <ul>
+      <li>les salariés peuvent <strong>toujours pointer</strong>&nbsp;;</li>
+      <li>les heures restent consultables et exportables&nbsp;;</li>
+      <li>les autres modifications sont suspendues, sauf le paiement lui-même.</li>
+    </ul>
+    <p>Aucune donnée n’est supprimée du fait d’un défaut de paiement.</p>
+
+    <h2>10. Durée et résiliation</h2>
+    <p>
+      Le contrat est conclu pour une durée indéterminée à compter de la création de l’entreprise.
+      L’offre Essentiel est sans engagement de durée.
+    </p>
+    <ul>
+      <li>
+        <strong>Par le client</strong>&nbsp;: il peut résilier l’offre Essentiel à tout moment
+        depuis la page «&nbsp;Abonnement&nbsp;» de l’application. La résiliation prend effet à la
+        fin de la période de facturation en cours, et le compte revient à l’offre Découverte. Il
+        peut aussi demander à tout moment la clôture de son compte, par e-mail au prestataire.
+      </li>
+      <li>
+        <strong>Par le prestataire</strong>&nbsp;: en cas de manquement grave du client, 30&nbsp;jours
+        après une mise en demeure par e-mail restée sans effet. Le prestataire peut aussi arrêter
+        le service moyennant un préavis de 3&nbsp;mois, pendant lequel le client récupère ses
+        données.
+      </li>
+    </ul>
+
+    <h2>11. Réversibilité et sort des données</h2>
+    <p>
+      Pendant toute la durée du contrat, le client peut exporter les heures de son équipe au
+      format CSV. À la clôture du compte, les données du client sont supprimées dans un délai de
+      30&nbsp;jours, puis disparaissent des sauvegardes au terme de leur rotation de 30&nbsp;jours.
+      Les factures sont conservées 10&nbsp;ans, comme l’impose le Code de commerce.
+    </p>
+
+    <h2>12. Données personnelles</h2>
+    <p>
+      Pour les données de ses utilisateurs saisies dans le service, le client est responsable du
+      traitement et le prestataire agit comme sous-traitant. Leurs obligations respectives sont
+      fixées par le <a routerLink="/sous-traitance">contrat de sous-traitance</a>, qui fait
+      partie des présentes CGV. Les données que le prestataire traite pour son propre compte sont
+      décrites dans la <a routerLink="/confidentialite">politique de confidentialité</a>.
+    </p>
+
+    <h2>13. Obligations du client</h2>
+    <ul>
+      <li>
+        Informer chaque salarié par écrit avant la mise en place du pointage (article L1222-4 du
+        Code du travail) et, dans les entreprises d’au moins 50&nbsp;salariés, informer et
+        consulter le comité social et économique au préalable (article L2312-38)&nbsp;;
+      </li>
+      <li>saisir des informations exactes et vérifier les éléments transmis à la paie&nbsp;;</li>
+      <li>
+        ne pas saisir de données inutiles au décompte du temps de travail, en particulier aucune
+        donnée de santé dans les commentaires&nbsp;;
+      </li>
+      <li>
+        utiliser le service conformément à sa destination, sans tenter d’en perturber le
+        fonctionnement, d’accéder aux données d’autres clients ni de le copier.
+      </li>
+    </ul>
+
+    <h2>14. Disponibilité et assistance</h2>
+    <p>
+      Le prestataire met en œuvre les moyens raisonnables pour que le service soit accessible en
+      permanence, sans garantir une disponibilité ininterrompue. Les opérations de maintenance
+      sont, autant que possible, réalisées en dehors des heures ouvrées et annoncées à l’avance.
+      L’assistance est assurée par e-mail, en français, les jours ouvrés.
+    </p>
+
+    <h2>15. Responsabilité</h2>
+    <p>
+      Le prestataire est tenu d’une obligation de moyens. Sa responsabilité ne peut être engagée
+      qu’en cas de faute prouvée, pour les seuls dommages directs. Elle est limitée, tous
+      dommages confondus, aux sommes payées par le client au titre des 12&nbsp;mois précédant le
+      fait qui l’engage, et à 100&nbsp;€ pour un client de l’offre gratuite. Ces limites ne
+      s’appliquent pas en cas de faute lourde ou dolosive, ni aux dommages que la loi interdit de
+      limiter.
+    </p>
+    <p>
+      Le client reste seul responsable des décisions prises à partir des données du service,
+      notamment en matière de paie et de respect de la réglementation du travail.
+    </p>
+
+    <h2>16. Propriété intellectuelle</h2>
+    <p>
+      Le logiciel WorkHoraire, sa documentation et ses marques restent la propriété du
+      prestataire. Le client reçoit, pour la durée du contrat, un droit personnel et non exclusif
+      d’utiliser le service pour ses besoins internes. Le client reste propriétaire de ses données.
+    </p>
+
+    <h2>17. Confidentialité</h2>
+    <p>
+      Chaque partie garde confidentielles les informations de l’autre dont elle a connaissance à
+      l’occasion du contrat, pendant sa durée et les 2&nbsp;années qui suivent.
+    </p>
+
+    <h2>18. Force majeure</h2>
+    <p>
+      Aucune partie n’est responsable d’un manquement causé par un événement de force majeure, au
+      sens de l’article&nbsp;1218 du Code civil.
+    </p>
+
+    <h2>19. Modification des CGV</h2>
+    <p>
+      Le prestataire peut modifier les CGV. La nouvelle version est communiquée par e-mail aux
+      administrateurs au moins 30&nbsp;jours avant son entrée en vigueur. Le client qui la refuse
+      peut résilier avant cette date&nbsp;; à défaut, elle s’applique.
+    </p>
+
+    <h2>20. Droit applicable et litiges</h2>
+    <p>
+      Les CGV sont soumises au droit français. En cas de litige, les parties recherchent d’abord
+      une solution amiable. À défaut d’accord dans un délai de 30&nbsp;jours, le litige est porté
+      devant les tribunaux compétents du ressort du siège du prestataire, sous réserve des règles
+      d’ordre public. La médiation de la consommation ne s’applique pas aux litiges entre
+      professionnels (article L611-3 du Code de la consommation).
+    </p>
+
+    <p class="wh-small version">Version {{ version }}.</p>
+  </div>
+</div>

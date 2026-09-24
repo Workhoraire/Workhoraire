@@ -1,0 +1,135 @@
+<section class="wh-page-hero wh-glow" aria-labelledby="page-title">
+  <div class="wh-container">
+    <p class="wh-eyebrow">Tarifs</p>
+    <h1 id="page-title">Payez seulement les salariés qui travaillent</h1>
+    <p class="wh-lead">
+      Gratuit jusqu’à 3&nbsp;salariés actifs. Au-delà, 3&nbsp;€&nbsp;HT par salarié actif et par
+      mois, sans abonnement de base et sans engagement.
+    </p>
+  </div>
+</section>
+
+<section class="wh-section wh-section--tight plans-section" aria-labelledby="plans-title">
+  <div class="wh-container">
+    <h2 id="plans-title" class="wh-visually-hidden">Les offres</h2>
+
+    <ul class="plans" role="list">
+      <li class="plan">
+        <h3>Découverte</h3>
+        <p class="plan-price">0&nbsp;€</p>
+        <p class="plan-unit">jusqu’à 3&nbsp;salariés actifs</p>
+        <ul class="wh-checklist" role="list">
+          <li>Toutes les fonctions de WorkHoraire</li>
+          <li>Pointage, feuilles de temps et corrections tracées</li>
+          <li>Alertes légales, heures supplémentaires et complémentaires</li>
+          <li>Absences et exports CSV pour la paie</li>
+        </ul>
+        <a class="wh-button wh-button--outline wh-button--block" [href]="links.signUp">
+          Commencer gratuitement
+        </a>
+      </li>
+
+      <li class="plan plan-featured">
+        <h3>Essentiel</h3>
+        <p class="plan-price">3&nbsp;€&nbsp;<span class="plan-tax">HT</span></p>
+        <p class="plan-unit">par salarié actif et par mois</p>
+        <ul class="wh-checklist" role="list">
+          <li>Toutes les fonctions de WorkHoraire</li>
+          <li>Au-delà de 3&nbsp;salariés actifs</li>
+          <li>Sans abonnement de base</li>
+          <li>Sans engagement</li>
+        </ul>
+        <a class="wh-button wh-button--lime wh-button--block" [href]="links.signUpEssential">
+          Choisir Essentiel
+        </a>
+      </li>
+    </ul>
+
+    <p class="active-definition">
+      <strong>Un salarié actif est un salarié qui a pointé, ou qui a eu une absence validée, dans
+      le mois&nbsp;: vous ne payez pas les saisonniers les mois où ils ne travaillent pas.</strong>
+    </p>
+  </div>
+</section>
+
+<section class="wh-section wh-section--panel" aria-labelledby="simulator-title">
+  <div class="wh-container simulator-layout">
+    <div class="simulator-intro">
+      <p class="wh-eyebrow">Simulateur</p>
+      <h2 id="simulator-title">Estimez votre prix</h2>
+      <p class="wh-lead">
+        Indiquez le nombre de salariés actifs dans le mois&nbsp;: le prix mensuel hors taxes
+        s’affiche aussitôt.
+      </p>
+    </div>
+
+    <div class="simulator">
+      <div class="field">
+        <label class="field-label" for="employees">Nombre de salariés actifs</label>
+        <div class="stepper">
+          <button
+            type="button"
+            class="step"
+            aria-label="Un salarié de moins"
+            aria-controls="employees"
+            [disabled]="estimate().activeEmployees <= 0"
+            (click)="changeEmployees(-1)"
+          >
+            <span aria-hidden="true">−</span>
+          </button>
+          <input
+            id="employees"
+            type="number"
+            inputmode="numeric"
+            min="0"
+            step="1"
+            [max]="maxEmployees"
+            [value]="employeesText()"
+            [attr.aria-describedby]="hint() ? 'employees-hint' : null"
+            [attr.aria-invalid]="hint() ? true : null"
+            (input)="onEmployeesInput($event)"
+            (change)="onEmployeesChange()"
+          />
+          <button
+            type="button"
+            class="step"
+            aria-label="Un salarié de plus"
+            aria-controls="employees"
+            [disabled]="estimate().activeEmployees >= maxEmployees"
+            (click)="changeEmployees(1)"
+          >
+            <span aria-hidden="true">+</span>
+          </button>
+        </div>
+        @if (hint(); as text) {
+          <p id="employees-hint" class="field-hint" role="status">{{ text }}</p>
+        }
+      </div>
+
+      <!-- Trailing spaces keep the words apart in the text announced by screen readers. -->
+      <output class="result" for="employees" aria-live="polite">
+        <span class="result-label">Votre prix </span>
+        <span class="result-price"><span class="result-amount">{{ price() }}</span> HT par mois </span>
+        <span class="result-detail">{{ detail() }}</span>
+      </output>
+
+      <a class="wh-button wh-button--primary wh-button--block" [href]="cta().href">
+        {{ cta().label }}
+      </a>
+    </div>
+  </div>
+</section>
+
+<section class="wh-section" aria-labelledby="faq-title">
+  <div class="wh-container faq">
+    <h2 id="faq-title">Questions fréquentes</h2>
+    <div class="faq-list">
+      @for (item of questions; track item.question) {
+        <details class="faq-item">
+          <summary>{{ item.question }}</summary>
+          <p>{{ item.answer }}</p>
+        </details>
+      }
+    </div>
+  </div>
+</section>

@@ -1,0 +1,40 @@
+:host {
+  display: block;
+}
+
+.guides-section {
+  padding-top: 0;
+  padding-bottom: clamp(3.5rem, 9vw, 6rem);
+}
+
+/* The whole card is clickable through the stretched title link. */
+.guide {
+  position: relative;
+  transition: border-color 150ms ease;
+
+  &:hover {
+    border-color: var(--wh-ink);
+  }
+
+  h3 {
+    font-size: 1.4rem;
+  }
+}
+
+.guide-link {
+  text-decoration: none;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: var(--wh-radius);
+  }
+}
+
+.read-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 700;
+}
