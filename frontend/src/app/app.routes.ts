@@ -10,6 +10,7 @@ import { onboardingGuard } from './core/auth/onboarding.guard';
 export const routes: Routes = [
   {
     path: 'onboarding',
+    title: 'Créer votre entreprise · WorkHoraire',
     canActivate: [authGuard, onboardingGuard],
     loadComponent: () =>
       import('./features/onboarding/onboarding').then(({ Onboarding }) => Onboarding),
@@ -32,8 +33,9 @@ export const routes: Routes = [
   {
     // No guard: the page welcomes the invited person before they have an account.
     path: 'employee-invitations/:token',
+    title: 'Invitation · WorkHoraire',
     loadComponent: () =>
-      import('./features/employees/employee-invitation').then(
+      import('./features/invitation/employee-invitation').then(
         ({ EmployeeInvitation }) => EmployeeInvitation,
       ),
   },

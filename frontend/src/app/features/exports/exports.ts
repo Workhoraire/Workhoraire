@@ -1,4 +1,4 @@
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -8,8 +8,9 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSelectModule } from '@angular/material/select';
 
-import { environment } from '../../../environments/environment';
+import { DownloadService } from '../../core/http/download.service';
 import { apiErrorMessage } from '../../core/http/error-message';
 import { addDays, formatShortDate, todayKey } from '../../core/time/time-format';
 import { CurrentUserService } from '../../core/user/current-user.service';
@@ -22,6 +23,25 @@ function endOfMonth(month: string): string {
   return addDays(`${month}-01`, new Date(Date.UTC(year, monthIndex, 0)).getUTCDate() - 1);
 }
 
+const monthLabel = new Intl.DateTimeFormat('fr-FR', {
+  month: 'long',
+  year: 'numeric',
+  timeZone: 'UTC',
+});
+
+/**
+ * The current month and the previous ones, newest first, as a list: the native
+ * month picker is a plain text box in Safari and Firefox on computers.
+ */
+export function recentMonths(today: string, count: number): { value: string; label: string }[] {
+  const [year, month] = today.split('-').map(Number);
+  return Array.from({ length: count }, (_, index) => {
+    const date = new Date(Date.UTC(year, month - 1 - index, 1));
+    const value = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
+    return { value, label: monthLabel.format(date) };
+  });
+}
+
 @Component({
   selector: 'app-exports',
   imports: [
@@ -31,6 +51,7 @@ function endOfMonth(month: string): string {
     MatIconModule,
     MatInputModule,
     MatProgressSpinnerModule,
+    MatSelectModule,
     ReactiveFormsModule,
   ],
   templateUrl: './exports.html',
@@ -38,10 +59,12 @@ function endOfMonth(month: string): string {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Exports {
-  private readonly http = inject(HttpClient);
+  private readonly downloads = inject(DownloadService);
   private readonly formBuilder = inject(FormBuilder);
 
   private readonly timezone = signal('Europe/Paris');
+  /** Two years of months: exports cover at most 62 days, older months are rarely asked. */
+  protected readonly months = computed(() => recentMonths(todayKey(this.timezone()), 24));
   protected readonly mode = signal<'month' | 'range'>('month');
   protected readonly downloading = signal<Granularity | null>(null);
   protected readonly error = signal<string | null>(null);
@@ -51,7 +74,9 @@ export class Exports {
     from: [''],
     to: [''],
   });
-  private readonly values = toSignal(this.form.valueChanges, { initialValue: this.form.getRawValue() });
+  private readonly values = toSignal(this.form.valueChanges, {
+    initialValue: this.form.getRawValue(),
+  });
 
   protected readonly period = computed(() => {
     const { month, from, to } = this.values();
@@ -75,6 +100,9 @@ export class Exports {
   }
 
   protected download(granularity: Granularity): void {
+    if (this.downloading()) {
+      return;
+    }
     const period = this.period();
     if (!period) {
       this.error.set('Choisissez une période valide.');
@@ -84,39 +112,19 @@ export class Exports {
     this.downloading.set(granularity);
     this.error.set(null);
 
-    this.http
-      .get(`${environment.apiUrl}/exports/timesheets`, {
-        params: { from: period.from, to: period.to, granularity },
-        responseType: 'blob',
-      })
+    const fileName = `workhoraire-${granularity === 'week' ? 'semaines' : 'jours'}-${period.from}_${period.to}.csv`;
+    this.downloads
+      .download('/exports/timesheets', fileName, { from: period.from, to: period.to, granularity })
       .subscribe({
-        next: (blob) => {
+        next: () => this.downloading.set(null),
+        error: (response: HttpErrorResponse) => {
           this.downloading.set(null);
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = `workhoraire-${granularity === 'week' ? 'semaines' : 'jours'}-${period.from}_${period.to}.csv`;
-          link.click();
-          // Some browsers start the download asynchronously: keep the file available a moment.
-          window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
-        },
-        error: async (response: HttpErrorResponse) => {
-          this.downloading.set(null);
-          // Errors come back as a Blob because of the response type.
-          let parsed = response;
-          if (response.error instanceof Blob) {
-            try {
-              parsed = new HttpErrorResponse({
-                error: JSON.parse(await response.error.text()),
-                status: response.status,
-                statusText: response.statusText,
-                url: response.url ?? undefined,
-              });
-            } catch {
-              parsed = response;
-            }
-          }
-          this.error.set(apiErrorMessage(parsed, 'L’export n’a pas pu être généré (période de 62 jours au plus).'));
+          this.error.set(
+            apiErrorMessage(
+              response,
+              'L’export n’a pas pu être généré (période de 62\u00a0jours au plus).',
+            ),
+          );
         },
       });
   }

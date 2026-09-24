@@ -35,7 +35,8 @@ export function invitationProblem(
   ) {
     return {
       kind: 'unverified-email',
-      message: 'Confirmez d’abord votre adresse e-mail (lien reçu par e-mail), puis rouvrez l’invitation.',
+      message:
+        'Confirmez d’abord votre adresse e-mail (lien reçu par e-mail), puis rouvrez l’invitation.',
       canSwitchAccount: true,
       canRetry: true,
     };
@@ -48,7 +49,10 @@ export function invitationProblem(
       canRetry: false,
     };
   }
-  if (response.status === 409 && message === 'The Keycloak user is already associated with a company') {
+  if (
+    response.status === 409 &&
+    message === 'The Keycloak user is already associated with a company'
+  ) {
     return {
       kind: 'other-company',
       message: `Votre compte${account} appartient déjà à une entreprise, et un compte ne peut appartenir qu’à une seule. Pour rejoindre celle-ci, demandez une invitation pour une autre adresse e-mail, puis créez un compte avec cette adresse.`,
@@ -59,7 +63,8 @@ export function invitationProblem(
   if (response.status === 409) {
     return {
       kind: 'already-used',
-      message: 'Cette invitation a déjà été utilisée. Si c’est vous qui l’avez acceptée, votre espace est prêt.',
+      message:
+        'Cette invitation a déjà été utilisée. Si c’est vous qui l’avez acceptée, votre espace est prêt.',
       canSwitchAccount: true,
       canRetry: false,
     };
@@ -67,7 +72,8 @@ export function invitationProblem(
   if (response.status === 410) {
     return {
       kind: 'expired',
-      message: 'Ce lien a expiré ou a été remplacé par un lien plus récent. Demandez un nouveau lien à votre administrateur.',
+      message:
+        'Ce lien a expiré ou a été remplacé par un lien plus récent. Demandez un nouveau lien à votre administrateur.',
       canSwitchAccount: false,
       canRetry: false,
     };
@@ -75,7 +81,8 @@ export function invitationProblem(
   if (response.status === 404) {
     return {
       kind: 'not-found',
-      message: 'Ce lien d’invitation est inconnu. Vérifiez qu’il a été copié en entier, ou demandez un nouveau lien à votre administrateur.',
+      message:
+        'Ce lien d’invitation est inconnu. Vérifiez qu’il a été copié en entier, ou demandez un nouveau lien à votre administrateur.',
       canSwitchAccount: false,
       canRetry: false,
     };

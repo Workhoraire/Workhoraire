@@ -4,8 +4,8 @@
       <p class="wh-eyebrow">Administration</p>
       <h1>Abonnement</h1>
       <p>
-        Gratuit jusqu’à 3 salariés actifs dans le mois. Au-delà, 3 € HT par salarié actif et par
-        mois, sans engagement.
+        Gratuit pour les petites équipes, puis un prix par utilisateur actif et par mois, sans
+        engagement.
       </p>
     </div>
   </header>
@@ -14,8 +14,8 @@
     <div class="wh-message wh-message-success" role="status">
       <mat-icon aria-hidden="true">check_circle</mat-icon>
       <span>
-        Merci ! Votre paiement est en cours d’enregistrement : l’abonnement apparaîtra ici dans
-        quelques instants.
+        Merci&nbsp;! Votre paiement est en cours d’enregistrement&nbsp;: l’abonnement apparaîtra ici
+        dans quelques instants.
       </span>
     </div>
   }
@@ -29,7 +29,7 @@
 
   @if (loading()) {
     <div class="wh-loading" role="status">
-      <mat-spinner diameter="28" />
+      <mat-spinner diameter="28" aria-hidden="true" />
       <span>Chargement de l’abonnement…</span>
     </div>
   } @else if (overview(); as billing) {
@@ -37,9 +37,9 @@
       <div class="wh-message wh-message-error" role="alert">
         <mat-icon aria-hidden="true">lock</mat-icon>
         <span>
-          Abonnement impayé : WorkHoraire est en lecture seule depuis le {{ deadline() }}. Vos
-          salariés peuvent toujours pointer, et vous pouvez consulter et exporter les heures.
-          Réglez l’abonnement pour tout débloquer.
+          Abonnement impayé&nbsp;: WorkHoraire est en lecture seule depuis le {{ deadline() }}. Vos
+          salariés peuvent toujours pointer, et vous pouvez consulter et exporter les heures. Réglez
+          l’abonnement pour tout débloquer.
         </span>
       </div>
     } @else if (billing.status === 'PAST_DUE') {
@@ -47,7 +47,7 @@
         <mat-icon aria-hidden="true">warning_amber</mat-icon>
         <span>
           Le dernier paiement a échoué. Mettez à jour votre moyen de paiement avant le
-          {{ deadline() }} : passé ce délai, WorkHoraire passera en lecture seule.
+          {{ deadline() }}&nbsp;: passé ce délai, WorkHoraire passera en lecture seule.
         </span>
       </div>
     } @else if (billing.paymentRequired) {
@@ -55,7 +55,7 @@
         <mat-icon aria-hidden="true">warning_amber</mat-icon>
         <span>
           Vous avez dépassé l’offre gratuite. Choisissez l’offre Essentiel avant le
-          {{ deadline() }} : passé ce délai, WorkHoraire passera en lecture seule (le pointage
+          {{ deadline() }}&nbsp;: passé ce délai, WorkHoraire passera en lecture seule (le pointage
           reste possible).
         </span>
       </div>
@@ -65,7 +65,7 @@
       <div class="wh-message wh-message-info" role="status">
         <mat-icon aria-hidden="true">info</mat-icon>
         <span>
-          Le paiement en ligne n’est pas encore ouvert : votre utilisation reste gratuite en
+          Le paiement en ligne n’est pas encore ouvert&nbsp;: votre utilisation reste gratuite en
           attendant.
         </span>
       </div>
@@ -78,21 +78,21 @@
         <p class="wh-kpi-note">{{ statusLabels[billing.status] }}</p>
       </div>
       <div class="wh-kpi">
-        <p class="wh-kpi-label">Salariés actifs en {{ monthLabel(billing.month) }}</p>
+        <p class="wh-kpi-label">Utilisateurs actifs en {{ monthLabel(billing.month) }}</p>
         <p class="wh-kpi-value">{{ billing.activeEmployees }}</p>
         <p class="wh-kpi-note">À ce jour</p>
       </div>
       <div class="wh-kpi wh-kpi-lime">
         <p class="wh-kpi-label">Estimation du mois</p>
         <p class="wh-kpi-value">{{ euros(billing.estimatedAmountCents) }} HT</p>
-        <p class="wh-kpi-note">Selon les salariés actifs à ce jour</p>
+        <p class="wh-kpi-note">Selon les utilisateurs actifs à ce jour</p>
       </div>
       <div class="wh-kpi">
         <p class="wh-kpi-label">Mois précédent</p>
         <p class="wh-kpi-value">{{ euros(billing.lastMonth.amountCents) }} HT</p>
         <p class="wh-kpi-note">
           {{ monthLabel(billing.lastMonth.month) }} · {{ billing.lastMonth.activeEmployees }}
-          {{ billing.lastMonth.activeEmployees > 1 ? 'salariés actifs' : 'salarié actif' }}
+          {{ billing.lastMonth.activeEmployees > 1 ? 'utilisateurs actifs' : 'utilisateur actif' }}
         </p>
       </div>
     </div>
@@ -100,14 +100,19 @@
     <section class="wh-card" aria-labelledby="pricing-title">
       <h2 id="pricing-title">Comment le prix est calculé</h2>
       <p>
-        Un salarié est actif s’il a pointé, ou s’il a eu une absence validée, dans le mois. Un
-        saisonnier ne compte pas les mois où il ne travaille pas.
+        Chaque utilisateur (salarié, manager ou dirigeant) est actif s’il a pointé, ou s’il a eu une
+        absence validée, dans le mois. Un saisonnier ne compte pas les mois où il ne travaille pas.
       </p>
       <ul>
-        <li><strong>3 salariés actifs ou moins</strong> : gratuit, c’est l’offre Découverte.</li>
         <li>
-          <strong>Au-delà</strong> : 3 € HT par salarié actif, tous comptés, c’est l’offre
-          Essentiel. Exemple : 8 salariés actifs = 24 € HT pour le mois.
+          <strong>{{ billing.freeActiveEmployees }}&nbsp;utilisateurs actifs ou moins</strong
+          >&nbsp;: gratuit, c’est l’offre Découverte.
+        </li>
+        <li>
+          <strong>Au-delà</strong>&nbsp;: {{ euros(billing.pricePerActiveEmployeeCents) }}&nbsp;HT
+          par utilisateur actif, tous comptés dès le {{ billing.freeActiveEmployees + 1 }}e, c’est
+          l’offre Essentiel. Exemple&nbsp;: 8&nbsp;utilisateurs actifs =
+          {{ euros(8 * billing.pricePerActiveEmployeeCents) }}&nbsp;HT pour le mois.
         </li>
         <li>
           Paiement par prélèvement SEPA ou carte bancaire, facture chaque mois, résiliable à tout
@@ -136,7 +141,7 @@
           }
         </div>
         <p class="wh-muted secure-note">
-          Le paiement est géré par Stripe : WorkHoraire ne voit pas et ne conserve pas vos
+          Le paiement est géré par Stripe&nbsp;: WorkHoraire ne voit pas et ne conserve pas vos
           coordonnées bancaires.
         </p>
       }

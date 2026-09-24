@@ -9,13 +9,23 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 
+import { MatDialog } from '@angular/material/dialog';
+
 import { UserRole } from '../../core/auth/auth.models';
 import { apiErrorMessage } from '../../core/http/error-message';
-import { formatDuration, formatShortDate, startOfWeek } from '../../core/time/time-format';
+import { ROLE_LABELS } from '../../core/time/labels';
+import {
+  formatDuration,
+  formatShortDate,
+  fullName,
+  initials,
+  startOfWeek,
+} from '../../core/time/time-format';
+import { CurrentUserService } from '../../core/user/current-user.service';
+import { confirmAction } from '../../shared/confirm-dialog';
 import {
   CreateEmployeeInvitationRequest,
   Employee,
-  EmployeeInvitation,
   UpdateEmployeeRequest,
 } from './employee.models';
 import { EmployeesService } from './employees.service';
@@ -39,6 +49,10 @@ import { EmployeesService } from './employees.service';
 export class Employees {
   private readonly formBuilder = inject(FormBuilder);
   private readonly employeesService = inject(EmployeesService);
+  private readonly dialog = inject(MatDialog);
+
+  /** The signed-in administrator: they cannot deactivate their own account. */
+  protected readonly currentUserId = signal<string | null>(null);
 
   protected readonly employees = signal<Employee[]>([]);
   protected readonly loading = signal(true);
@@ -63,7 +77,6 @@ export class Employees {
   protected readonly editForm = this.formBuilder.nonNullable.group({
     firstName: ['', [Validators.required, Validators.maxLength(100)]],
     lastName: ['', [Validators.required, Validators.maxLength(100)]],
-    email: ['', [Validators.required, Validators.email, Validators.maxLength(320)]],
     role: ['EMPLOYEE' as UserRole, [Validators.required]],
     weeklyHours: [35, [Validators.required, Validators.min(1), Validators.max(48)]],
     /** Optional date from which a contract change applies. */
@@ -72,6 +85,9 @@ export class Employees {
   });
 
   constructor() {
+    inject(CurrentUserService)
+      .getCurrentUser()
+      .subscribe({ next: (user) => this.currentUserId.set(user.id), error: () => undefined });
     this.loadEmployees();
   }
 
@@ -92,6 +108,10 @@ export class Employees {
   }
 
   protected inviteEmployee(formDirective: FormGroupDirective): void {
+    // The button stays focusable while saving (disabledInteractive): ignore a second click.
+    if (this.saving()) {
+      return;
+    }
     if (this.inviteForm.invalid) {
       this.inviteForm.markAllAsTouched();
       return;
@@ -147,7 +167,6 @@ export class Employees {
     this.editForm.setValue({
       firstName: employee.firstName ?? '',
       lastName: employee.lastName ?? '',
-      email: employee.email ?? '',
       role: employee.role,
       weeklyHours: employee.weeklyContractMinutes / 60,
       contractFrom: '',
@@ -160,7 +179,6 @@ export class Employees {
     this.editForm.reset({
       firstName: '',
       lastName: '',
-      email: '',
       role: 'EMPLOYEE',
       weeklyHours: 35,
       contractFrom: '',
@@ -169,6 +187,9 @@ export class Employees {
   }
 
   protected saveEmployee(employee: Employee): void {
+    if (this.savingEmployeeId()) {
+      return;
+    }
     if (this.editForm.invalid) {
       this.editForm.markAllAsTouched();
       return;
@@ -183,11 +204,12 @@ export class Employees {
     const payload: UpdateEmployeeRequest = {
       firstName: values.firstName.trim(),
       lastName: values.lastName.trim(),
-      email: values.email.trim().toLowerCase(),
       role: values.role,
       payrollId: values.payrollId.trim(),
       ...(contractChange ? { weeklyContractMinutes } : {}),
-      ...(contractChange && values.contractFrom ? { contractEffectiveFrom: values.contractFrom } : {}),
+      ...(contractChange && values.contractFrom
+        ? { contractEffectiveFrom: values.contractFrom }
+        : {}),
     };
 
     this.savingEmployeeId.set(employee.id);
@@ -205,7 +227,7 @@ export class Employees {
                   ? `à partir de la semaine du ${formatShortDate(startOfWeek(values.contractFrom))}`
                   : 'dès cette semaine'
               }.`
-            : 'Les informations de l’employé ont été mises à jour.',
+            : 'Les informations du salarié ont été mises à jour.',
         );
       },
       error: (response: HttpErrorResponse) => {
@@ -216,26 +238,45 @@ export class Employees {
   }
 
   protected toggleActive(employee: Employee): void {
+    if (this.savingEmployeeId()) {
+      return;
+    }
+    if (!employee.isActive) {
+      this.setActive(employee);
+      return;
+    }
+    confirmAction(this.dialog, {
+      title: `Désactiver ${this.fullName(employee)} ?`,
+      message:
+        'Son accès à WorkHoraire est coupé tout de suite. Ses heures restent dans les feuilles de temps et les exports. Vous pourrez le réactiver.',
+      confirmLabel: 'Désactiver',
+      cancelLabel: 'Garder l’accès',
+    }).subscribe((confirmed) => {
+      if (confirmed) {
+        this.setActive(employee);
+      }
+    });
+  }
+
+  private setActive(employee: Employee): void {
     this.savingEmployeeId.set(employee.id);
     this.error.set(null);
 
-    this.employeesService
-      .updateEmployee(employee.id, { isActive: !employee.isActive })
-      .subscribe({
-        next: (updatedEmployee) => {
-          this.savingEmployeeId.set(null);
-          this.replaceEmployee(updatedEmployee);
-          this.notice.set(
-            updatedEmployee.isActive
-              ? 'L’employé a été réactivé.'
-              : 'L’employé a été désactivé.',
-          );
-        },
-        error: (response: HttpErrorResponse) => {
-          this.savingEmployeeId.set(null);
-          this.error.set(this.errorMessage(response));
-        },
-      });
+    this.employeesService.updateEmployee(employee.id, { isActive: !employee.isActive }).subscribe({
+      next: (updatedEmployee) => {
+        this.savingEmployeeId.set(null);
+        this.replaceEmployee(updatedEmployee);
+        this.notice.set(
+          updatedEmployee.isActive
+            ? 'Le salarié a été réactivé.'
+            : 'Le salarié a été désactivé : il ne peut plus se connecter.',
+        );
+      },
+      error: (response: HttpErrorResponse) => {
+        this.savingEmployeeId.set(null);
+        this.error.set(this.errorMessage(response));
+      },
+    });
   }
 
   protected async copyInvitationLink(): Promise<void> {
@@ -257,25 +298,11 @@ export class Employees {
     return `${formatDuration(minutes)} / semaine`;
   }
 
-  protected fullName(employee: Employee): string {
-    return [employee.firstName, employee.lastName].filter(Boolean).join(' ') || 'Employé sans nom';
-  }
-
-  protected initials(employee: Employee): string {
-    const initials = [employee.firstName, employee.lastName]
-      .filter(Boolean)
-      .map((value) => value![0])
-      .join('');
-
-    return initials.toUpperCase() || 'E';
-  }
+  protected readonly fullName = fullName;
+  protected readonly initials = initials;
 
   protected roleLabel(role: UserRole): string {
-    return {
-      ADMIN: 'Administrateur',
-      MANAGER: 'Manager',
-      EMPLOYEE: 'Employé',
-    }[role];
+    return ROLE_LABELS[role];
   }
 
   protected statusLabel(isActive: boolean): string {
@@ -292,7 +319,7 @@ export class Employees {
 
   private errorMessage(response: HttpErrorResponse): string {
     if (response.status === 403 && !response.error?.message?.includes('own account')) {
-      return 'L’accès à la gestion des employés est réservé aux administrateurs.';
+      return 'L’accès à la gestion des salariés est réservé aux administrateurs.';
     }
     return apiErrorMessage(response);
   }

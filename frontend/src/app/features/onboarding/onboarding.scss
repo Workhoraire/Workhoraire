@@ -72,7 +72,7 @@
 
 .eyebrow {
   margin: 0 0 1rem;
-  color: #ca5e3e;
+  color: var(--wh-coral-ink);
   font-size: 0.7rem;
   font-weight: 800;
   letter-spacing: 0.17em;
@@ -203,13 +203,13 @@ mat-form-field {
 
 .terms-error {
   margin: 0.25rem 0 0 2.5rem;
-  color: #b4502f;
+  color: var(--wh-coral-ink);
   font-size: 0.85rem;
 }
 
 .terms-note {
   margin: 0.4rem 0 0 2.5rem;
-  color: #68736d;
+  color: var(--wh-muted);
   font-size: 0.82rem;
 }
 

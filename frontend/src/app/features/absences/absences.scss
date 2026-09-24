@@ -77,3 +77,13 @@
   text-align: right;
   white-space: nowrap;
 }
+
+/* A list that could not be loaded: the reason, and a way to try again. */
+.load-error {
+  flex-wrap: wrap;
+  align-items: center;
+
+  button {
+    margin-left: auto;
+  }
+}

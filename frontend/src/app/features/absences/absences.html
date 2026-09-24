@@ -22,7 +22,13 @@
       <div class="tab-body layout">
         <section class="wh-card" aria-labelledby="request-title">
           <h2 id="request-title">Nouvelle demande</h2>
-          <form class="wh-form" [formGroup]="form" #formRef="ngForm" (ngSubmit)="submit(formRef)" novalidate>
+          <form
+            class="wh-form"
+            [formGroup]="form"
+            #formRef="ngForm"
+            (ngSubmit)="submit(formRef)"
+            novalidate
+          >
             <mat-form-field>
               <mat-label>Type d’absence</mat-label>
               <mat-select formControlName="type">
@@ -35,24 +41,45 @@
               <mat-form-field>
                 <mat-label>Du</mat-label>
                 <input matInput type="date" formControlName="startDate" required />
+                @if (form.controls.startDate.hasError('required')) {
+                  <mat-error>La date de début est obligatoire.</mat-error>
+                }
               </mat-form-field>
               <mat-form-field>
                 <mat-label>Au</mat-label>
-                <input matInput type="date" formControlName="endDate" required />
+                <input
+                  matInput
+                  type="date"
+                  formControlName="endDate"
+                  required
+                  [attr.aria-invalid]="form.hasError('datesOrder') ? true : null"
+                  [attr.aria-describedby]="form.hasError('datesOrder') ? 'dates-order-error' : null"
+                />
+                @if (form.controls.endDate.hasError('required')) {
+                  <mat-error>La date de fin est obligatoire.</mat-error>
+                }
               </mat-form-field>
             </div>
             @if (form.hasError('datesOrder')) {
-              <p class="form-error">La date de fin doit être égale ou postérieure à la date de début.</p>
+              <p id="dates-order-error" class="form-error" role="alert">
+                La date de fin doit être égale ou postérieure à la date de début.
+              </p>
             }
-            <mat-checkbox formControlName="startsAfternoon">Le premier jour, à partir de l’après-midi</mat-checkbox>
-            <mat-checkbox formControlName="endsMorning">Le dernier jour, le matin seulement</mat-checkbox>
+            <mat-checkbox formControlName="startsAfternoon"
+              >Le premier jour, à partir de l’après-midi</mat-checkbox
+            >
+            <mat-checkbox formControlName="endsMorning"
+              >Le dernier jour, le matin seulement</mat-checkbox
+            >
             <mat-form-field class="comment-field">
               <mat-label>Commentaire (facultatif)</mat-label>
               <textarea matInput rows="2" maxlength="500" formControlName="comment"></textarea>
               <mat-hint>N’indiquez aucune information médicale.</mat-hint>
             </mat-form-field>
             <div class="wh-actions">
-              <button mat-flat-button type="submit" [disabled]="saving()">Envoyer la demande</button>
+              <button mat-flat-button type="submit" [disabled]="saving()">
+                Envoyer la demande
+              </button>
             </div>
           </form>
         </section>
@@ -60,7 +87,16 @@
         <section aria-labelledby="mine-title">
           <h2 id="mine-title" class="list-title">Mes demandes</h2>
           @if (loading()) {
-            <div class="wh-loading" role="status"><mat-spinner diameter="28" /></div>
+            <div class="wh-loading" role="status">
+              <mat-spinner diameter="28" aria-hidden="true" />
+              <span>Chargement de vos demandes…</span>
+            </div>
+          } @else if (mineError(); as message) {
+            <div class="wh-message wh-message-error load-error">
+              <mat-icon aria-hidden="true">error_outline</mat-icon>
+              <span role="alert">{{ message }}</span>
+              <button mat-button type="button" (click)="loadMine()">Réessayer</button>
+            </div>
           } @else if (mine().length === 0) {
             <div class="wh-card wh-empty">
               <mat-icon aria-hidden="true">beach_access</mat-icon>
@@ -72,18 +108,27 @@
                 <li class="wh-card request">
                   <div class="request-head">
                     <strong>{{ typeLabels[request.type] }}</strong>
-                    <span class="wh-chip" [class]="statusClass(request.status)">{{ statusLabels[request.status] }}</span>
+                    <span class="wh-chip" [class]="statusClass(request.status)">{{
+                      statusLabels[request.status]
+                    }}</span>
                   </div>
-                  <p class="request-period">{{ period(request) }} · {{ daysLabel(request.days) }}</p>
+                  <p class="request-period">
+                    {{ period(request) }} · {{ daysLabel(request.days) }}
+                  </p>
                   @if (request.comment) {
-                    <p class="wh-muted">« {{ request.comment }} »</p>
+                    <p class="wh-muted">«&nbsp;{{ request.comment }}&nbsp;»</p>
                   }
                   @if (decisionLabel(request); as decision) {
                     <p class="wh-muted">{{ decision }}</p>
                   }
                   @if (canCancel(request)) {
                     <div class="wh-actions">
-                      <button mat-button type="button" [disabled]="busyId() === request.id" (click)="cancel(request)">
+                      <button
+                        mat-button
+                        type="button"
+                        [disabled]="busyId() === request.id"
+                        (click)="cancel(request)"
+                      >
                         Annuler la demande
                       </button>
                     </div>
@@ -97,9 +142,20 @@
     </mat-tab>
 
     @if (isManager()) {
-      <mat-tab [label]="'À valider (' + pending().length + ')'">
+      <mat-tab [label]="pendingTabLabel()">
         <div class="tab-body">
-          @if (pending().length === 0) {
+          @if (teamLoading()) {
+            <div class="wh-loading" role="status">
+              <mat-spinner diameter="28" aria-hidden="true" />
+              <span>Chargement des demandes de l’équipe…</span>
+            </div>
+          } @else if (teamError(); as message) {
+            <div class="wh-message wh-message-error load-error">
+              <mat-icon aria-hidden="true">error_outline</mat-icon>
+              <span role="alert">{{ message }}</span>
+              <button mat-button type="button" (click)="loadTeam()">Réessayer</button>
+            </div>
+          } @else if (pending().length === 0) {
             <div class="wh-card wh-empty">
               <mat-icon aria-hidden="true">task_alt</mat-icon>
               <p>Aucune demande en attente. Tout est à jour.</p>
@@ -112,9 +168,11 @@
                     <strong>{{ fullName(request.employee) }}</strong>
                     <span class="wh-chip wh-chip-amber">{{ typeLabels[request.type] }}</span>
                   </div>
-                  <p class="request-period">{{ period(request) }} · {{ daysLabel(request.days) }}</p>
+                  <p class="request-period">
+                    {{ period(request) }} · {{ daysLabel(request.days) }}
+                  </p>
                   @if (request.comment) {
-                    <p class="wh-muted">« {{ request.comment }} »</p>
+                    <p class="wh-muted">«&nbsp;{{ request.comment }}&nbsp;»</p>
                   }
                   @if (canReview(request)) {
                     <mat-form-field class="review-field">
@@ -127,15 +185,27 @@
                       />
                     </mat-form-field>
                     <div class="wh-actions">
-                      <button mat-stroked-button type="button" [disabled]="busyId() === request.id" (click)="reject(request)">
+                      <button
+                        mat-stroked-button
+                        type="button"
+                        [disabled]="busyId() === request.id"
+                        (click)="reject(request)"
+                      >
                         Refuser
                       </button>
-                      <button mat-flat-button type="button" [disabled]="busyId() === request.id" (click)="approve(request)">
+                      <button
+                        mat-flat-button
+                        type="button"
+                        [disabled]="busyId() === request.id"
+                        (click)="approve(request)"
+                      >
                         Accepter
                       </button>
                     </div>
                   } @else {
-                    <p class="wh-muted">Votre propre demande doit être validée par un administrateur.</p>
+                    <p class="wh-muted">
+                      Votre propre demande doit être validée par un administrateur.
+                    </p>
                   }
                 </li>
               }
@@ -146,54 +216,76 @@
 
       <mat-tab label="Historique de l’équipe">
         <div class="tab-body">
-          <mat-button-toggle-group
-            class="filters"
-            [value]="teamFilter()"
-            (change)="teamFilter.set($event.value)"
-            aria-label="Filtrer par statut"
-          >
-            @for (filter of statusFilters; track filter) {
-              <mat-button-toggle [value]="filter">
-                {{ filter === 'ALL' ? 'Toutes' : statusLabels[filter] }}
-              </mat-button-toggle>
-            }
-          </mat-button-toggle-group>
-
-          @if (filteredTeam().length === 0) {
-            <p class="wh-muted">Aucune demande.</p>
-          } @else {
-            <div class="wh-table-scroll">
-              <table class="wh-table">
-                <thead>
-                  <tr>
-                    <th scope="col">Salarié</th>
-                    <th scope="col">Type</th>
-                    <th scope="col">Période</th>
-                    <th scope="col" class="wh-num">Jours</th>
-                    <th scope="col">Statut</th>
-                    <th scope="col"><span class="wh-visually-hidden">Action</span></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (request of filteredTeam(); track request.id) {
-                    <tr>
-                      <td>{{ fullName(request.employee) }}</td>
-                      <td>{{ typeLabels[request.type] }}</td>
-                      <td>{{ period(request) }}</td>
-                      <td class="wh-num">{{ request.days.toString().replace('.', ',') }}</td>
-                      <td><span class="wh-chip" [class]="statusClass(request.status)">{{ statusLabels[request.status] }}</span></td>
-                      <td class="row-action">
-                        @if (canRevoke(request)) {
-                          <button mat-button type="button" [disabled]="busyId() === request.id" (click)="revoke(request)">
-                            Annuler
-                          </button>
-                        }
-                      </td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
+          @if (teamLoading()) {
+            <div class="wh-loading" role="status">
+              <mat-spinner diameter="28" aria-hidden="true" />
+              <span>Chargement de l’historique…</span>
             </div>
+          } @else if (teamError(); as message) {
+            <div class="wh-message wh-message-error load-error">
+              <mat-icon aria-hidden="true">error_outline</mat-icon>
+              <span role="alert">{{ message }}</span>
+              <button mat-button type="button" (click)="loadTeam()">Réessayer</button>
+            </div>
+          } @else {
+            <mat-button-toggle-group
+              class="filters"
+              [value]="teamFilter()"
+              (change)="teamFilter.set($event.value)"
+              aria-label="Filtrer par statut"
+            >
+              @for (filter of statusFilters; track filter) {
+                <mat-button-toggle [value]="filter">
+                  {{ filter === 'ALL' ? 'Toutes' : statusLabels[filter] }}
+                </mat-button-toggle>
+              }
+            </mat-button-toggle-group>
+
+            @if (filteredTeam().length === 0) {
+              <p class="wh-muted">Aucune demande.</p>
+            } @else {
+              <div class="wh-table-scroll">
+                <table class="wh-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Salarié</th>
+                      <th scope="col">Type</th>
+                      <th scope="col">Période</th>
+                      <th scope="col" class="wh-num">Jours</th>
+                      <th scope="col">Statut</th>
+                      <th scope="col"><span class="wh-visually-hidden">Action</span></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (request of filteredTeam(); track request.id) {
+                      <tr>
+                        <td>{{ fullName(request.employee) }}</td>
+                        <td>{{ typeLabels[request.type] }}</td>
+                        <td>{{ period(request) }}</td>
+                        <td class="wh-num">{{ request.days.toString().replace('.', ',') }}</td>
+                        <td>
+                          <span class="wh-chip" [class]="statusClass(request.status)">{{
+                            statusLabels[request.status]
+                          }}</span>
+                        </td>
+                        <td class="row-action">
+                          @if (canRevoke(request)) {
+                            <button
+                              mat-button
+                              type="button"
+                              [disabled]="busyId() === request.id"
+                              (click)="revoke(request)"
+                            >
+                              Annuler
+                            </button>
+                          }
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
           }
         </div>
       </mat-tab>

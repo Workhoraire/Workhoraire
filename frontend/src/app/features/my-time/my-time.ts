@@ -1,9 +1,11 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { Subscription, forkJoin } from 'rxjs';
 
+import { DownloadService } from '../../core/http/download.service';
 import { apiErrorMessage } from '../../core/http/error-message';
 import { describeAlert } from '../../core/time/labels';
 import { addDays, startOfWeek, todayKey } from '../../core/time/time-format';
@@ -19,6 +21,7 @@ import { WeekSummary } from '../../shared/timesheet/week-summary';
   selector: 'app-my-time',
   imports: [
     AuditLogList,
+    MatButtonModule,
     MatIconModule,
     MatProgressSpinnerModule,
     TimesheetDays,
@@ -53,7 +56,7 @@ import { WeekSummary } from '../../shared/timesheet/week-summary';
 
       @if (loading()) {
         <div class="wh-loading" role="status">
-          <mat-spinner diameter="32" />
+          <mat-spinner diameter="32" aria-hidden="true" />
           <span>Chargement de la semaine…</span>
         </div>
       } @else if (timesheet(); as sheet) {
@@ -73,16 +76,35 @@ import { WeekSummary } from '../../shared/timesheet/week-summary';
           <app-audit-log-list [logs]="auditLogs()" [timezone]="sheet.timezone" />
         </section>
       }
+
+      <section class="wh-card personal-data" aria-labelledby="personal-data-title">
+        <h2 id="personal-data-title">Mes données personnelles</h2>
+        <p>
+          Téléchargez tout ce que WorkHoraire enregistre sur vous : profil, contrats, pointages,
+          absences et corrections, dans un fichier JSON.
+        </p>
+        <button
+          mat-stroked-button
+          type="button"
+          [disabled]="downloading()"
+          (click)="downloadMyData()"
+        >
+          <mat-icon aria-hidden="true">download</mat-icon>
+          Télécharger mes données
+        </button>
+      </section>
     </section>
   `,
   styles: `
-    .corrections {
+    .corrections,
+    .personal-data {
       margin-top: 1rem;
     }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MyTime {
+  private readonly downloads = inject(DownloadService);
   private readonly timeService = inject(TimeService);
   private readonly currentUserService = inject(CurrentUserService);
 
@@ -95,6 +117,7 @@ export class MyTime {
   protected readonly auditLogs = signal<TimeEntryAuditLog[]>([]);
   protected readonly loading = signal(true);
   protected readonly error = signal<string | null>(null);
+  protected readonly downloading = signal(false);
   /** Only the last requested week may be displayed, even if an older response arrives later. */
   private loadSubscription?: Subscription;
 
@@ -109,6 +132,24 @@ export class MyTime {
       },
       error: () => this.load(),
     });
+  }
+
+  /** Rights of access and portability (GDPR): everything stored about me, as a file. */
+  protected downloadMyData(): void {
+    if (this.downloading()) {
+      return;
+    }
+    this.downloading.set(true);
+    this.error.set(null);
+    this.downloads
+      .download('/me/data-export', `workhoraire-mes-donnees-${this.today()}.json`)
+      .subscribe({
+        next: () => this.downloading.set(false),
+        error: (response: HttpErrorResponse) => {
+          this.downloading.set(false);
+          this.error.set(apiErrorMessage(response, 'Vos données n’ont pas pu être téléchargées.'));
+        },
+      });
   }
 
   protected selectWeek(weekStart: string): void {
@@ -133,6 +174,9 @@ export class MyTime {
         this.loading.set(false);
       },
       error: (response: HttpErrorResponse) => {
+        // Never leave another week's hours under the new dates.
+        this.timesheet.set(null);
+        this.auditLogs.set([]);
         this.loading.set(false);
         this.error.set(apiErrorMessage(response, 'Vos heures n’ont pas pu être chargées.'));
       },

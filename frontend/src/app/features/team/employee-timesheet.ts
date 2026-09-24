@@ -1,21 +1,25 @@
+import { Location } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   ChangeDetectionStrategy,
   Component,
+  Injector,
+  afterNextRender,
   computed,
   effect,
   inject,
   input,
   signal,
   untracked,
+  viewChild,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { RouterLink } from '@angular/router';
-import { Observable, Subscription, forkJoin } from 'rxjs';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { Subscription, forkJoin } from 'rxjs';
 
 import { CurrentUser } from '../../core/auth/auth.models';
 import { apiErrorMessage } from '../../core/http/error-message';
@@ -31,6 +35,7 @@ import {
   EmployeeTimesheet,
   TimeEntryAuditLog,
   TimesheetDay,
+  TimesheetEmployee,
 } from '../../core/time/time.models';
 import { TimeService } from '../../core/time/time.service';
 import { CurrentUserService } from '../../core/user/current-user.service';
@@ -38,7 +43,14 @@ import { AuditLogList } from '../../shared/timesheet/audit-log-list';
 import { EntryAction, TimesheetDays } from '../../shared/timesheet/timesheet-days';
 import { WeekNavigator } from '../../shared/timesheet/week-navigator';
 import { WeekSummary } from '../../shared/timesheet/week-summary';
-import { EntryDialog, EntryDialogData, EntryDialogResult } from './entry-dialog';
+import { EntryDialog, EntryDialogData } from './entry-dialog';
+import { weekFromParam, weekQueryParams } from './week-param';
+
+const SAVED_MESSAGES: Record<EntryDialogData['mode'], string> = {
+  create: 'Période ajoutée et tracée.',
+  edit: 'Correction enregistrée et tracée.',
+  delete: 'Période supprimée et tracée.',
+};
 
 @Component({
   selector: 'app-employee-timesheet',
@@ -56,7 +68,7 @@ import { EntryDialog, EntryDialogData, EntryDialogResult } from './entry-dialog'
   ],
   template: `
     <section class="wh-page">
-      <a mat-button routerLink="/team" class="back">
+      <a mat-button routerLink="/team" [queryParams]="weekQuery()" class="back">
         <mat-icon aria-hidden="true">arrow_back</mat-icon>
         Heures de l’équipe
       </a>
@@ -64,12 +76,12 @@ import { EntryDialog, EntryDialogData, EntryDialogResult } from './entry-dialog'
       <header class="wh-page-header">
         <div>
           <p class="wh-eyebrow">Feuille de temps</p>
-          <h1>{{ timesheet() ? fullName(timesheet()!.employee) : 'Salarié' }}</h1>
-          @if (timesheet(); as sheet) {
+          <h1>{{ employeeName() }}</h1>
+          @if (employee(); as person) {
             <p>
-              {{ roleLabel(sheet.employee.role) }} · contrat de
-              {{ formatDuration(sheet.employee.weeklyContractMinutes) }} par semaine
-              @if (!sheet.employee.isActive) {
+              {{ roleLabel(person.role) }} · contrat de
+              {{ formatDuration(person.weeklyContractMinutes) }} par semaine
+              @if (!person.isActive) {
                 · compte désactivé
               }
             </p>
@@ -83,9 +95,10 @@ import { EntryDialog, EntryDialogData, EntryDialogResult } from './entry-dialog'
       </header>
 
       @if (error(); as message) {
-        <div class="wh-message wh-message-error" role="alert">
+        <div class="wh-message wh-message-error load-error">
           <mat-icon aria-hidden="true">error_outline</mat-icon>
-          <span>{{ message }}</span>
+          <span role="alert">{{ message }}</span>
+          <button mat-button type="button" (click)="retry()">Réessayer</button>
         </div>
       }
 
@@ -98,8 +111,8 @@ import { EntryDialog, EntryDialogData, EntryDialogResult } from './entry-dialog'
 
       @if (loading() && !timesheet()) {
         <div class="wh-loading" role="status">
-          <mat-spinner diameter="32" />
-          <span>Chargement…</span>
+          <mat-spinner diameter="32" aria-hidden="true" />
+          <span>Chargement de la semaine…</span>
         </div>
       } @else if (timesheet(); as sheet) {
         <app-week-summary [week]="sheet.weeks[0]" />
@@ -132,6 +145,13 @@ import { EntryDialog, EntryDialogData, EntryDialogResult } from './entry-dialog'
     .back {
       margin: 0 0 0.5rem -0.75rem;
     }
+    .load-error {
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .load-error button {
+      margin-left: auto;
+    }
     .corrections {
       margin-top: 1rem;
     }
@@ -146,35 +166,56 @@ export class EmployeeTimesheetPage {
   private readonly currentUserService = inject(CurrentUserService);
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly location = inject(Location);
+  private readonly injector = inject(Injector);
+  private readonly days = viewChild(TimesheetDays);
 
   protected readonly currentUser = signal<CurrentUser | null>(null);
-  private readonly timezone = computed(() => this.currentUser()?.company.timezone ?? 'Europe/Paris');
+  private readonly timezone = computed(
+    () => this.currentUser()?.company.timezone ?? 'Europe/Paris',
+  );
   protected readonly today = computed(() => todayKey(this.timezone()));
   protected readonly currentWeekStart = computed(() => startOfWeek(this.today()));
   protected readonly weekStart = signal(startOfWeek(todayKey('Europe/Paris')));
+  /** The selected week goes back to the team page with the "Heures de l’équipe" link. */
+  protected readonly weekQuery = computed(() =>
+    weekQueryParams(this.weekStart(), this.currentWeekStart()),
+  );
 
+  /** Kept while another week loads: the header does not blink. */
+  protected readonly employee = signal<TimesheetEmployee | null>(null);
+  protected readonly employeeName = computed(() => {
+    const employee = this.employee();
+    return employee ? fullName(employee) : 'Salarié';
+  });
   protected readonly timesheet = signal<EmployeeTimesheet | null>(null);
   protected readonly auditLogs = signal<TimeEntryAuditLog[]>([]);
   protected readonly loading = signal(true);
   protected readonly error = signal<string | null>(null);
   /** Only the last requested week may be displayed, even if an older response arrives later. */
   private loadSubscription?: Subscription;
+  /** Employee and week of the displayed timesheet, e.g. "id|2026-09-21". */
+  private shownWeek: string | null = null;
 
   protected readonly isOwnSheetForManager = computed(() => {
     const user = this.currentUser();
     return user?.role === 'MANAGER' && user.id === this.employeeId();
   });
-  protected readonly canEdit = computed(() => this.currentUser() !== null && !this.isOwnSheetForManager());
+  protected readonly canEdit = computed(
+    () => this.currentUser() !== null && !this.isOwnSheetForManager(),
+  );
 
   protected readonly formatDuration = formatDuration;
-  protected readonly fullName = fullName;
   protected readonly describeAlert = describeAlert;
 
   constructor() {
+    const requestedWeek = this.route.snapshot.queryParamMap.get('semaine');
     this.currentUserService.getCurrentUser().subscribe({
       next: (user) => {
         this.currentUser.set(user);
-        this.weekStart.set(this.currentWeekStart());
+        this.weekStart.set(weekFromParam(requestedWeek, this.currentWeekStart()));
       },
     });
 
@@ -195,69 +236,67 @@ export class EmployeeTimesheetPage {
 
   protected selectWeek(weekStart: string): void {
     this.weekStart.set(weekStart);
+    this.rememberWeek();
+  }
+
+  protected retry(): void {
+    this.load(this.employeeId(), this.weekStart());
   }
 
   protected openCreate(day: TimesheetDay): void {
-    this.openDialog({ mode: 'create', date: day.date }, (result) =>
-      this.timeService.createEntry({
-        userId: this.employeeId(),
-        startAt: result.startAt!,
-        endAt: result.endAt!,
-        note: result.note || undefined,
-        reason: result.reason,
-      }),
-    );
+    this.openDialog({ mode: 'create', date: day.date });
   }
 
   protected openEdit({ day, entry }: EntryAction): void {
-    this.openDialog({ mode: 'edit', date: day.date, entry }, (result) =>
-      this.timeService.updateEntry(entry.id, {
-        startAt: result.startAt,
-        endAt: result.endAt,
-        note: result.note,
-        reason: result.reason,
-      }),
-    );
+    this.openDialog({ mode: 'edit', date: day.date, entry });
   }
 
   protected openDelete({ day, entry }: EntryAction): void {
-    this.openDialog({ mode: 'delete', date: day.date, entry }, (result) =>
-      this.timeService.deleteEntry(entry.id, result.reason),
-    );
+    this.openDialog({ mode: 'delete', date: day.date, entry });
   }
 
-  private openDialog(
-    data: Pick<EntryDialogData, 'mode' | 'date' | 'entry'>,
-    save: (result: EntryDialogResult) => Observable<unknown>,
-  ): void {
+  /** The dialog saves by itself and closes with `true` once the change is recorded. */
+  private openDialog(data: Pick<EntryDialogData, 'mode' | 'date' | 'entry'>): void {
     const sheet = this.timesheet();
     if (!sheet) {
       return;
     }
 
     this.dialog
-      .open<EntryDialog, EntryDialogData, EntryDialogResult>(EntryDialog, {
-        data: { ...data, employeeName: fullName(sheet.employee), timezone: sheet.timezone },
+      .open<EntryDialog, EntryDialogData, boolean>(EntryDialog, {
+        data: {
+          ...data,
+          employeeId: this.employeeId(),
+          employeeName: fullName(sheet.employee),
+          timezone: sheet.timezone,
+        },
         width: '28rem',
         maxWidth: '95vw',
       })
       .afterClosed()
-      .subscribe((result) => {
-        if (!result) {
+      .subscribe((saved) => {
+        if (!saved) {
           return;
         }
-        save(result).subscribe({
-          next: () => {
-            this.snackBar.open('Correction enregistrée et tracée.', 'OK', { duration: 4000 });
-            this.load(this.employeeId(), this.weekStart());
-          },
-          error: (response: HttpErrorResponse) => this.error.set(apiErrorMessage(response)),
-        });
+        this.snackBar.open(SAVED_MESSAGES[data.mode], 'OK', { duration: 4000 });
+        // A deleted period takes its buttons away: the focus moves to its day.
+        this.load(this.employeeId(), this.weekStart(), data.mode === 'delete' ? data.date : null);
       });
   }
 
-  private load(employeeId: string, from: string): void {
+  private load(employeeId: string, from: string, focusDate: string | null = null): void {
     const to = addDays(from, 6);
+    const week = `${employeeId}|${from}`;
+    // Another week or another employee: the hours on screen must never appear
+    // under the new dates, even for a moment. The same week stays while it refreshes.
+    if (this.shownWeek !== week) {
+      this.timesheet.set(null);
+      this.auditLogs.set([]);
+      this.shownWeek = null;
+    }
+    if (this.employee()?.id !== employeeId) {
+      this.employee.set(null);
+    }
     this.loading.set(true);
     this.error.set(null);
     this.loadSubscription?.unsubscribe();
@@ -268,13 +307,30 @@ export class EmployeeTimesheetPage {
     }).subscribe({
       next: ({ timesheet, auditLogs }) => {
         this.timesheet.set(timesheet);
+        this.employee.set(timesheet.employee);
         this.auditLogs.set(auditLogs);
+        this.shownWeek = week;
         this.loading.set(false);
+        if (focusDate) {
+          afterNextRender(() => this.days()?.focusDay(focusDate), { injector: this.injector });
+        }
       },
       error: (response: HttpErrorResponse) => {
+        this.timesheet.set(null);
+        this.auditLogs.set([]);
+        this.shownWeek = null;
         this.loading.set(false);
         this.error.set(apiErrorMessage(response, 'La feuille de temps n’a pas pu être chargée.'));
       },
     });
+  }
+
+  /** In the address, without a navigation: a reload or the browser's "back" keeps the week. */
+  private rememberWeek(): void {
+    const url = this.router.createUrlTree([], {
+      relativeTo: this.route,
+      queryParams: this.weekQuery(),
+    });
+    this.location.replaceState(url.toString());
   }
 }

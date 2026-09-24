@@ -17,7 +17,7 @@ type InvitationState = 'loading' | 'welcome' | 'success' | 'error';
   selector: 'app-employee-invitation',
   imports: [MatButtonModule, MatCardModule, MatIconModule, MatProgressSpinnerModule, RouterLink],
   templateUrl: './employee-invitation.html',
-  styleUrl: './employee-invitation.scss',
+  styleUrl: '../../shared/public-page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class EmployeeInvitation {

@@ -164,8 +164,14 @@ export function formatLongDate(dateKey: string): string {
 }
 
 /** "21 sept. 2026" */
+/** "1er sept. 2026", "24 sept. 2026". */
 export function formatShortDate(dateKey: string): string {
-  return shortDateYear.format(keyToUtcDate(dateKey));
+  return withFirstOrdinal(dateKey, shortDateYear.format(keyToUtcDate(dateKey)));
+}
+
+/** French writes the first day of a month "1er". */
+function withFirstOrdinal(dateKey: string, text: string): string {
+  return dateKey.endsWith('-01') ? text.replace(/^1(?=\s)/, '1er') : text;
 }
 
 /** "lun." */
@@ -176,7 +182,10 @@ export function formatWeekdayShort(dateKey: string): string {
 /** "21 – 27 sept. 2026" for the week starting on the given Monday. */
 export function formatWeekRange(weekStart: string): string {
   const weekEnd = addDays(weekStart, 6);
-  return `${shortDate.format(keyToUtcDate(weekStart))} – ${shortDateYear.format(keyToUtcDate(weekEnd))}`;
+  return `${withFirstOrdinal(weekStart, shortDate.format(keyToUtcDate(weekStart)))} – ${withFirstOrdinal(
+    weekEnd,
+    shortDateYear.format(keyToUtcDate(weekEnd)),
+  )}`;
 }
 
 /** "08:30" in the company timezone, or an empty string. */

@@ -46,8 +46,9 @@ const ACTION_ICONS: Record<TimeEntryAuditLog['action'], string> = {
                 {{ describeSnapshot(log.after) }}
               </p>
               <p class="log-meta">
-                Par {{ name(log.actor) }} le {{ when(log.createdAt) }} · Motif :
-                « {{ log.reason }} »
+                Par {{ name(log.actor) }} le {{ when(log.createdAt) }} · Motif&nbsp;: «&nbsp;{{
+                  log.reason
+                }}&nbsp;»
               </p>
             </div>
           </li>
@@ -101,13 +102,17 @@ export class AuditLogList {
     return `${formatShortDate(toDateKey(instant, this.timezone()))} à ${formatTime(instant, this.timezone())}`;
   }
 
+  /** "lun. 21 sept. 22:00–06:00 (lendemain)": a night shift ends on the next day. */
   protected describeSnapshot(snapshot: EntrySnapshot | null): string {
     if (!snapshot) {
       return '';
     }
-    const day = formatDayLabel(toDateKey(snapshot.startAt, this.timezone()));
+    const startDay = toDateKey(snapshot.startAt, this.timezone());
     const start = formatTime(snapshot.startAt, this.timezone());
-    const end = snapshot.endAt ? formatTime(snapshot.endAt, this.timezone()) : 'en cours';
-    return `${day} ${start}–${end}`;
+    if (!snapshot.endAt) {
+      return `${formatDayLabel(startDay)} ${start}–en cours`;
+    }
+    const nextDay = toDateKey(snapshot.endAt, this.timezone()) !== startDay ? ' (lendemain)' : '';
+    return `${formatDayLabel(startDay)} ${start}–${formatTime(snapshot.endAt, this.timezone())}${nextDay}`;
   }
 }

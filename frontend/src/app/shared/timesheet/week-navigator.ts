@@ -25,16 +25,21 @@ import { addDays, formatWeekRange } from '../../core/time/time-format';
         type="button"
         matTooltip="Semaine suivante"
         aria-label="Semaine suivante"
+        disabledInteractive
         [disabled]="isCurrent()"
-        (click)="weekChange.emit(next())"
+        (click)="goTo(next())"
       >
         <mat-icon aria-hidden="true">chevron_right</mat-icon>
       </button>
-      @if (!isCurrent()) {
-        <button mat-button type="button" (click)="weekChange.emit(currentWeekStart())">
-          Cette semaine
-        </button>
-      }
+      <button
+        mat-button
+        type="button"
+        disabledInteractive
+        [disabled]="isCurrent()"
+        (click)="goTo(currentWeekStart())"
+      >
+        Cette semaine
+      </button>
     </div>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -48,4 +53,11 @@ export class WeekNavigator {
   protected readonly previous = computed(() => addDays(this.weekStart(), -7));
   protected readonly next = computed(() => addDays(this.weekStart(), 7));
   protected readonly isCurrent = computed(() => this.weekStart() >= this.currentWeekStart());
+
+  /** Disabled buttons stay focusable (disabledInteractive) and still receive clicks. */
+  protected goTo(weekStart: string): void {
+    if (!this.isCurrent()) {
+      this.weekChange.emit(weekStart);
+    }
+  }
 }

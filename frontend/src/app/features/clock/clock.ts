@@ -3,9 +3,13 @@ import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
+  ElementRef,
+  Injector,
+  afterNextRender,
   computed,
   inject,
   signal,
+  viewChild,
 } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -40,9 +44,14 @@ import { CurrentUserService } from '../../core/user/current-user.service';
 /** Same rule as the backend: an entry open for longer was probably forgotten. */
 const FORGOTTEN_AFTER_MS = 12 * 60 * 60 * 1000;
 
+/** "lundi", for screen readers: abbreviations are read badly. */
+const weekdayLong = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', timeZone: 'UTC' });
+
 interface WeekBar {
   date: string;
   label: string;
+  /** "lundi : 7 h 30", the text read by screen readers. */
+  spoken: string;
   minutes: number;
   percent: number;
   isToday: boolean;
@@ -70,6 +79,8 @@ export class Clock {
   private readonly currentUserService = inject(CurrentUserService);
   private readonly snackBar = inject(MatSnackBar);
   private readonly formBuilder = inject(FormBuilder);
+  private readonly injector = inject(Injector);
+  private readonly noteField = viewChild<ElementRef<HTMLTextAreaElement>>('noteField');
 
   protected readonly user = signal<CurrentUser | null>(null);
   protected readonly status = signal<ClockStatus | null>(null);
@@ -81,7 +92,9 @@ export class Clock {
   private readonly clockOffset = signal(0);
   private readonly now = signal(Date.now());
 
-  protected readonly noteControl = this.formBuilder.nonNullable.control('', [Validators.maxLength(500)]);
+  protected readonly noteControl = this.formBuilder.nonNullable.control('', [
+    Validators.maxLength(500),
+  ]);
   protected readonly forgottenForm = this.formBuilder.nonNullable.group({
     date: ['', Validators.required],
     time: ['', Validators.required],
@@ -92,12 +105,16 @@ export class Clock {
     () => this.status()?.timezone ?? this.user()?.company.timezone ?? 'Europe/Paris',
   );
   private readonly serverNow = computed(() => this.now() + this.clockOffset());
-  protected readonly todayKey = computed(() => toDateKey(new Date(this.serverNow()), this.timezone()));
+  protected readonly todayKey = computed(() =>
+    toDateKey(new Date(this.serverNow()), this.timezone()),
+  );
 
   protected readonly openEntry = computed(() => this.status()?.openEntry ?? null);
   protected readonly isForgotten = computed(() => {
     const entry = this.openEntry();
-    return entry !== null && this.serverNow() - new Date(entry.startAt).getTime() > FORGOTTEN_AFTER_MS;
+    return (
+      entry !== null && this.serverNow() - new Date(entry.startAt).getTime() > FORGOTTEN_AFTER_MS
+    );
   });
   protected readonly isWorking = computed(() => this.openEntry() !== null && !this.isForgotten());
 
@@ -109,7 +126,8 @@ export class Clock {
     }
     return Math.max(
       0,
-      Math.floor(this.serverNow() / 60_000) - Math.floor(new Date(status.serverTime).getTime() / 60_000),
+      Math.floor(this.serverNow() / 60_000) -
+        Math.floor(new Date(status.serverTime).getTime() / 60_000),
     );
   });
 
@@ -127,10 +145,16 @@ export class Clock {
     const today = this.status()?.today;
     return today ? this.liveDayMinutes(today.date, today.workedMinutes) : 0;
   });
-  /** The running minutes always fall in the current civil week. */
-  protected readonly weekMinutes = computed(
-    () => (this.status()?.week.workedMinutes ?? 0) + this.elapsedMinutes(),
-  );
+  /** A night shift started last Sunday counts in last week, not in this one. */
+  protected readonly weekMinutes = computed(() => {
+    const status = this.status();
+    if (!status) {
+      return 0;
+    }
+    const day = this.openEntryDay();
+    const inWeek = day !== null && status.weekDays.some((weekDay) => weekDay.date === day);
+    return status.week.workedMinutes + (inWeek ? this.elapsedMinutes() : 0);
+  });
 
   /** Running session as "HH:MM:SS". */
   protected readonly sessionClock = computed(() => {
@@ -138,7 +162,10 @@ export class Clock {
     if (!entry || !this.isWorking()) {
       return null;
     }
-    const seconds = Math.max(0, Math.floor((this.serverNow() - new Date(entry.startAt).getTime()) / 1000));
+    const seconds = Math.max(
+      0,
+      Math.floor((this.serverNow() - new Date(entry.startAt).getTime()) / 1000),
+    );
     const pad = (value: number) => String(value).padStart(2, '0');
     return `${pad(Math.floor(seconds / 3600))}:${pad(Math.floor((seconds % 3600) / 60))}:${pad(seconds % 60)}`;
   });
@@ -168,7 +195,9 @@ export class Clock {
     if (this.isWorking()) {
       return 'Pointer ma sortie';
     }
-    return (this.status()?.today.entries.length ?? 0) > 0 ? 'Reprendre le travail' : 'Pointer mon arrivée';
+    return (this.status()?.today.entries.length ?? 0) > 0
+      ? 'Reprendre le travail'
+      : 'Pointer mon arrivée';
   });
 
   protected readonly weekBars = computed<WeekBar[]>(() => {
@@ -187,6 +216,13 @@ export class Clock {
     return status.weekDays.map((day, index) => ({
       date: day.date,
       label: formatWeekdayShort(day.date).replace('.', ''),
+      spoken: `${weekdayLong.format(new Date(`${day.date}T12:00:00Z`))} : ${
+        minutes[index] > 0
+          ? formatDuration(minutes[index])
+          : day.absences.length > 0 || day.publicHoliday !== null
+            ? 'absence ou jour férié'
+            : 'aucune heure'
+      }`,
       minutes: minutes[index],
       percent: Math.round((minutes[index] / max) * 100),
       isToday: day.date === today,
@@ -232,15 +268,41 @@ export class Clock {
       next: (user) => this.user.set(user),
     });
 
-    const timer = window.setInterval(() => this.now.set(Date.now()), 1000);
-    inject(DestroyRef).onDestroy(() => window.clearInterval(timer));
+    const timer = window.setInterval(() => {
+      this.now.set(Date.now());
+      // Past midnight, "today" is a new day: a tab left open overnight catches up.
+      const status = this.status();
+      if (
+        status &&
+        !this.loading() &&
+        !this.busy() &&
+        !this.error() &&
+        status.today.date !== this.todayKey()
+      ) {
+        this.load();
+      }
+    }, 1000);
+    // Back to the tab: the entry may have been closed from another device or by a manager.
+    const onVisible = () => {
+      if (document.visibilityState === 'visible' && !this.loading() && !this.busy()) {
+        this.load();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    inject(DestroyRef).onDestroy(() => {
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisible);
+    });
 
     this.load();
   }
 
-  protected load(): void {
+  /** Reloads the day. After a failed action, its message stays on screen. */
+  protected load(keepError = false): void {
     this.loading.set(true);
-    this.error.set(null);
+    if (!keepError) {
+      this.error.set(null);
+    }
 
     this.timeService.getClockStatus().subscribe({
       next: (status) => this.applyStatus(status),
@@ -252,6 +314,10 @@ export class Clock {
   }
 
   protected toggleClock(): void {
+    // The button stays focusable while busy (aria-disabled): ignore the click.
+    if (this.busy()) {
+      return;
+    }
     const note = this.noteControl.value.trim() || undefined;
     const working = this.isWorking();
     const request = working ? this.timeService.clockOut(note) : this.timeService.clockIn(note);
@@ -265,21 +331,33 @@ export class Clock {
         this.noteControl.reset('');
         this.showNote.set(false);
         const time = formatTime(working ? entry.endAt : entry.startAt, this.timezone());
-        this.snackBar.open(working ? `Sortie pointée à ${time}` : `Arrivée pointée à ${time}`, 'OK', {
-          duration: 4000,
-        });
+        this.snackBar.open(
+          working ? `Sortie pointée à ${time}` : `Arrivée pointée à ${time}`,
+          'OK',
+          {
+            duration: 4000,
+          },
+        );
         this.load();
       },
       error: (response: HttpErrorResponse) => {
         this.busy.set(false);
         this.error.set(apiErrorMessage(response));
         // The state may have changed from another device: refresh it.
-        this.load();
+        this.load(true);
       },
     });
   }
 
+  protected openNote(): void {
+    this.showNote.set(true);
+    afterNextRender(() => this.noteField()?.nativeElement.focus(), { injector: this.injector });
+  }
+
   protected closeForgottenEntry(): void {
+    if (this.busy()) {
+      return;
+    }
     const entry = this.openEntry();
     if (!entry || this.forgottenForm.invalid) {
       this.forgottenForm.markAllAsTouched();
@@ -312,7 +390,10 @@ export class Clock {
     this.loading.set(false);
 
     if (status.openEntry) {
-      this.forgottenForm.patchValue({ date: toDateKey(status.openEntry.startAt, status.timezone), time: '' });
+      this.forgottenForm.patchValue({
+        date: toDateKey(status.openEntry.startAt, status.timezone),
+        time: '',
+      });
     }
   }
 }

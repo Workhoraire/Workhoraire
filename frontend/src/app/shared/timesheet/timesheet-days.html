@@ -1,13 +1,16 @@
+<h2 class="wh-visually-hidden">Détail des jours</h2>
 <ol class="days">
   @for (day of days(); track day.date) {
     <li
       class="day"
+      [attr.data-date]="day.date"
       [class.weekend]="day.weekday >= 6"
       [class.today]="day.date === today()"
       [class.quiet]="isQuiet(day)"
     >
       <div class="day-head">
-        <h3 class="day-name">{{ formatDayLabel(day.date) }}</h3>
+        <!-- Focusable by script: the focus comes back here after a deletion. -->
+        <h3 class="day-name" tabindex="-1">{{ formatDayLabel(day.date) }}</h3>
         <div class="day-tags">
           @if (day.publicHoliday; as holiday) {
             <span class="wh-chip wh-chip-sky">{{ holiday }}</span>
@@ -36,6 +39,9 @@
               <span class="entry-times">
                 {{ formatTime(entry.startAt, timezone()) }} –
                 {{ entry.isOpen ? 'en cours' : formatTime(entry.endAt, timezone()) }}
+                @if (endsNextDay(day, entry)) {
+                  <span class="next-day">(lendemain)</span>
+                }
               </span>
               <span class="wh-muted">{{ formatDuration(entry.durationMinutes) }}</span>
               @if (entry.source === 'MANUAL') {
@@ -44,7 +50,7 @@
                 <span class="wh-chip wh-chip-amber">Corrigé</span>
               }
               @if (entry.note) {
-                <span class="entry-note">« {{ entry.note }} »</span>
+                <span class="entry-note">«&nbsp;{{ entry.note }}&nbsp;»</span>
               }
               @if (editable()) {
                 <span class="entry-actions">
@@ -72,7 +78,7 @@
           }
         </ul>
         @if (day.breakMinutes > 0) {
-          <p class="day-meta">Pauses et coupures : {{ formatDuration(day.breakMinutes) }}</p>
+          <p class="day-meta">Pauses et coupures&nbsp;: {{ formatDuration(day.breakMinutes) }}</p>
         }
       }
 

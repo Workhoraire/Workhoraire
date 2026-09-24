@@ -35,7 +35,7 @@ import { AuthService } from '../../core/auth/auth.service';
     </div>
   `,
   // Same layout as the invitation page.
-  styleUrl: '../employees/employee-invitation.scss',
+  styleUrl: '../../shared/public-page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AccountDisabled {

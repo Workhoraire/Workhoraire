@@ -28,7 +28,10 @@ async function renderShellAs(role: UserRole): Promise<HTMLElement> {
     providers: [
       provideRouter([]),
       provideNoopAnimations(),
-      { provide: AuthService, useValue: { logout: () => Promise.resolve() } },
+      {
+        provide: AuthService,
+        useValue: { logout: () => Promise.resolve(), accountUrl: () => 'http://keycloak/account' },
+      },
       {
         provide: CurrentUserService,
         useValue: {
