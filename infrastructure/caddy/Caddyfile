@@ -2,34 +2,47 @@
 # every domain (Let's Encrypt certificates, or a local authority when
 # CADDY_EXTRA_GLOBAL=local_certs for a test on *.localhost), security headers
 # and routing to the containers.
+#
+# This directory is mounted, not the file alone: deploy.sh validates the new
+# version, then reloads it (`caddy reload` keeps the running configuration
+# when the new one is invalid).
 {
 	email {$ACME_EMAIL}
 	{$CADDY_EXTRA_GLOBAL}
 }
 
+# Deferred (because of -Server and ?): applied to the upstream's response.
+# `?Referrer-Policy` only fills the header in, so Keycloak's stricter
+# `no-referrer` stays on its pages.
 (security_headers) {
 	header {
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
 		X-Content-Type-Options "nosniff"
-		Referrer-Policy "strict-origin-when-cross-origin"
+		?Referrer-Policy "strict-origin-when-cross-origin"
 		Permissions-Policy "geolocation=(), camera=(), microphone=(), payment=()"
 		-Server
 	}
 }
 
-# Access logs, for security only: kept 6 months, as the privacy policy says.
-# Invitation tokens are masked in the logged addresses; Caddy already leaves
-# out cookies and Authorization headers.
+# Access logs, for security only: IP addresses are kept 6 months at most, as
+# the privacy policy says (one file a day, deleted after 180 days; roll_keep,
+# 10 files by default, is raised so that the age is the limit).
+# Invitation tokens are masked in the logged addresses and in the Referer,
+# also in their URL-encoded form (redirect_uri of the sign-in pages); Caddy
+# already leaves out cookies and Authorization headers.
 (access_log) {
 	log {
 		output file /data/logs/access.log {
 			roll_size 50MiB
+			roll_interval 24h
+			roll_keep 200
 			roll_keep_for 4320h
 		}
 		format filter {
 			wrap json
 			fields {
-				request>uri regexp "/employee-invitations/[^/?]+" "/employee-invitations/REDACTED"
+				request>uri regexp "(/|%2F|%2f)employee-invitations(/|%2F|%2f)[A-Za-z0-9_-]+" "${1}employee-invitations${2}REDACTED"
+				request>headers>Referer regexp "(/|%2F|%2f)employee-invitations(/|%2F|%2f)[A-Za-z0-9_-]+" "${1}employee-invitations${2}REDACTED"
 			}
 		}
 	}
@@ -43,6 +56,13 @@
 	# replay); nothing is loaded from elsewhere, and there is no form or cookie.
 	header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
 	reverse_proxy site:80
+}
+
+# The www form of the site (DNS record `www`) leads to the site itself.
+www.{$SITE_HOST} {
+	import security_headers
+	import access_log
+	redir https://{$SITE_HOST}{uri} permanent
 }
 
 {$APP_HOST} {

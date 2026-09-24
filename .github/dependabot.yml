@@ -14,6 +14,15 @@ updates:
     directories: ["/backend", "/frontend", "/site", "/infrastructure/keycloak", "/infrastructure/backup"]
     schedule:
       interval: weekly
+    # A new major version is a deliberate change, never a weekly proposal:
+    # PostgreSQL's must match the server of docker-compose.prod.yml (a newer
+    # pg_dump makes dumps that an older server may not restore), and Node.js
+    # stays on its LTS line (odd majors are not LTS).
+    ignore:
+      - dependency-name: "postgres"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "node"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: "/"
     schedule:

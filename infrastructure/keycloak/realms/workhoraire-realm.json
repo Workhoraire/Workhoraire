@@ -2,17 +2,22 @@
   "realm": "workhoraire",
   "enabled": true,
   "displayName": "WorkHoraire",
+  "loginTheme": "workhoraire",
+  "ssoSessionIdleTimeoutRememberMe": 1209600,
+  "ssoSessionMaxLifespanRememberMe": 2592000,
   "registrationAllowed": true,
   "registrationEmailAsUsername": true,
   "loginWithEmailAllowed": true,
   "duplicateEmailsAllowed": false,
   "resetPasswordAllowed": true,
   "rememberMe": true,
-  "verifyEmail": false,
+  "verifyEmail": true,
   "bruteForceProtected": true,
   "failureFactor": 10,
   "waitIncrementSeconds": 60,
   "maxFailureWaitSeconds": 900,
+  "eventsEnabled": true,
+  "eventsExpiration": 15552000,
   "passwordPolicy": "length(12) and notUsername and notEmail",
   "internationalizationEnabled": true,
   "supportedLocales": [
@@ -37,6 +42,17 @@
     ]
   },
   "clients": [
+    {
+      "clientId": "admin-cli",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "fullScopeAllowed": false
+    },
     {
       "clientId": "workhoraire-api",
       "name": "WorkHoraire API",
