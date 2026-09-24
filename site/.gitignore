@@ -1,0 +1,8 @@
+# Dependencies, build output and Angular CLI cache of the marketing site
+/node_modules
+/dist
+/.angular
+
+# Test coverage and TypeScript output
+/coverage
+/out-tsc

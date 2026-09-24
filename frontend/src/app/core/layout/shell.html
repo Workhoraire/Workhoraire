@@ -26,6 +26,12 @@
       }
     </nav>
 
+    <p class="legal-links">
+      <a [href]="legalLinks.privacy" target="_blank" rel="noopener">Confidentialité</a>
+      <span aria-hidden="true">·</span>
+      <a [href]="legalLinks.terms" target="_blank" rel="noopener">CGV</a>
+    </p>
+
     @if (user(); as currentUser) {
       <div class="user-card">
         <span class="avatar" aria-hidden="true">{{ initials(currentUser) }}</span>
@@ -65,6 +71,10 @@
           <strong>{{ fullName(currentUser) }}</strong>
           <span>{{ roleLabels[currentUser.role] }} · {{ currentUser.company.name }}</span>
         </div>
+        <a mat-menu-item [href]="legalLinks.privacy" target="_blank" rel="noopener">
+          <mat-icon aria-hidden="true">policy</mat-icon>
+          <span>Confidentialité</span>
+        </a>
         <button mat-menu-item type="button" (click)="logout()">
           <mat-icon aria-hidden="true">logout</mat-icon>
           <span>Se déconnecter</span>

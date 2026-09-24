@@ -20,12 +20,12 @@ Les **1,5 million d'entreprises employeuses de 0 à 49 salariés** (8,2 millions
 | Pointer en un geste depuis le téléphone, avec l'heure du serveur | Tableau de bord : présents, sorties oubliées, absents, alertes | Export CSV hebdomadaire : heures sup +25/+50, heures complémentaires +10/+25, absences par type, matricule |
 | Sa journée, sa semaine, ses heures sup | Heures de l'équipe par jour et par semaine | Export CSV journalier (preuve, contrôle) |
 | Déclarer une sortie oubliée (tracée) | Corriger avec motif obligatoire, historique complet | Fichier lisible dans Excel en français, protégé contre l'injection |
-| Voir chaque correction faite sur ses heures | Valider ou refuser les absences | – |
+| Voir chaque correction faite sur ses heures | Valider, refuser ou annuler les absences | – |
 | Demander des congés (demi-journées, jours ouvrés, fériés exclus) | Alertes légales : 10 h, 48 h, pause, repos de 11 h, 6 jours, temps partiel | – |
 
 **Qualité** :
-- 74 tests unitaires et 10 tests d'intégration sur une vraie base PostgreSQL (dont la concurrence et l’isolation entre entreprises), plus 11 tests frontend ;
-- recette visuelle sur mobile avec des données réalistes ; 3 défauts trouvés et corrigés avant livraison.
+- 89 tests unitaires et 16 tests d'intégration sur une vraie base PostgreSQL (dont la concurrence, l’isolation entre entreprises et la chaîne complète d'ajout d'un salarié), plus 31 tests frontend ;
+- recette visuelle sur mobile avec des données réalistes, puis revue de code complète et recette avec de vrais comptes : défauts trouvés et corrigés avant livraison ([détail](../technique/tests-et-qualite.md)).
 
 ## Décisions à prendre par l'équipe
 
@@ -52,5 +52,6 @@ Les **1,5 million d'entreprises employeuses de 0 à 49 salariés** (8,2 millions
 | [05 Spécifications du MVP](05-specifications-mvp.md) | Récits utilisateurs et critères d'acceptation |
 | [06 Roadmap](06-roadmap.md) | Maintenant, ensuite, plus tard, dette technique |
 | [07 Kit de conformité client](07-kit-conformite-client.md) | Note d'information des salariés, note au CSE, checklist |
+| [08 Prix et hébergement](08-prix-et-hebergement.md) | Grille de prix comparée à Pointeo, frais de paiement, facture électronique, hébergement en France par étape et budget |
 | [Technique](../technique/) | Architecture, API, moteur de calcul, sécurité, tests, ADR |
 | [Recherche](recherche/) | Les trois études complètes et sourcées (marché, droit, besoins) |

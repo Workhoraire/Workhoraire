@@ -1,6 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormGroupDirective, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -10,7 +10,8 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 
 import { UserRole } from '../../core/auth/auth.models';
-import { formatDuration } from '../../core/time/time-format';
+import { apiErrorMessage } from '../../core/http/error-message';
+import { formatDuration, formatShortDate, startOfWeek } from '../../core/time/time-format';
 import {
   CreateEmployeeInvitationRequest,
   Employee,
@@ -65,6 +66,8 @@ export class Employees {
     email: ['', [Validators.required, Validators.email, Validators.maxLength(320)]],
     role: ['EMPLOYEE' as UserRole, [Validators.required]],
     weeklyHours: [35, [Validators.required, Validators.min(1), Validators.max(48)]],
+    /** Optional date from which a contract change applies. */
+    contractFrom: [''],
     payrollId: ['', [Validators.maxLength(50)]],
   });
 
@@ -88,7 +91,7 @@ export class Employees {
     });
   }
 
-  protected inviteEmployee(): void {
+  protected inviteEmployee(formDirective: FormGroupDirective): void {
     if (this.inviteForm.invalid) {
       this.inviteForm.markAllAsTouched();
       return;
@@ -114,10 +117,16 @@ export class Employees {
           `${window.location.origin}/employee-invitations/${encodeURIComponent(invitation.token)}`,
         );
         this.copied.set(false);
-        this.notice.set(
-          `Invitation créée pour ${invitation.firstName} ${invitation.lastName}.`,
-        );
-        this.inviteForm.reset({
+        const who = `${invitation.firstName} ${invitation.lastName}`;
+        const created = invitation.replacesPrevious
+          ? `Nouveau lien créé pour ${who} : l’ancien lien ne fonctionne plus.`
+          : `Invitation créée pour ${who}.`;
+        const delivery = invitation.emailSent
+          ? ` Le lien lui a été envoyé par e-mail (${invitation.email}).`
+          : ' Transmettez-lui le lien ci-dessous.';
+        this.notice.set(created + delivery);
+        // resetForm also clears the "submitted" state: no error on the emptied fields.
+        formDirective.resetForm({
           firstName: '',
           lastName: '',
           email: '',
@@ -141,6 +150,7 @@ export class Employees {
       email: employee.email ?? '',
       role: employee.role,
       weeklyHours: employee.weeklyContractMinutes / 60,
+      contractFrom: '',
       payrollId: employee.payrollId ?? '',
     });
   }
@@ -153,6 +163,7 @@ export class Employees {
       email: '',
       role: 'EMPLOYEE',
       weeklyHours: 35,
+      contractFrom: '',
       payrollId: '',
     });
   }
@@ -164,13 +175,19 @@ export class Employees {
     }
 
     const values = this.editForm.getRawValue();
+    const weeklyContractMinutes = Math.round(values.weeklyHours * 60);
+    // The contract is only sent when it changes, or to date a change: each
+    // change is recorded from a Monday, past weeks keep the former contract.
+    const contractChange =
+      weeklyContractMinutes !== employee.weeklyContractMinutes || values.contractFrom !== '';
     const payload: UpdateEmployeeRequest = {
       firstName: values.firstName.trim(),
       lastName: values.lastName.trim(),
       email: values.email.trim().toLowerCase(),
       role: values.role,
-      weeklyContractMinutes: Math.round(values.weeklyHours * 60),
       payrollId: values.payrollId.trim(),
+      ...(contractChange ? { weeklyContractMinutes } : {}),
+      ...(contractChange && values.contractFrom ? { contractEffectiveFrom: values.contractFrom } : {}),
     };
 
     this.savingEmployeeId.set(employee.id);
@@ -181,7 +198,15 @@ export class Employees {
         this.savingEmployeeId.set(null);
         this.replaceEmployee(updatedEmployee);
         this.cancelEditing();
-        this.notice.set('Les informations de l’employé ont été mises à jour.');
+        this.notice.set(
+          contractChange
+            ? `Informations mises à jour. Contrat de ${formatDuration(weeklyContractMinutes)} par semaine ${
+                values.contractFrom
+                  ? `à partir de la semaine du ${formatShortDate(startOfWeek(values.contractFrom))}`
+                  : 'dès cette semaine'
+              }.`
+            : 'Les informations de l’employé ont été mises à jour.',
+        );
       },
       error: (response: HttpErrorResponse) => {
         this.savingEmployeeId.set(null);
@@ -266,25 +291,9 @@ export class Employees {
   }
 
   private errorMessage(response: HttpErrorResponse): string {
-    if (response.status === 403) {
+    if (response.status === 403 && !response.error?.message?.includes('own account')) {
       return 'L’accès à la gestion des employés est réservé aux administrateurs.';
     }
-
-    if (response.status === 409) {
-      return response.error?.message ?? 'Cette opération entre en conflit avec une donnée existante.';
-    }
-
-    if (response.status === 400) {
-      const messages = response.error?.message;
-      if (Array.isArray(messages) && messages.length > 0) {
-        return messages[0];
-      }
-      if (typeof messages === 'string') {
-        return messages;
-      }
-      return 'Vérifiez les informations saisies puis réessayez.';
-    }
-
-    return 'Une erreur est survenue. Vérifiez que le backend est disponible.';
+    return apiErrorMessage(response);
   }
 }

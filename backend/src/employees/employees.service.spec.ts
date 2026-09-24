@@ -1,11 +1,13 @@
 import {
   ConflictException,
   ForbiddenException,
+  GoneException,
   NotFoundException,
 } from '@nestjs/common';
-import { UserRole } from '@prisma/client';
+import { Prisma, UserRole } from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
 import { ApplicationUser, KeycloakUser } from '../auth/auth.types';
+import { MailService } from '../notifications/mail.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEmployeeInvitationDto } from './dto/create-employee-invitation.dto';
 import { UpdateEmployeeDto } from './dto/update-employee.dto';
@@ -22,6 +24,13 @@ interface TransactionMock {
     create: jest.Mock;
     findFirst: jest.Mock;
     findUnique: jest.Mock;
+    update: jest.Mock;
+  };
+  contractPeriod: {
+    count: jest.Mock;
+    create: jest.Mock;
+    findFirst: jest.Mock;
+    upsert: jest.Mock;
   };
 }
 
@@ -29,11 +38,13 @@ describe('EmployeesService', () => {
   let service: EmployeesService;
   let prisma: PrismaService;
   let transaction: TransactionMock;
+  let mail: { send: jest.Mock; enabled: boolean } & MailService;
 
   const admin = {
     id: 'admin-1',
     companyId: 'company-a',
     role: UserRole.ADMIN,
+    company: { id: 'company-a', name: 'Acme', timezone: 'Europe/Paris' },
   } as ApplicationUser;
 
   const keycloakUser: KeycloakUser = {
@@ -51,6 +62,7 @@ describe('EmployeesService', () => {
   }
 
   beforeEach(() => {
+    mail = { send: jest.fn().mockResolvedValue(true), enabled: true } as unknown as typeof mail;
     transaction = {
       employeeInvitation: {
         create: jest.fn(),
@@ -62,6 +74,13 @@ describe('EmployeesService', () => {
         create: jest.fn(),
         findFirst: jest.fn(),
         findUnique: jest.fn(),
+        update: jest.fn(),
+      },
+      contractPeriod: {
+        count: jest.fn().mockResolvedValue(1),
+        create: jest.fn(),
+        findFirst: jest.fn().mockResolvedValue(null),
+        upsert: jest.fn(),
       },
     };
 
@@ -71,6 +90,9 @@ describe('EmployeesService', () => {
         findFirst: jest.fn(),
         update: jest.fn(),
       },
+      employeeInvitation: {
+        findUnique: jest.fn(),
+      },
       $transaction: jest.fn(),
     } as unknown as PrismaService;
 
@@ -79,7 +101,7 @@ describe('EmployeesService', () => {
         callback(transaction),
     );
 
-    service = new EmployeesService(prisma, configWith('true'));
+    service = new EmployeesService(prisma, configWith('true'), mail);
   });
 
   it('lists only employees belonging to the authenticated admin company', async () => {
@@ -134,28 +156,26 @@ describe('EmployeesService', () => {
       id: 'employee-1',
       role: UserRole.EMPLOYEE,
       isActive: true,
+      weeklyContractMinutes: 2100,
     });
-    (prisma.user.update as jest.Mock).mockResolvedValue({
-      id: 'employee-1',
-      firstName: 'Jeanne',
-      lastName: 'Dupont',
-      email: 'jeanne@example.com',
-      isActive: false,
-      role: UserRole.MANAGER,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
+    transaction.user.update.mockResolvedValue({ id: 'employee-1' });
+    transaction.contractPeriod.findFirst.mockResolvedValue({ weeklyContractMinutes: 1440 });
 
-    await service.updateEmployee(admin, 'employee-1', {
-      firstName: 'Jeanne',
-      lastName: 'Dupont',
-      email: 'jeanne@example.com',
-      role: UserRole.MANAGER,
-      isActive: false,
-      weeklyContractMinutes: 1440,
-    });
+    await service.updateEmployee(
+      admin,
+      'employee-1',
+      {
+        firstName: 'Jeanne',
+        lastName: 'Dupont',
+        email: 'jeanne@example.com',
+        role: UserRole.MANAGER,
+        isActive: false,
+        weeklyContractMinutes: 1440,
+      },
+      new Date('2026-09-23T10:00:00.000Z'),
+    );
 
-    expect(prisma.user.update).toHaveBeenCalledWith({
+    expect(transaction.user.update).toHaveBeenCalledWith({
       where: { id: 'employee-1' },
       data: {
         firstName: 'Jeanne',
@@ -169,9 +189,85 @@ describe('EmployeesService', () => {
     });
   });
 
+  it('records a contract change from the Monday of the chosen week, keeping past weeks', async () => {
+    (prisma.user.findFirst as jest.Mock).mockResolvedValue({
+      id: 'employee-1',
+      role: UserRole.EMPLOYEE,
+      isActive: true,
+      weeklyContractMinutes: 2100,
+    });
+    transaction.contractPeriod.count.mockResolvedValue(0);
+    transaction.contractPeriod.findFirst.mockResolvedValue({ weeklyContractMinutes: 2100 });
+    transaction.user.update.mockResolvedValue({ id: 'employee-1' });
+
+    // Change asked on Wednesday 23 September, effective Thursday 1 October 2026.
+    await service.updateEmployee(
+      admin,
+      'employee-1',
+      { weeklyContractMinutes: 1680, contractEffectiveFrom: '2026-10-01' },
+      new Date('2026-09-23T10:00:00.000Z'),
+    );
+
+    // The former contract is kept for the past (history started now)…
+    expect(transaction.contractPeriod.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ userId: 'employee-1', weeklyContractMinutes: 2100 }),
+    });
+    // …and the new one applies from Monday 28 September.
+    expect(transaction.contractPeriod.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          userId_effectiveFrom: {
+            userId: 'employee-1',
+            effectiveFrom: new Date('2026-09-28T00:00:00.000Z'),
+          },
+        },
+        create: expect.objectContaining({ weeklyContractMinutes: 1680 }),
+      }),
+    );
+    // The contract in force this week is still 35 h.
+    expect(transaction.user.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { weeklyContractMinutes: 2100 } }),
+    );
+  });
+
+  it('refuses a payroll number already used in the company', async () => {
+    (prisma.user.findFirst as jest.Mock).mockResolvedValue({
+      id: 'employee-1',
+      role: UserRole.EMPLOYEE,
+      isActive: true,
+      weeklyContractMinutes: 2100,
+    });
+    transaction.user.update.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
+        code: 'P2002',
+        clientVersion: 'test',
+      }),
+    );
+
+    await expect(
+      service.updateEmployee(admin, 'employee-1', { payrollId: 'M001' }),
+    ).rejects.toThrow('This payroll number is already used by another employee');
+  });
+
+  it('refuses to start in production with the verified email check disabled', () => {
+    const productionConfig = {
+      get: jest.fn((key: string, fallback?: string) =>
+        key === 'KEYCLOAK_REQUIRE_VERIFIED_EMAIL'
+          ? 'false'
+          : key === 'NODE_ENV'
+            ? 'production'
+            : fallback,
+      ),
+    } as unknown as ConfigService;
+
+    expect(() => new EmployeesService(prisma, productionConfig, mail)).toThrow(
+      'KEYCLOAK_REQUIRE_VERIFIED_EMAIL=false is only allowed in local development',
+    );
+  });
+
   it('creates an invitation with the authenticated company and inviter', async () => {
     transaction.user.findFirst.mockResolvedValue(null);
-    transaction.employeeInvitation.findFirst.mockResolvedValue(null);
+    transaction.employeeInvitation.updateMany.mockResolvedValue({ count: 0 });
     transaction.employeeInvitation.create.mockResolvedValue({
       id: 'invitation-1',
       email: 'employee@example.com',
@@ -200,6 +296,84 @@ describe('EmployeesService', () => {
       transaction.employeeInvitation.create.mock.calls[0][0].data.tokenHash,
     ).toHaveLength(64);
     expect(result.token).toHaveLength(43);
+    expect(result.replacesPrevious).toBe(false);
+    // The personal link is also sent to the invited address.
+    expect(mail.send).toHaveBeenCalledWith(
+      'employee@example.com',
+      expect.objectContaining({
+        subject: 'Acme vous invite sur WorkHoraire',
+        text: expect.stringContaining(`http://localhost:4200/employee-invitations/${result.token}`),
+      }),
+    );
+    expect(result.emailSent).toBe(true);
+  });
+
+  it('replaces a pending invitation for the same email with a new link', async () => {
+    transaction.user.findFirst.mockResolvedValue(null);
+    transaction.employeeInvitation.updateMany.mockResolvedValue({ count: 1 });
+    transaction.employeeInvitation.create.mockResolvedValue({
+      id: 'invitation-2',
+      email: 'employee@example.com',
+      firstName: 'Jean',
+      lastName: 'Dupont',
+      role: UserRole.EMPLOYEE,
+      weeklyContractMinutes: 2100,
+      expiresAt: new Date('2026-09-30T00:00:00.000Z'),
+    });
+
+    const result = await service.createInvitation(admin, {
+      firstName: 'Jean',
+      lastName: 'Dupont',
+      email: 'Employee@Example.com',
+    });
+
+    // The previous link of the same company expires now: a lost link is never a dead end.
+    expect(transaction.employeeInvitation.updateMany).toHaveBeenCalledWith({
+      where: {
+        companyId: 'company-a',
+        email: 'employee@example.com',
+        acceptedAt: null,
+        expiresAt: { gt: expect.any(Date) },
+      },
+      data: { expiresAt: expect.any(Date) },
+    });
+    expect(transaction.employeeInvitation.create).toHaveBeenCalled();
+    expect(result.replacesPrevious).toBe(true);
+  });
+
+  it('shows who invites the person, but only for a link that can still be used', async () => {
+    const findUnique = prisma.employeeInvitation.findUnique as jest.Mock;
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const invitation = {
+      firstName: 'Nora',
+      lastName: 'Test',
+      email: 'nora@example.com',
+      role: UserRole.EMPLOYEE,
+      acceptedAt: null,
+      expiresAt,
+      company: { name: 'Acme' },
+    };
+    findUnique.mockResolvedValue(invitation);
+
+    await expect(service.getInvitationPreview('a-valid-token')).resolves.toEqual({
+      firstName: 'Nora',
+      lastName: 'Test',
+      email: 'nora@example.com',
+      role: UserRole.EMPLOYEE,
+      companyName: 'Acme',
+      expiresAt,
+    });
+    // The token is looked up by its hash: it is never stored in clear.
+    expect(findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { tokenHash: expect.stringMatching(/^[0-9a-f]{64}$/) } }),
+    );
+
+    findUnique.mockResolvedValue({ ...invitation, acceptedAt: new Date() });
+    await expect(service.getInvitationPreview('used')).rejects.toBeInstanceOf(ConflictException);
+    findUnique.mockResolvedValue({ ...invitation, expiresAt: new Date(Date.now() - 1000) });
+    await expect(service.getInvitationPreview('expired')).rejects.toBeInstanceOf(GoneException);
+    findUnique.mockResolvedValue(null);
+    await expect(service.getInvitationPreview('unknown')).rejects.toBeInstanceOf(NotFoundException);
   });
 
   it('accepts an invitation only for the matching Keycloak email and company', async () => {
@@ -249,6 +423,13 @@ describe('EmployeesService', () => {
         isActive: true,
       }),
     });
+    expect(transaction.contractPeriod.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        companyId: 'company-a',
+        userId: 'employee-1',
+        weeklyContractMinutes: 1440,
+      }),
+    });
     expect(result.company).toEqual({
       id: 'company-a',
       name: 'Acme',
@@ -289,7 +470,7 @@ describe('EmployeesService', () => {
     );
     expect(transaction.employeeInvitation.findUnique).not.toHaveBeenCalled();
 
-    const localService = new EmployeesService(prisma, configWith('false'));
+    const localService = new EmployeesService(prisma, configWith('false'), mail);
     transaction.employeeInvitation.findUnique.mockResolvedValue(null);
     await expect(localService.acceptInvitation('a-valid-token', unverified)).rejects.toBeInstanceOf(
       NotFoundException,

@@ -1,5 +1,6 @@
 import { Transform } from 'class-transformer';
 import {
+  Equals,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -35,4 +36,21 @@ export class CreateCompanyDto {
   @IsNotEmpty()
   @MaxLength(64)
   timezone?: string;
+
+  /** The administrator's name: the sign-up page only asks for an e-mail and a password. */
+  @Transform(trimString)
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  firstName?: string;
+
+  @Transform(trimString)
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  lastName?: string;
+
+  /** Terms of sale and data processing agreement, accepted with a check box. */
+  @Equals(true, { message: 'The terms of sale must be accepted' })
+  acceptTerms!: boolean;
 }

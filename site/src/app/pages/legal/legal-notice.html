@@ -1,0 +1,98 @@
+<section class="wh-page-hero wh-glow" aria-labelledby="page-title">
+  <div class="wh-container">
+    <p class="wh-eyebrow">Informations légales</p>
+    <h1 id="page-title">Mentions légales</h1>
+    <p class="wh-lead">Mises à jour le {{ updatedOn }}.</p>
+  </div>
+</section>
+
+<div class="wh-container legal">
+  <div class="wh-prose">
+    @if (draft) {
+      <p class="wh-note wh-note--coral draft-notice" role="note">
+        L’identité de l’éditeur sera complétée à l’immatriculation de la société, avant l’ouverture
+        du service au public.
+      </p>
+    }
+
+    <p>
+      Informations publiées en application des articles 1-1 et 19 de la loi n°&nbsp;2004-575 du
+      21&nbsp;juin 2004 pour la confiance dans l’économie numérique.
+    </p>
+
+    <h2>Éditeur du site et du service</h2>
+    <p>Le site et l’application WorkHoraire sont édités par&nbsp;:</p>
+    <dl class="facts">
+      <dt>Dénomination</dt>
+      <dd><app-legal-field [value]="publisher.name" label="dénomination sociale ou nom de l’entrepreneur" /></dd>
+      <dt>Forme juridique</dt>
+      <dd><app-legal-field [value]="publisher.legalForm" label="forme juridique" /></dd>
+      @if (publisher.shareCapital) {
+        <dt>Capital social</dt>
+        <dd>{{ publisher.shareCapital }}</dd>
+      }
+      <dt>Siège</dt>
+      <dd><app-legal-field [value]="publisher.address" label="adresse du siège" /></dd>
+      <dt>Immatriculation</dt>
+      <dd><app-legal-field [value]="publisher.registration" label="numéro RCS ou SIREN" /></dd>
+      <dt>TVA</dt>
+      <dd>
+        @if (publisher.vatExempt === true) {
+          TVA non applicable, article 293&nbsp;B du CGI
+        } @else {
+          <app-legal-field [value]="publisher.vatNumber" label="numéro de TVA intracommunautaire" />
+        }
+      </dd>
+      <dt>Téléphone</dt>
+      <dd><app-legal-field [value]="publisher.phone" label="numéro de téléphone" /></dd>
+      <dt>E-mail</dt>
+      <dd>
+        @if (publisher.email) {
+          <a [href]="'mailto:' + publisher.email">{{ publisher.email }}</a>
+        } @else {
+          <app-legal-field label="adresse e-mail de contact" />
+        }
+      </dd>
+    </dl>
+
+    <h2>Directeur de la publication</h2>
+    <p>
+      <app-legal-field [value]="publisher.publicationDirector" label="nom du directeur de la publication" />
+    </p>
+
+    <h2>Hébergement</h2>
+    <p>Le site et l’application sont hébergés en France par&nbsp;:</p>
+    <dl class="facts">
+      <dt>Hébergeur</dt>
+      <dd>{{ hosting.name }}</dd>
+      <dt>Adresse</dt>
+      <dd><app-legal-field [value]="hosting.address" label="adresse de l’hébergeur" /></dd>
+      <dt>Téléphone</dt>
+      <dd><app-legal-field [value]="hosting.phone" label="téléphone de l’hébergeur" /></dd>
+      <dt>Site</dt>
+      <dd><a [href]="hosting.website" rel="noopener">{{ hosting.website }}</a></dd>
+    </dl>
+
+    <h2>Propriété intellectuelle</h2>
+    <p>
+      Les textes, le logo, les illustrations et le logiciel WorkHoraire sont protégés par le droit
+      de la propriété intellectuelle. Leur reproduction, même partielle, demande l’autorisation
+      écrite de l’éditeur. Les captures d’écran du site montrent des données de démonstration
+      fictives.
+    </p>
+
+    <h2>Données personnelles et cookies</h2>
+    <p>
+      Ce site ne dépose aucun cookie et n’utilise aucun traceur. Pour savoir quelles données
+      WorkHoraire traite et comment exercer vos droits, consultez la
+      <a routerLink="/confidentialite">politique de confidentialité</a>.
+    </p>
+
+    <h2>Conditions du service</h2>
+    <p>
+      L’utilisation du service par les entreprises clientes est régie par les
+      <a routerLink="/cgv">conditions générales de vente</a> et le
+      <a routerLink="/sous-traitance">contrat de sous-traitance</a>.
+    </p>
+  </div>
+</div>

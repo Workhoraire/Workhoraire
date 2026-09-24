@@ -1,0 +1,518 @@
+/* WorkHoraire marketing site: brand tokens and shared building blocks. */
+
+:root {
+  /* Brand, same values as the application (frontend/src/styles.scss). */
+  --wh-ink: #17211d;
+  --wh-ink-soft: #2d3b34;
+  --wh-muted: #68736d;
+  --wh-paper: #f4f5ef;
+  --wh-panel: #ffffff;
+  --wh-line: #dfe4dc;
+  --wh-lime: #c8ef73;
+  --wh-lime-soft: #eef8d6;
+  --wh-coral: #ff8d67;
+  --wh-coral-ink: #b4502f;
+  --wh-coral-soft: #ffe8df;
+  --wh-shadow: 0 20px 50px rgba(23, 33, 29, 0.08);
+  --wh-radius: 1.25rem;
+
+  /* Site only. `--wh-muted` is kept for white panels: on the paper background it is below 4.5:1. */
+  --wh-on-ink: #f8faf3;
+  --wh-on-ink-muted: #bbc6bd;
+  --wh-focus: var(--wh-ink);
+  --wh-container: 72rem;
+  --wh-gutter: clamp(1rem, 4vw, 2.5rem);
+  --wh-header-height: 4.25rem;
+}
+
+/* ---------- Base ---------- */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: light;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  /* Anchored sections are not hidden under the sticky header. */
+  scroll-padding-top: calc(var(--wh-header-height) + 1.5rem);
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  background: var(--wh-paper);
+  color: var(--wh-ink);
+  font-family: 'DM Sans Variable', 'DM Sans', 'Segoe UI', system-ui, sans-serif;
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  overflow-wrap: break-word;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+img,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+img {
+  height: auto;
+}
+
+button,
+input,
+select,
+textarea {
+  color: inherit;
+  font: inherit;
+}
+
+a {
+  color: inherit;
+  text-decoration-thickness: 0.08em;
+  text-underline-offset: 0.2em;
+}
+
+:focus-visible {
+  outline: 3px solid var(--wh-focus);
+  outline-offset: 3px;
+}
+
+/* Targets of in-page links receive the focus by script: no outline around a whole section. */
+[tabindex='-1']:focus {
+  outline: none;
+}
+
+::selection {
+  background: var(--wh-lime);
+  color: var(--wh-ink);
+}
+
+h1,
+h2,
+h3,
+h4 {
+  margin: 0 0 0.5em;
+  font-weight: 800;
+  line-height: 1.08;
+  text-wrap: balance;
+}
+
+h1 {
+  font-size: clamp(2.15rem, 6vw, 4rem);
+  letter-spacing: -0.05em;
+  line-height: 1.02;
+}
+
+h2 {
+  font-size: clamp(1.75rem, 4vw, 2.75rem);
+  letter-spacing: -0.045em;
+}
+
+h3 {
+  font-size: 1.25rem;
+  font-weight: 750;
+  letter-spacing: -0.025em;
+  line-height: 1.25;
+}
+
+p,
+ul,
+ol,
+dl,
+table,
+figure,
+blockquote {
+  margin: 0 0 1rem;
+}
+
+/* Ordinals such as "36e": the superscript must not widen the line spacing. */
+sup {
+  position: relative;
+  top: -0.45em;
+  font-size: 0.72em;
+  line-height: 0;
+  vertical-align: baseline;
+}
+
+/* ---------- Layout ---------- */
+
+.wh-container {
+  width: min(calc(100% - 2 * var(--wh-gutter)), var(--wh-container));
+  margin-inline: auto;
+}
+
+.wh-section {
+  padding-block: clamp(3.5rem, 9vw, 7rem);
+}
+
+.wh-section--tight {
+  padding-block: clamp(2.5rem, 6vw, 4.5rem);
+}
+
+.wh-section--panel {
+  border-block: 1px solid var(--wh-line);
+  background: var(--wh-panel);
+}
+
+.wh-section--ink {
+  --wh-focus: var(--wh-lime);
+  background: var(--wh-ink);
+  color: var(--wh-on-ink);
+}
+
+.wh-section-header {
+  max-width: 46rem;
+  margin-bottom: clamp(2rem, 5vw, 3.5rem);
+
+  > :last-child {
+    margin-bottom: 0;
+  }
+
+  &.is-centered {
+    margin-inline: auto;
+    text-align: center;
+  }
+}
+
+/* Heading block of the inner pages, on a soft brand glow. */
+.wh-page-hero {
+  padding-block: clamp(3rem, 8vw, 6rem) clamp(2.5rem, 6vw, 4rem);
+
+  h1 {
+    max-width: 22ch;
+  }
+
+  .wh-lead {
+    margin-bottom: 0;
+  }
+}
+
+/* Decorative glows kept away from the top-left corner, where the small coral eyebrow text sits. */
+.wh-glow {
+  background:
+    radial-gradient(38rem 24rem at 95% -10%, rgba(200, 239, 115, 0.5), transparent 70%),
+    radial-gradient(30rem 20rem at 105% 105%, rgba(255, 141, 103, 0.14), transparent 70%);
+}
+
+.wh-grid {
+  display: grid;
+  gap: clamp(1rem, 2.5vw, 1.5rem);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* ---------- Text ---------- */
+
+.wh-eyebrow {
+  margin: 0 0 0.9rem;
+  color: var(--wh-coral-ink);
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  line-height: 1.3;
+  text-transform: uppercase;
+
+  .wh-section--ink & {
+    color: var(--wh-lime);
+  }
+}
+
+.wh-lead {
+  max-width: 40rem;
+  color: var(--wh-ink-soft);
+  font-size: clamp(1.125rem, 2.2vw, 1.3rem);
+  line-height: 1.55;
+
+  .wh-section--ink & {
+    color: var(--wh-on-ink-muted);
+  }
+}
+
+.wh-small {
+  color: var(--wh-ink-soft);
+  font-size: 0.92rem;
+
+  .wh-section--ink & {
+    color: var(--wh-on-ink-muted);
+  }
+}
+
+/* Long-form text: guides and legal pages. */
+.wh-prose {
+  max-width: 46rem;
+  color: var(--wh-ink-soft);
+
+  h2 {
+    margin-top: 2.75rem;
+    color: var(--wh-ink);
+    font-size: clamp(1.5rem, 3.5vw, 2rem);
+    letter-spacing: -0.04em;
+  }
+
+  h3 {
+    margin-top: 1.75rem;
+    color: var(--wh-ink);
+  }
+
+  ul,
+  ol {
+    padding-left: 1.4rem;
+  }
+
+  li + li {
+    margin-top: 0.4rem;
+  }
+
+  a:not(.wh-button) {
+    color: var(--wh-ink);
+    font-weight: 600;
+    text-decoration-color: var(--wh-coral);
+    text-decoration-thickness: 2px;
+
+    &:hover {
+      text-decoration-color: currentColor;
+    }
+  }
+
+  strong {
+    color: var(--wh-ink);
+  }
+}
+
+/* ---------- Components ---------- */
+
+.wh-button {
+  display: inline-flex;
+  min-height: 3rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.4rem;
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  text-align: center;
+  text-decoration: none;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease;
+}
+
+.wh-button--primary {
+  background: var(--wh-ink);
+  color: var(--wh-on-ink);
+
+  &:hover {
+    background: var(--wh-ink-soft);
+  }
+}
+
+.wh-button--lime {
+  background: var(--wh-lime);
+  color: var(--wh-ink);
+
+  &:hover {
+    background: #d8f693;
+  }
+}
+
+.wh-button--outline {
+  border-color: currentColor;
+
+  &:hover {
+    background: rgba(23, 33, 29, 0.06);
+  }
+
+  .wh-section--ink &:hover {
+    background: rgba(255, 255, 255, 0.08);
+  }
+}
+
+.wh-button--small {
+  min-height: 2.5rem;
+  padding: 0.5rem 1.1rem;
+  font-size: 0.95rem;
+}
+
+.wh-button--block {
+  width: 100%;
+}
+
+.wh-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.wh-card {
+  padding: clamp(1.25rem, 3vw, 2rem);
+  border: 1px solid var(--wh-line);
+  border-radius: var(--wh-radius);
+  background: var(--wh-panel);
+
+  > :last-child {
+    margin-bottom: 0;
+  }
+}
+
+/* Low specificity: any class set on a paragraph (eyebrow, result...) wins. */
+:where(.wh-card) p {
+  color: var(--wh-ink-soft);
+}
+
+.wh-icon-badge {
+  display: grid;
+  width: 2.75rem;
+  height: 2.75rem;
+  place-items: center;
+  margin-bottom: 1.1rem;
+  border-radius: 0.9rem;
+  background: var(--wh-lime-soft);
+  color: var(--wh-ink);
+}
+
+.wh-checklist {
+  display: grid;
+  gap: 0.65rem;
+  padding: 0;
+  list-style: none;
+
+  li {
+    position: relative;
+    padding-left: 2rem;
+  }
+
+  li::before {
+    content: '';
+    position: absolute;
+    top: 0.18em;
+    left: 0;
+    width: 1.3rem;
+    height: 1.3rem;
+    border-radius: 50%;
+    background: var(--wh-lime)
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2317211d' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7'/%3E%3C/svg%3E")
+      center / 0.8rem no-repeat;
+  }
+}
+
+.wh-note {
+  padding: 1rem 1.25rem;
+  border-left: 4px solid var(--wh-lime);
+  border-radius: 0.9rem;
+  background: var(--wh-lime-soft);
+  color: var(--wh-ink);
+  line-height: 1.55;
+
+  > :last-child {
+    margin-bottom: 0;
+  }
+}
+
+.wh-note--coral {
+  border-left-color: var(--wh-coral);
+  background: var(--wh-coral-soft);
+}
+
+.wh-table-wrap {
+  margin-bottom: 1.5rem;
+  overflow-x: auto;
+  border: 1px solid var(--wh-line);
+  border-radius: 1rem;
+  background: var(--wh-panel);
+}
+
+.wh-table {
+  width: 100%;
+  margin: 0;
+  border-collapse: collapse;
+  color: var(--wh-ink);
+  font-size: 0.95rem;
+
+  caption {
+    padding: 0.9rem 1rem 0.25rem;
+    color: var(--wh-muted);
+    font-size: 0.85rem;
+    text-align: left;
+  }
+
+  th,
+  td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--wh-line);
+    text-align: left;
+    vertical-align: top;
+  }
+
+  thead th {
+    color: var(--wh-ink-soft);
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  tbody tr:last-child > *,
+  tfoot tr:last-child > * {
+    border-bottom: 0;
+  }
+
+  tfoot {
+    background: var(--wh-lime-soft);
+    font-weight: 700;
+  }
+
+  .is-num {
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    white-space: nowrap;
+  }
+}
+
+/* Text still to be written by the publisher, highlighted on purpose. */
+.wh-placeholder {
+  padding: 0.1em 0.35em;
+  border-radius: 0.35em;
+  background: var(--wh-coral-soft);
+  color: var(--wh-ink);
+  font-weight: 700;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+.wh-visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  border: 0;
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

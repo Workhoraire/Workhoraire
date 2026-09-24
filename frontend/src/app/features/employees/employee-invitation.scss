@@ -128,9 +128,16 @@ h1 {
 
 .invitation-actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  justify-content: center;
   gap: 0.75rem;
   margin-top: 2rem;
+}
+
+/* A label never breaks inside a button: the buttons go to the next line instead. */
+.invitation-actions > * {
+  white-space: nowrap;
 }
 
 @media (max-width: 520px) {

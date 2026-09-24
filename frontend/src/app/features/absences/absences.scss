@@ -72,3 +72,8 @@
     grid-template-columns: minmax(0, 24rem) minmax(0, 1fr);
   }
 }
+
+.row-action {
+  text-align: right;
+  white-space: nowrap;
+}

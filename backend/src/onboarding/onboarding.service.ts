@@ -9,8 +9,10 @@ import {
   KeycloakUser,
   toApplicationUserResponse,
 } from '../auth/auth.types';
+import { initialContractPeriod } from '../employees/contract-periods';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCompanyDto } from './dto/create-company.dto';
+import { CURRENT_TERMS_VERSION } from './terms';
 
 const DEFAULT_TIMEZONE = 'Europe/Paris';
 
@@ -46,6 +48,8 @@ export class OnboardingService {
             name,
             siret,
             timezone,
+            termsAcceptedAt: new Date(),
+            termsVersion: CURRENT_TERMS_VERSION,
           },
         });
 
@@ -53,11 +57,15 @@ export class OnboardingService {
           data: {
             keycloakSubject: keycloakUser.sub,
             email: keycloakUser.email ?? null,
-            firstName: keycloakUser.given_name ?? null,
-            lastName: keycloakUser.family_name ?? null,
+            firstName: dto.firstName?.trim() || keycloakUser.given_name || null,
+            lastName: dto.lastName?.trim() || keycloakUser.family_name || null,
             role: UserRole.ADMIN,
             companyId: company.id,
           },
+        });
+
+        await transaction.contractPeriod.create({
+          data: initialContractPeriod(company.id, user.id, user.weeklyContractMinutes),
         });
 
         return toApplicationUserResponse(user, company);

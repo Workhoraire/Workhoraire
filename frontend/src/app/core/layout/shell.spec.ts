@@ -75,7 +75,8 @@ describe('Shell navigation', () => {
   it('gives administrators every page and moves the extra ones to the "Plus" menu on phones', async () => {
     const element = await renderShellAs('ADMIN');
 
-    expect(sideLinks(element).length).toBe(7);
+    expect(sideLinks(element).length).toBe(8);
+    expect(sideLinks(element)).toContain('Abonnement');
     expect(labels(element, '.bottom-nav .bottom-link')).toEqual([
       'Accueil',
       'Pointer',

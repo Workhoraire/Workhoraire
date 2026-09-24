@@ -22,7 +22,7 @@
       <div class="tab-body layout">
         <section class="wh-card" aria-labelledby="request-title">
           <h2 id="request-title">Nouvelle demande</h2>
-          <form class="wh-form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+          <form class="wh-form" [formGroup]="form" #formRef="ngForm" (ngSubmit)="submit(formRef)" novalidate>
             <mat-form-field>
               <mat-label>Type d’absence</mat-label>
               <mat-select formControlName="type">
@@ -78,11 +78,8 @@
                   @if (request.comment) {
                     <p class="wh-muted">« {{ request.comment }} »</p>
                   }
-                  @if (request.reviewedBy) {
-                    <p class="wh-muted">
-                      {{ request.status === 'APPROVED' ? 'Acceptée' : 'Traitée' }} par
-                      {{ fullName(request.reviewedBy) }}{{ request.reviewComment ? ' : « ' + request.reviewComment + ' »' : '' }}
-                    </p>
+                  @if (decisionLabel(request); as decision) {
+                    <p class="wh-muted">{{ decision }}</p>
                   }
                   @if (canCancel(request)) {
                     <div class="wh-actions">
@@ -174,6 +171,7 @@
                     <th scope="col">Période</th>
                     <th scope="col" class="wh-num">Jours</th>
                     <th scope="col">Statut</th>
+                    <th scope="col"><span class="wh-visually-hidden">Action</span></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -184,6 +182,13 @@
                       <td>{{ period(request) }}</td>
                       <td class="wh-num">{{ request.days.toString().replace('.', ',') }}</td>
                       <td><span class="wh-chip" [class]="statusClass(request.status)">{{ statusLabels[request.status] }}</span></td>
+                      <td class="row-action">
+                        @if (canRevoke(request)) {
+                          <button mat-button type="button" [disabled]="busyId() === request.id" (click)="revoke(request)">
+                            Annuler
+                          </button>
+                        }
+                      </td>
                     </tr>
                   }
                 </tbody>

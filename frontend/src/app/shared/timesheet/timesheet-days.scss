@@ -48,7 +48,11 @@
   margin: 0;
   font-size: 0.95rem;
   font-weight: 750;
-  text-transform: capitalize;
+}
+
+/* "Lun. 21 sept." : only the first letter, French months stay in lower case. */
+.day-name::first-letter {
+  text-transform: uppercase;
 }
 
 .day-tags {

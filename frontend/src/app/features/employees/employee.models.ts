@@ -28,6 +28,11 @@ export interface UpdateEmployeeRequest {
   role?: UserRole;
   isActive?: boolean;
   weeklyContractMinutes?: number;
+  /**
+   * "YYYY-MM-DD": the new contract applies from the Monday of that week, past
+   * weeks keep the former one. Default: the current week.
+   */
+  contractEffectiveFrom?: string;
   /** An empty string removes the payroll number. */
   payrollId?: string;
 }
@@ -41,4 +46,8 @@ export interface EmployeeInvitation {
   weeklyContractMinutes: number;
   token: string;
   expiresAt: string;
+  /** True when this link replaces a previous one, which no longer works. */
+  replacesPrevious: boolean;
+  /** True when the link was also sent by e-mail to the invited address. */
+  emailSent: boolean;
 }

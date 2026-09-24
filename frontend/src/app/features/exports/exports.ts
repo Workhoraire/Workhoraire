@@ -97,7 +97,8 @@ export class Exports {
           link.href = url;
           link.download = `workhoraire-${granularity === 'week' ? 'semaines' : 'jours'}-${period.from}_${period.to}.csv`;
           link.click();
-          URL.revokeObjectURL(url);
+          // Some browsers start the download asynchronously: keep the file available a moment.
+          window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
         },
         error: async (response: HttpErrorResponse) => {
           this.downloading.set(null);

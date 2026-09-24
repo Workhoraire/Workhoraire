@@ -6,17 +6,23 @@
 ## Epic A. Compte et entreprise (existant, complété)
 
 **A1. Créer mon entreprise** : en tant que dirigeant, je crée mon espace et deviens ADMIN.
-- Nom (2 à 120 caractères), SIRET facultatif (14 chiffres), fuseau horaire IANA (Europe/Paris par défaut).
+- Prénom et nom de l'administrateur, nom de l'entreprise (2 à 120 caractères), SIRET facultatif (14 chiffres), fuseau horaire IANA (Europe/Paris par défaut).
 - La création de l'entreprise et de l'administrateur est atomique ; un compte déjà rattaché est refusé.
+- La page avertit les salariés invités : ils ne doivent pas créer d'entreprise, mais ouvrir le lien reçu et s'inscrire avec l'adresse exacte de l'invitation.
 
 **A2. Inviter un salarié**, avec son rôle et sa **durée contractuelle hebdomadaire** (1 à 48 h, 35 h par défaut).
+- Le lien ouvre une page d'accueil : « Bonjour Nora, Boulangerie Martin vous invite… ». Le bouton « Créer mon mot de passe » ouvre l'inscription avec l'adresse déjà remplie : **seuls le mot de passe et sa confirmation sont demandés**. Au retour, la personne arrive directement dans l'entreprise. « J'ai déjà un compte » permet de se connecter.
 - Le lien d'invitation expire au bout de 7 jours et n'est utilisable qu'une fois ; le jeton est stocké haché.
 - L'acceptation exige l'adresse e-mail invitée et, par défaut, une adresse **vérifiée** par Keycloak (ADR 0004).
 - La durée contractuelle de l'invitation est reprise sur le compte créé.
+- Une nouvelle invitation pour la même adresse remplace la précédente, dont le lien ne fonctionne plus : un lien perdu ne bloque pas l'adresse.
+- Ouvert avec un autre compte, le lien nomme le compte utilisé et propose « Changer de compte » : après la déconnexion, on revient sur le lien pour se connecter ou s'inscrire avec la bonne adresse. La page ne propose jamais de créer une entreprise.
 
 **A3. Gérer les salariés** (ADMIN) : nom, e-mail, rôle, durée contractuelle, **matricule paie**, activation.
 - Un administrateur ne peut ni se désactiver ni se rétrograder.
-- Un salarié désactivé ne peut plus se connecter à l'application, mais son historique reste dans les feuilles de temps et les exports.
+- Un changement de durée contractuelle est **daté** : il s'applique à partir du lundi de la semaine choisie (la semaine en cours par défaut), et les semaines précédentes gardent l'ancien contrat (ADR 0007).
+- Le matricule paie est unique dans l'entreprise.
+- Un salarié désactivé ne peut plus se connecter à l'application : une page le lui explique. Son historique reste dans les feuilles de temps et les exports.
 
 ## Epic B. Pointage
 
@@ -32,7 +38,7 @@
 - Il compte **0 heure** et déclenche l'alerte « Sortie non pointée ».
 - Le salarié déclare l'heure réelle de fin, avec un motif. La fin doit être après le début, pas dans le futur, et la période ne peut dépasser 24 h.
 - La déclaration est inscrite dans la piste d'audit, avec le salarié comme auteur.
-- Pointer la sortie « maintenant » est refusé au-delà de 24 h d'ouverture.
+- Pointer la sortie « maintenant » est refusé au-delà de 12 h d'ouverture : le salarié déclare alors l'heure réelle.
 
 ## Epic C. Corrections et traçabilité (MANAGER, ADMIN)
 
@@ -43,6 +49,8 @@
 
 **C2. Corriger une période** : début, fin ou note, avec **motif obligatoire**.
 - Renseigner la fin d'un pointage ouvert le clôture.
+- Seuls les champs réellement modifiés sont enregistrés. Une période ne change pas de jour : il faut la supprimer, puis l'ajouter au bon jour.
+- Deux corrections simultanées ne peuvent pas créer de chevauchement. Une correction faite sur une version périmée est refusée, avec un message qui demande d'actualiser la page.
 - La période est marquée « Corrigé ».
 
 **C3. Supprimer une période** avec un motif. Elle disparaît des heures, mais la piste d'audit conserve sa valeur d'origine.
@@ -63,11 +71,12 @@
 
 **D3. Calculs** (voir le moteur de calcul) :
 - les heures sont rattachées au jour local de début, dans le fuseau de l'entreprise ;
-- semaine civile du lundi au dimanche ;
-- heures sup +25 % puis +50 % au-delà de 35 h, les congés payés comptant dans le seuil ;
+- semaine civile du lundi au dimanche ; une nuit du dimanche au lundi est coupée au lundi 0 h pour le total de la semaine ;
+- chaque semaine est calculée avec le contrat en vigueur son lundi ;
+- heures sup +25 % puis +50 % au-delà de 35 h, les congés payés comptant dans le seuil, sauf un jour où des heures sont pointées ;
 - heures complémentaires +10 % jusqu'à 1/10 du contrat, puis +25 %.
 
-**D4. Alertes** : 10 h par jour, 48 h par semaine, pause de 20 min dès 6 h, repos de 11 h, plus de 6 jours travaillés, heures complémentaires au-delà de 1/10 du contrat, sortie non pointée.
+**D4. Alertes** : 10 h par jour, 48 h par semaine, pause de 20 min dès 6 h, repos de 11 h, plus de 6 jours travaillés, heures complémentaires au-delà de 1/10 du contrat, sortie non pointée, heures pointées pendant une absence validée.
 - Chaque alerte indique la valeur mesurée, le seuil et sa base légale.
 - Les alertes sont informatives, jamais bloquantes.
 
@@ -78,14 +87,18 @@
 - Le décompte se fait en **jours ouvrés**, jours fériés exclus : par exemple, du 9 au 13 novembre 2026 = 4 jours.
 - La demande est refusée si elle ne couvre aucun jour ouvré, chevauche une demande en attente ou acceptée (à la demi-journée près), ou dure plus de 366 jours.
 - Le commentaire est facultatif, et l'interface rappelle de n'y mettre aucune information médicale.
+- Si deux demandes identiques sont envoyées en même temps (double clic, deux appareils), une seule est enregistrée.
 
 **E2. Valider ou refuser** (MANAGER, ADMIN), avec un commentaire facultatif.
 - Une demande ne se traite qu'une fois, même si deux personnes valident en même temps.
+- La validation est refusée si la période chevauche une absence déjà acceptée.
 - Un MANAGER ne traite pas sa propre demande.
 
-**E3. Annuler ma demande** tant qu'elle est en attente, ou acceptée mais pas encore commencée.
+**E3. Annuler ma demande** tant qu'elle est en attente, ou acceptée mais pas encore commencée. J'apparais alors comme l'auteur de l'annulation.
 
 **E4.** Les absences acceptées apparaissent dans les feuilles de temps, le tableau de bord et les exports.
+
+**E5. Annuler une absence acceptée** (MANAGER, ADMIN), même commencée (retour anticipé, erreur de saisie), avec un **motif obligatoire**. Le salarié voit qui l'a annulée, et pourquoi. Un MANAGER n'annule pas sa propre absence.
 
 ## Epic F. Tableau de bord (MANAGER, ADMIN)
 
@@ -113,10 +126,10 @@
 |---|---|---|
 | Sécurité | Isolation stricte par entreprise : `companyId` jamais lu depuis le client, vérifié à chaque requête | ✅ testé (unitaires et e2e) |
 | Sécurité | Validation stricte des entrées (liste blanche, champs inconnus refusés, dates ISO avec fuseau) | ✅ |
-| Intégrité | Contraintes SQL : fin > début, un seul pointage ouvert, dates d'absence cohérentes, durée contractuelle de 1 à 48 h | ✅ |
+| Intégrité | Contraintes SQL : fin > début, un seul pointage ouvert, dates d'absence cohérentes, durée contractuelle de 1 à 48 h, contrats datés d'un lundi, matricule unique ; verrous contre les écritures simultanées | ✅ testé (e2e) |
 | Accessibilité | Libellés ARIA, contrastes, navigation au clavier, `lang="fr"` | 🟡 à auditer (RGAA) |
 | Mobile | Mise en page mobile d'abord, barre de navigation basse, bouton de pointage large | ✅ vérifié visuellement |
-| Performance | Bundle initial < 500 kB (469 kB) ; pages chargées à la demande | ✅ |
+| Performance | Bundle initial < 500 kB (457 kB) ; pages chargées à la demande | ✅ |
 | Vie privée | Polices auto-hébergées (aucun appel à Google Fonts) ; pas de traceur | ✅ |
 | Fuseaux | Calculs dans le fuseau de l'entreprise, heure d'été incluse | ✅ testé |
 

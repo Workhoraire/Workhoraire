@@ -15,7 +15,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { RouterLink } from '@angular/router';
-import { Observable, forkJoin } from 'rxjs';
+import { Observable, Subscription, forkJoin } from 'rxjs';
 
 import { CurrentUser } from '../../core/auth/auth.models';
 import { apiErrorMessage } from '../../core/http/error-message';
@@ -157,6 +157,8 @@ export class EmployeeTimesheetPage {
   protected readonly auditLogs = signal<TimeEntryAuditLog[]>([]);
   protected readonly loading = signal(true);
   protected readonly error = signal<string | null>(null);
+  /** Only the last requested week may be displayed, even if an older response arrives later. */
+  private loadSubscription?: Subscription;
 
   protected readonly isOwnSheetForManager = computed(() => {
     const user = this.currentUser();
@@ -258,8 +260,9 @@ export class EmployeeTimesheetPage {
     const to = addDays(from, 6);
     this.loading.set(true);
     this.error.set(null);
+    this.loadSubscription?.unsubscribe();
 
-    forkJoin({
+    this.loadSubscription = forkJoin({
       timesheet: this.timeService.getEmployeeTimesheet(employeeId, from, to),
       auditLogs: this.timeService.getAuditLogs(from, to, employeeId),
     }).subscribe({

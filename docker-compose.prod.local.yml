@@ -1,0 +1,15 @@
+# Local rehearsal of the production stack on *.localhost domains, with Caddy's
+# local certificate authority instead of Let's Encrypt. Never on a server.
+#
+#   docker compose -f docker-compose.prod.yml -f docker-compose.prod.local.yml \
+#     --env-file .env.prod-local up -d --build
+services:
+  proxy:
+    environment:
+      CADDY_EXTRA_GLOBAL: local_certs
+
+  api:
+    environment:
+      # The API calls Keycloak through its public URL, whose certificate comes
+      # from Caddy's local authority here: skip the check, for this rehearsal only.
+      NODE_TLS_REJECT_UNAUTHORIZED: "0"

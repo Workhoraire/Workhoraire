@@ -1,0 +1,20 @@
+{
+  "publisher": {
+    "name": null,
+    "legalForm": null,
+    "shareCapital": null,
+    "address": null,
+    "registration": null,
+    "vatNumber": null,
+    "vatExempt": null,
+    "email": null,
+    "phone": null,
+    "publicationDirector": null
+  },
+  "hosting": {
+    "name": "OVH SAS",
+    "address": "2 rue Kellermann, 59100 Roubaix, France",
+    "phone": "+33 9 72 10 10 07",
+    "website": "https://www.ovhcloud.com/fr/"
+  }
+}

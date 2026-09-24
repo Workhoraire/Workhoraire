@@ -6,6 +6,8 @@ import {
 } from '@nestjs/common';
 import { Prisma, TimeEntryAuditAction, TimeEntrySource, UserRole } from '@prisma/client';
 import { ApplicationUser } from '../auth/auth.types';
+import { ConfigService } from '@nestjs/config';
+import { MailService } from '../notifications/mail.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { TimesheetsService } from '../timesheets/timesheets.service';
 import { TimeEntriesService } from './time-entries.service';
@@ -46,6 +48,8 @@ describe('TimeEntriesService', () => {
   let auditCreate: jest.Mock;
   let auditFindMany: jest.Mock;
   let userFindFirst: jest.Mock;
+  let lockQuery: jest.Mock;
+  let mail: { send: jest.Mock; enabled: boolean };
 
   function storedEntry(overrides: Record<string, unknown> = {}) {
     return {
@@ -75,8 +79,13 @@ describe('TimeEntriesService', () => {
     auditCreate = jest.fn();
     auditFindMany = jest.fn().mockResolvedValue([]);
     userFindFirst = jest.fn();
+    lockQuery = jest.fn().mockResolvedValue([]);
 
-    const transaction = { timeEntry, timeEntryAuditLog: { create: auditCreate } };
+    const transaction = {
+      timeEntry,
+      timeEntryAuditLog: { create: auditCreate },
+      $queryRaw: lockQuery,
+    };
     const prisma = {
       timeEntry,
       timeEntryAuditLog: { create: auditCreate, findMany: auditFindMany },
@@ -86,7 +95,14 @@ describe('TimeEntriesService', () => {
       ),
     } as unknown as PrismaService;
 
-    service = new TimeEntriesService(prisma, {} as TimesheetsService);
+    // E-mails off by default: one test below turns them on.
+    mail = { send: jest.fn().mockResolvedValue(true), enabled: false };
+    service = new TimeEntriesService(
+      prisma,
+      {} as TimesheetsService,
+      mail as unknown as MailService,
+      { get: (_key: string, fallback: string) => fallback } as unknown as ConfigService,
+    );
   });
 
   describe('clocking', () => {
@@ -136,13 +152,14 @@ describe('TimeEntriesService', () => {
       expect(result).toMatchObject({ isOpen: false, durationMinutes: 600 });
     });
 
-    it('asks to declare the end time instead of clocking out an entry open for over 24 hours', async () => {
+    it('asks to declare the end time instead of clocking out an entry open for over 12 hours', async () => {
+      // Opened at 03:00 UTC, clock-out at 16:00 UTC: 13 hours, most likely a forgotten exit.
       timeEntry.findUnique.mockResolvedValue(
-        storedEntry({ startAt: new Date('2026-09-22T06:00:00.000Z') }),
+        storedEntry({ startAt: new Date('2026-09-23T03:00:00.000Z') }),
       );
 
       await expect(service.clockOut(employee, {}, now)).rejects.toThrow(
-        'This entry has been open for more than 24 hours: declare its end time',
+        'This entry has been open for more than 12 hours: declare its end time',
       );
       expect(timeEntry.update).not.toHaveBeenCalled();
     });
@@ -232,6 +249,11 @@ describe('TimeEntriesService', () => {
           createdById: 'manager-1',
         }),
       });
+      // The employee row is locked before the overlap check (concurrent corrections).
+      expect(lockQuery).toHaveBeenCalled();
+      expect(lockQuery.mock.invocationCallOrder[0]).toBeLessThan(
+        timeEntry.findFirst.mock.invocationCallOrder[0],
+      );
       expect(auditCreate).toHaveBeenCalledWith({
         data: expect.objectContaining({
           action: TimeEntryAuditAction.CREATED,
@@ -275,6 +297,37 @@ describe('TimeEntriesService', () => {
       ).resolves.toBeDefined();
     });
 
+    it('tells the employee by e-mail about a correction, with the reason', async () => {
+      mail.enabled = true;
+      const closed = storedEntry({
+        endAt: new Date('2026-09-22T10:00:00.000Z'),
+        openUserId: null,
+        startAt: new Date('2026-09-22T06:00:00.000Z'),
+      });
+      timeEntry.findFirst.mockResolvedValueOnce(closed).mockResolvedValueOnce(null);
+      timeEntry.update.mockImplementation(({ data }) => Promise.resolve({ ...closed, ...data }));
+      userFindFirst.mockResolvedValue({ email: 'emma@example.com', firstName: 'Emma', isActive: true });
+
+      await service.updateEntry(
+        { ...manager, firstName: 'Karim', lastName: 'Benali' } as ApplicationUser,
+        'entry-1',
+        { endAt: '2026-09-22T10:30:00.000Z', reason: 'Livraison tardive' },
+        now,
+      );
+      // The e-mail leaves after the correction is saved, without delaying it.
+      await new Promise((resolve) => setImmediate(resolve));
+
+      expect(mail.send).toHaveBeenCalledWith(
+        'emma@example.com',
+        expect.objectContaining({
+          subject: 'Vos heures du mardi 22 septembre ont été corrigées',
+          text: expect.stringContaining('Avant : 08:00 – 12:00'),
+        }),
+      );
+      expect(mail.send.mock.calls[0][1].text).toContain('Après : 08:00 – 12:30');
+      expect(mail.send.mock.calls[0][1].text).toContain('Motif : « Livraison tardive »');
+    });
+
     it('updates an entry of the company with a before/after snapshot', async () => {
       const closed = storedEntry({
         endAt: new Date('2026-09-22T11:00:00.000Z'),
@@ -296,6 +349,10 @@ describe('TimeEntriesService', () => {
       expect(timeEntry.findFirst).toHaveBeenNthCalledWith(1, {
         where: { id: 'entry-1', companyId: 'company-a' },
       });
+      // Optimistic lock: only the version that was checked is updated.
+      expect(timeEntry.update).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: 'entry-1', updatedAt: closed.updatedAt } }),
+      );
       expect(auditCreate).toHaveBeenCalledWith({
         data: expect.objectContaining({
           action: TimeEntryAuditAction.UPDATED,
@@ -311,7 +368,9 @@ describe('TimeEntriesService', () => {
 
       await service.deleteEntry(admin, 'entry-1', { reason: 'Doublon' });
 
-      expect(timeEntry.delete).toHaveBeenCalledWith({ where: { id: 'entry-1' } });
+      expect(timeEntry.delete).toHaveBeenCalledWith({
+        where: { id: 'entry-1', updatedAt: closed.updatedAt },
+      });
       expect(auditCreate).toHaveBeenCalledWith({
         data: expect.objectContaining({
           action: TimeEntryAuditAction.DELETED,
@@ -320,6 +379,58 @@ describe('TimeEntriesService', () => {
           after: Prisma.DbNull,
         }),
       });
+    });
+
+    it('refuses to move an entry to another day, which would hide its trail', async () => {
+      timeEntry.findFirst.mockResolvedValue(
+        storedEntry({
+          startAt: new Date('2026-09-21T06:00:00.000Z'),
+          endAt: new Date('2026-09-21T10:00:00.000Z'),
+          openUserId: null,
+        }),
+      );
+
+      await expect(
+        service.updateEntry(
+          manager,
+          'entry-1',
+          {
+            startAt: '2026-06-01T06:00:00.000Z',
+            endAt: '2026-06-01T10:00:00.000Z',
+            reason: 'Déplacement',
+          },
+          now,
+        ),
+      ).rejects.toThrow('An entry cannot be moved to another day: delete it and create a new one');
+      expect(timeEntry.update).not.toHaveBeenCalled();
+    });
+
+    it('bounds the start of an open entry to the last 24 hours', async () => {
+      timeEntry.findFirst.mockResolvedValue(storedEntry());
+
+      await expect(
+        service.updateEntry(
+          manager,
+          'entry-1',
+          { startAt: '2026-09-23T00:30:00+02:00', reason: 'Arrivée plus tôt' },
+          new Date('2026-09-24T01:00:00+02:00'),
+        ),
+      ).rejects.toThrow('An entry cannot last more than 24 hours');
+    });
+
+    it('turns a concurrent change or deletion into a 409 instead of a 500', async () => {
+      const closed = storedEntry({ endAt: new Date('2026-09-22T11:00:00.000Z'), openUserId: null });
+      timeEntry.findFirst.mockResolvedValue(closed);
+      timeEntry.delete.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError('Record not found', {
+          code: 'P2025',
+          clientVersion: 'test',
+        }),
+      );
+
+      await expect(service.deleteEntry(admin, 'entry-1', { reason: 'Doublon' })).rejects.toThrow(
+        'This time entry has changed, reload it and retry',
+      );
     });
 
     it('returns 404 for an entry of another company', async () => {

@@ -1,0 +1,5 @@
+# Replace http://localhost:4400 with the public address of the site (siteUrl).
+User-agent: *
+Allow: /
+
+Sitemap: http://localhost:4400/sitemap.xml

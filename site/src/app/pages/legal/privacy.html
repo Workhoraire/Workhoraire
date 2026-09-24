@@ -1,0 +1,209 @@
+<section class="wh-page-hero wh-glow" aria-labelledby="page-title">
+  <div class="wh-container">
+    <p class="wh-eyebrow">Informations légales</p>
+    <h1 id="page-title">Politique de confidentialité</h1>
+    <p class="wh-lead">Mise à jour le {{ updatedOn }}.</p>
+  </div>
+</section>
+
+<div class="wh-container legal">
+  <div class="wh-prose">
+    @if (draft) {
+      <p class="wh-note wh-note--coral draft-notice" role="note">
+        L’identité de l’éditeur sera complétée à l’immatriculation de la société, avant l’ouverture
+        du service au public.
+      </p>
+    }
+
+    <h2>En bref</h2>
+    <ul>
+      <li>Ce site ne dépose aucun cookie et n’utilise aucun traceur.</li>
+      <li>
+        Les heures, les absences et l’identité des salariés sont traitées <strong>pour le compte
+        de leur employeur</strong>, qui en est responsable. WorkHoraire agit comme sous-traitant.
+      </li>
+      <li>
+        Les données de l’application sont hébergées en France. WorkHoraire ne vend aucune donnée,
+        ne fait pas de publicité et n’utilise pas les données des salariés à d’autres fins que le
+        service, par exemple pour entraîner des modèles d’intelligence artificielle.
+      </li>
+      <li>Le paiement est géré par Stripe&nbsp;: WorkHoraire ne voit jamais vos coordonnées bancaires.</li>
+    </ul>
+
+    <h2>1. Qui est responsable de vos données&nbsp;?</h2>
+    <h3>Vous êtes salarié d’une entreprise cliente</h3>
+    <p>
+      Votre employeur est <strong>responsable du traitement</strong> de vos heures, de vos absences
+      et de votre identité dans WorkHoraire. Il choisit de les enregistrer, pour remplir ses
+      obligations de décompte du temps de travail. WorkHoraire agit comme
+      <strong>sous-traitant</strong>, au sens de l’article&nbsp;28 du RGPD, selon le
+      <a routerLink="/sous-traitance">contrat de sous-traitance</a>.
+    </p>
+    <p>
+      Pour exercer vos droits sur ces données, adressez-vous d’abord à votre employeur. Si vous
+      nous écrivez, nous lui transmettons votre demande et l’aidons à y répondre.
+    </p>
+
+    <h3>Vous êtes client, prospect ou visiteur du site</h3>
+    <p>
+      L’éditeur de WorkHoraire est responsable des traitements décrits ci-dessous&nbsp;: le compte
+      de votre entreprise, la facturation, les échanges avec nous et la sécurité du service.
+    </p>
+    <dl class="facts">
+      <dt>Responsable</dt>
+      <dd><app-legal-field [value]="publisher.name" label="dénomination de l’éditeur" /></dd>
+      <dt>Adresse</dt>
+      <dd><app-legal-field [value]="publisher.address" label="adresse du siège" /></dd>
+      <dt>Contact</dt>
+      <dd>
+        @if (publisher.email) {
+          <a [href]="'mailto:' + publisher.email">{{ publisher.email }}</a>
+        } @else {
+          <app-legal-field label="adresse e-mail de contact" />
+        }
+      </dd>
+    </dl>
+    <p>
+      WorkHoraire n’a pas désigné de délégué à la protection des données&nbsp;: écrivez à
+      l’adresse ci-dessus pour toute question.
+    </p>
+
+    <h2>2. Ce que WorkHoraire traite en tant que responsable</h2>
+
+    <h3>Sécurité du site et du service</h3>
+    <dl class="facts">
+      <dt>Données</dt>
+      <dd>Adresse IP, date et heure, adresse demandée, navigateur (journaux du serveur)</dd>
+      <dt>Finalité</dt>
+      <dd>Assurer la sécurité du service, détecter et bloquer les abus</dd>
+      <dt>Base légale</dt>
+      <dd>Intérêt légitime (article&nbsp;6.1.f du RGPD)</dd>
+      <dt>Conservation</dt>
+      <dd>6&nbsp;mois</dd>
+    </dl>
+
+    <h3>Compte de votre entreprise</h3>
+    <dl class="facts">
+      <dt>Données</dt>
+      <dd>
+        Nom, prénom et adresse e-mail de l’administrateur, nom de l’entreprise, SIRET, fuseau
+        horaire, date et version des conditions générales acceptées
+      </dd>
+      <dt>Finalité</dt>
+      <dd>Créer et gérer le compte, fournir le service, vous informer sur votre abonnement</dd>
+      <dt>Base légale</dt>
+      <dd>Exécution du contrat (article&nbsp;6.1.b du RGPD)</dd>
+      <dt>Conservation</dt>
+      <dd>
+        Pendant le contrat, puis suppression dans les 30&nbsp;jours qui suivent la clôture du
+        compte. La preuve de l’acceptation des conditions générales est gardée 5&nbsp;ans après la
+        fin du contrat, délai de prescription des actions entre commerçants.
+      </dd>
+    </dl>
+
+    <h3>Facturation et paiement</h3>
+    <dl class="facts">
+      <dt>Données</dt>
+      <dd>
+        Dénomination, adresse de facturation, numéro de TVA, adresse e-mail, nombre de salariés
+        actifs par mois, factures. Les coordonnées bancaires sont saisies chez Stripe et ne
+        transitent pas par WorkHoraire.
+      </dd>
+      <dt>Finalité</dt>
+      <dd>Facturer l’abonnement, encaisser les paiements, tenir la comptabilité</dd>
+      <dt>Base légale</dt>
+      <dd>Exécution du contrat, et obligation légale pour la comptabilité (article&nbsp;6.1.c du RGPD)</dd>
+      <dt>Conservation</dt>
+      <dd>Factures et pièces comptables&nbsp;: 10&nbsp;ans (article L123-22 du Code de commerce)</dd>
+    </dl>
+
+    <h3>Échanges avec nous</h3>
+    <dl class="facts">
+      <dt>Données</dt>
+      <dd>Nom, adresse e-mail, entreprise, contenu de vos messages</dd>
+      <dt>Finalité</dt>
+      <dd>Répondre à vos questions et à vos demandes d’assistance</dd>
+      <dt>Base légale</dt>
+      <dd>Intérêt légitime (article&nbsp;6.1.f du RGPD)</dd>
+      <dt>Conservation</dt>
+      <dd>3&nbsp;ans après notre dernier échange</dd>
+    </dl>
+
+    <h2>3. Qui reçoit ces données&nbsp;?</h2>
+    <p>
+      Seules les personnes habilitées de l’éditeur y accèdent, pour le besoin de leur mission.
+      WorkHoraire s’appuie sur les prestataires suivants&nbsp;:
+    </p>
+    <ul>
+      <li>
+        <strong>{{ hosting.name }}</strong>, hébergement du site, de l’application et des
+        sauvegardes, en France&nbsp;;
+      </li>
+      <li>
+        <strong>Brevo</strong> (Sendinblue SAS, Paris), envoi des e-mails du service&nbsp;:
+        invitations, notifications de correction et informations d’abonnement. Brevo héberge les
+        données dans l’Union européenne&nbsp;; certains de ses propres prestataires techniques
+        peuvent y accéder depuis les États-Unis, avec les garanties prévues par le RGPD&nbsp;;
+      </li>
+      <li>
+        <strong>Stripe</strong>, paiement et facturation de l’abonnement. Stripe contracte avec
+        les entreprises européennes depuis l’Irlande (Stripe Payments Europe, Limited). Stripe
+        peut transférer des données hors de l’Union européenne, notamment aux États-Unis, avec les
+        garanties prévues par le RGPD&nbsp;: décision d’adéquation du cadre de protection des
+        données UE–États-Unis et clauses contractuelles types. Stripe agit aussi comme
+        responsable de certains traitements, comme la prévention de la fraude&nbsp;: voir la
+        <a href="https://stripe.com/fr/privacy" rel="noopener">politique de confidentialité de Stripe</a>.
+      </li>
+    </ul>
+    <p>Aucune donnée n’est vendue ni cédée à des fins commerciales.</p>
+
+    <h2>4. Cookies et stockage dans le navigateur</h2>
+    <p>
+      <strong>Le site</strong> ne dépose aucun cookie et ne mesure pas l’audience&nbsp;: aucun
+      bandeau de consentement n’est donc nécessaire.
+    </p>
+    <p>
+      <strong>L’application</strong> utilise seulement des éléments strictement nécessaires à son
+      fonctionnement&nbsp;: les cookies de session du service de connexion, qui vous gardent
+      connecté et protègent le formulaire de connexion, et le stockage local du navigateur, qui
+      retient par exemple l’offre choisie sur le site. Ces éléments sont dispensés de
+      consentement (article&nbsp;82 de la loi Informatique et Libertés et lignes directrices de
+      la CNIL, délibération n°&nbsp;2020-091). Aucun traceur publicitaire ou de mesure d’audience
+      n’est utilisé.
+    </p>
+
+    <h2>5. Sécurité</h2>
+    <p>
+      Échanges chiffrés (HTTPS), mots de passe gérés par le service de connexion et jamais
+      stockés en clair, droits d’accès par rôle, piste d’audit des corrections, sauvegardes
+      chiffrées chaque nuit dont la restauration est testée. Le détail est sur la page
+      <a routerLink="/securite">Sécurité</a> et dans l’annexe du
+      <a routerLink="/sous-traitance">contrat de sous-traitance</a>.
+    </p>
+
+    <h2>6. Vos droits</h2>
+    <p>
+      Vous disposez d’un droit d’accès, de rectification, d’effacement, de limitation du
+      traitement et de portabilité de vos données, ainsi que d’un droit d’opposition aux
+      traitements fondés sur l’intérêt légitime. Vous pouvez aussi définir des directives sur le
+      sort de vos données après votre décès (article&nbsp;85 de la loi Informatique et Libertés).
+    </p>
+    <p>
+      Écrivez à l’adresse de contact indiquée plus haut. Nous répondons dans un délai d’un mois,
+      qui peut être prolongé de deux mois pour une demande complexe (article&nbsp;12 du RGPD). En
+      cas de doute raisonnable sur votre identité, nous pouvons vous demander de la justifier.
+    </p>
+    <p>
+      Si vous estimez, après nous avoir contactés, que vos droits ne sont pas respectés, vous
+      pouvez adresser une réclamation à la CNIL&nbsp;: en ligne sur
+      <a href="https://www.cnil.fr/fr/plaintes" rel="noopener">www.cnil.fr/fr/plaintes</a>, ou
+      par courrier à la CNIL, Service des plaintes, 3&nbsp;place de Fontenoy, 75007&nbsp;Paris.
+    </p>
+
+    <h2>7. Modifications</h2>
+    <p>
+      Cette politique peut évoluer avec le service. Les entreprises clientes sont prévenues par
+      e-mail de tout changement important. La date de mise à jour figure en haut de la page.
+    </p>
+  </div>
+</div>

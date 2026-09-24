@@ -1,5 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { AbsenceRequest, AbsenceStatus, Prisma, TimeEntry } from '@prisma/client';
+import {
+  AbsenceRequest,
+  AbsenceStatus,
+  ContractPeriod,
+  Prisma,
+  TimeEntry,
+} from '@prisma/client';
 import { ApplicationUser } from '../auth/auth.types';
 import {
   addDays,
@@ -14,6 +20,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import {
   CalculatorAbsence,
   CalculatorEntry,
+  ContractSpan,
   calculateTimesheet,
   computedRange,
 } from './timesheet.calculator';
@@ -37,6 +44,7 @@ export const timesheetEmployeeSelect = {
 interface LoadedData {
   entries: TimeEntry[];
   absences: AbsenceRequest[];
+  contracts: ContractPeriod[];
   correctedIds: Set<string>;
 }
 
@@ -87,7 +95,7 @@ export class TimesheetsService {
     return this.buildEmployeeTimesheet(actor, employee, from, to, now);
   }
 
-  /** Timesheets of every active employee, plus inactive ones who worked in the period. */
+  /** Timesheets of every active employee, plus inactive ones with work or absences in the period. */
   async getTeamTimesheet(
     actor: ApplicationUser,
     from: string,
@@ -97,6 +105,7 @@ export class TimesheetsService {
     assertValidPeriod(from, to);
     const timezone = actor.company.timezone;
     const bounds = this.queryBounds(from, to, timezone);
+    const range = computedRange(from, to);
 
     const [employees, data] = await Promise.all([
       this.prisma.user.findMany({
@@ -105,6 +114,15 @@ export class TimesheetsService {
           OR: [
             { isActive: true },
             { timeEntries: { some: { startAt: { gte: bounds.start, lt: bounds.end } } } },
+            {
+              absenceRequests: {
+                some: {
+                  status: AbsenceStatus.APPROVED,
+                  startDate: { lte: dateKeyToDateColumn(range.to) },
+                  endDate: { gte: dateKeyToDateColumn(range.from) },
+                },
+              },
+            },
           ],
         },
         select: timesheetEmployeeSelect,
@@ -119,6 +137,9 @@ export class TimesheetsService {
         to,
         timezone,
         contractMinutes: employee.weeklyContractMinutes,
+        contracts: this.toContractSpans(
+          data.contracts.filter((contract) => contract.userId === employee.id),
+        ),
         entries: this.toCalculatorEntries(
           data.entries.filter((entry) => entry.userId === employee.id),
           data.correctedIds,
@@ -171,6 +192,7 @@ export class TimesheetsService {
       to,
       timezone,
       contractMinutes: employee.weeklyContractMinutes,
+      contracts: this.toContractSpans(data.contracts),
       entries: this.toCalculatorEntries(data.entries, data.correctedIds),
       absences: this.toCalculatorAbsences(data.absences),
       now,
@@ -201,7 +223,7 @@ export class TimesheetsService {
     const range = computedRange(from, to);
     const bounds = this.queryBounds(from, to, timezone);
 
-    const [entries, absences] = await Promise.all([
+    const [entries, absences, contracts] = await Promise.all([
       this.prisma.timeEntry.findMany({
         where: {
           companyId,
@@ -219,6 +241,10 @@ export class TimesheetsService {
           endDate: { gte: dateKeyToDateColumn(range.from) },
         },
       }),
+      this.prisma.contractPeriod.findMany({
+        where: { companyId, ...(userId ? { userId } : {}) },
+        orderBy: { effectiveFrom: 'asc' },
+      }),
     ]);
 
     const correctedIds = new Set<string>();
@@ -231,7 +257,7 @@ export class TimesheetsService {
       logs.forEach((log) => correctedIds.add(log.timeEntryId));
     }
 
-    return { entries, absences, correctedIds };
+    return { entries, absences, contracts, correctedIds };
   }
 
   private toCalculatorEntries(entries: TimeEntry[], correctedIds: Set<string>): CalculatorEntry[] {
@@ -242,6 +268,13 @@ export class TimesheetsService {
       source: entry.source,
       note: entry.note,
       isCorrected: correctedIds.has(entry.id),
+    }));
+  }
+
+  private toContractSpans(contracts: ContractPeriod[]): ContractSpan[] {
+    return contracts.map((contract) => ({
+      from: dateColumnToKey(contract.effectiveFrom),
+      minutes: contract.weeklyContractMinutes,
     }));
   }
 

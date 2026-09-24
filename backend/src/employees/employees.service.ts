@@ -15,10 +15,21 @@ import {
   KeycloakUser,
   toApplicationUserResponse,
 } from '../auth/auth.types';
+import {
+  dateKeyToDateColumn,
+  isValidDateKey,
+  startOfWeek,
+  toDateKey,
+} from '../common/dates/local-date';
+import { formatMailDate, mailName } from '../notifications/mail-format';
+import { invitationMail } from '../notifications/mail-templates';
+import { MailService } from '../notifications/mail.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { CONTRACT_HISTORY_START, initialContractPeriod } from './contract-periods';
 import { CreateEmployeeInvitationDto } from './dto/create-employee-invitation.dto';
 import { UpdateEmployeeDto } from './dto/update-employee.dto';
 import {
+  EmployeeInvitationPreview,
   EmployeeInvitationResponse,
   EmployeeResponse,
 } from './employee.types';
@@ -47,12 +58,23 @@ export class EmployeesService {
    */
   private readonly requireVerifiedEmail: boolean;
 
+  /** Origin of the application, for the links sent by e-mail. */
+  private readonly appUrl: string;
+
   constructor(
     private readonly prisma: PrismaService,
     configService: ConfigService,
+    private readonly mail: MailService,
   ) {
+    this.appUrl = configService.get<string>('FRONTEND_URL', 'http://localhost:4200');
     this.requireVerifiedEmail =
       configService.get<string>('KEYCLOAK_REQUIRE_VERIFIED_EMAIL', 'true') !== 'false';
+
+    if (!this.requireVerifiedEmail && configService.get<string>('NODE_ENV') === 'production') {
+      throw new Error(
+        'KEYCLOAK_REQUIRE_VERIFIED_EMAIL=false is only allowed in local development',
+      );
+    }
   }
 
   listEmployees(companyId: string): Promise<EmployeeResponse[]> {
@@ -83,10 +105,11 @@ export class EmployeesService {
     currentUser: ApplicationUser,
     employeeId: string,
     dto: UpdateEmployeeDto,
+    now = new Date(),
   ): Promise<EmployeeResponse> {
     const employee = await this.prisma.user.findFirst({
       where: { id: employeeId, companyId: currentUser.companyId },
-      select: { id: true, role: true, isActive: true },
+      select: { id: true, role: true, isActive: true, weeklyContractMinutes: true },
     });
 
     if (!employee) {
@@ -120,22 +143,104 @@ export class EmployeesService {
     if (dto.isActive !== undefined) {
       data.isActive = dto.isActive;
     }
-    if (dto.weeklyContractMinutes !== undefined) {
-      data.weeklyContractMinutes = dto.weeklyContractMinutes;
-    }
     if (dto.payrollId !== undefined) {
       data.payrollId = dto.payrollId || null;
     }
 
-    if (Object.keys(data).length === 0) {
+    const contractMinutes = dto.weeklyContractMinutes;
+    if (contractMinutes === undefined && dto.contractEffectiveFrom !== undefined) {
+      throw new BadRequestException('contractEffectiveFrom requires weeklyContractMinutes');
+    }
+    if (dto.contractEffectiveFrom !== undefined && !isValidDateKey(dto.contractEffectiveFrom)) {
+      throw new BadRequestException('contractEffectiveFrom must be a valid date (YYYY-MM-DD)');
+    }
+
+    if (Object.keys(data).length === 0 && contractMinutes === undefined) {
       throw new BadRequestException('At least one employee field is required');
     }
 
-    return this.prisma.user.update({
-      where: { id: employee.id },
-      data,
-      select: employeeSelect,
+    try {
+      return await this.prisma.$transaction(async (transaction) => {
+        if (contractMinutes !== undefined) {
+          data.weeklyContractMinutes = await this.changeContract(
+            transaction,
+            currentUser,
+            employee,
+            contractMinutes,
+            dto.contractEffectiveFrom,
+            now,
+          );
+        }
+
+        return transaction.user.update({
+          where: { id: employee.id },
+          data,
+          select: employeeSelect,
+        });
+      });
+    } catch (error: unknown) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new ConflictException('This payroll number is already used by another employee');
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Records a contract change from the Monday of the chosen week (the current
+   * week by default), so that past weeks keep the contract they were worked
+   * under. Returns the contract in force this week.
+   */
+  private async changeContract(
+    transaction: Prisma.TransactionClient,
+    currentUser: ApplicationUser,
+    employee: { id: string; weeklyContractMinutes: number },
+    weeklyContractMinutes: number,
+    effectiveFromInput: string | undefined,
+    now: Date,
+  ): Promise<number> {
+    const thisWeek = startOfWeek(toDateKey(now, currentUser.company.timezone));
+    const effectiveFrom = startOfWeek(effectiveFromInput ?? thisWeek);
+
+    // Employees created before the history existed keep their contract for the past.
+    const existingPeriods = await transaction.contractPeriod.count({
+      where: { userId: employee.id },
     });
+    if (existingPeriods === 0 && effectiveFrom > CONTRACT_HISTORY_START) {
+      await transaction.contractPeriod.create({
+        data: initialContractPeriod(
+          currentUser.companyId,
+          employee.id,
+          employee.weeklyContractMinutes,
+        ),
+      });
+    }
+
+    await transaction.contractPeriod.upsert({
+      where: {
+        userId_effectiveFrom: {
+          userId: employee.id,
+          effectiveFrom: dateKeyToDateColumn(effectiveFrom),
+        },
+      },
+      create: {
+        companyId: currentUser.companyId,
+        userId: employee.id,
+        effectiveFrom: dateKeyToDateColumn(effectiveFrom),
+        weeklyContractMinutes,
+      },
+      update: { weeklyContractMinutes },
+    });
+
+    const current = await transaction.contractPeriod.findFirst({
+      where: { userId: employee.id, effectiveFrom: { lte: dateKeyToDateColumn(thisWeek) } },
+      orderBy: { effectiveFrom: 'desc' },
+    });
+
+    return current?.weeklyContractMinutes ?? employee.weeklyContractMinutes;
   }
 
   async createInvitation(
@@ -148,7 +253,7 @@ export class EmployeesService {
     const expiresAt = new Date(Date.now() + INVITATION_TTL_MS);
 
     try {
-      const invitation = await this.prisma.$transaction(async (transaction) => {
+      const { invitation, replacesPrevious } = await this.prisma.$transaction(async (transaction) => {
         const existingEmployee = await transaction.user.findFirst({
           where: {
             companyId: currentUser.companyId,
@@ -163,23 +268,19 @@ export class EmployeesService {
           );
         }
 
-        const pendingInvitation = await transaction.employeeInvitation.findFirst({
+        // A new link replaces a lost or unused one: the previous link stops working.
+        const now = new Date();
+        const replaced = await transaction.employeeInvitation.updateMany({
           where: {
             companyId: currentUser.companyId,
             email,
             acceptedAt: null,
-            expiresAt: { gt: new Date() },
+            expiresAt: { gt: now },
           },
-          select: { id: true },
+          data: { expiresAt: now },
         });
 
-        if (pendingInvitation) {
-          throw new ConflictException(
-            'An active invitation already exists for this email',
-          );
-        }
-
-        return transaction.employeeInvitation.create({
+        const created = await transaction.employeeInvitation.create({
           data: {
             email,
             firstName: dto.firstName.trim(),
@@ -192,7 +293,21 @@ export class EmployeesService {
             expiresAt,
           },
         });
+        return { invitation: created, replacesPrevious: replaced.count > 0 };
       });
+
+      // The link also goes by e-mail: the invited person does not wait for a
+      // copy-paste, and receiving it proves the address is theirs.
+      const emailSent = await this.mail.send(
+        invitation.email,
+        invitationMail({
+          firstName: invitation.firstName,
+          companyName: currentUser.company.name,
+          inviterName: mailName(currentUser),
+          link: `${this.appUrl}/employee-invitations/${token}`,
+          expiresOn: formatMailDate(invitation.expiresAt, currentUser.company.timezone),
+        }),
+      );
 
       return {
         id: invitation.id,
@@ -203,6 +318,8 @@ export class EmployeesService {
         weeklyContractMinutes: invitation.weeklyContractMinutes,
         token,
         expiresAt: invitation.expiresAt,
+        replacesPrevious,
+        emailSent,
       };
     } catch (error: unknown) {
       if (error instanceof ConflictException) {
@@ -218,6 +335,36 @@ export class EmployeesService {
 
       throw error;
     }
+  }
+
+  /**
+   * Shown by the invitation link before the person signs in, so that the
+   * sign-up page can be pre-filled: only the holder of the link sees it.
+   */
+  async getInvitationPreview(token: string): Promise<EmployeeInvitationPreview> {
+    const invitation = await this.prisma.employeeInvitation.findUnique({
+      where: { tokenHash: this.hashToken(token) },
+      include: { company: { select: { name: true } } },
+    });
+
+    if (!invitation) {
+      throw new NotFoundException('Invitation not found');
+    }
+    if (invitation.acceptedAt) {
+      throw new ConflictException('This invitation has already been used');
+    }
+    if (invitation.expiresAt <= new Date()) {
+      throw new GoneException('This invitation has expired');
+    }
+
+    return {
+      firstName: invitation.firstName,
+      lastName: invitation.lastName,
+      email: invitation.email,
+      role: invitation.role,
+      companyName: invitation.company.name,
+      expiresAt: invitation.expiresAt,
+    };
   }
 
   async acceptInvitation(
@@ -297,6 +444,14 @@ export class EmployeesService {
             isActive: true,
             companyId: invitation.companyId,
           },
+        });
+
+        await transaction.contractPeriod.create({
+          data: initialContractPeriod(
+            invitation.companyId,
+            user.id,
+            invitation.weeklyContractMinutes,
+          ),
         });
 
         return toApplicationUserResponse(user, invitation.company);

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Replace http://localhost:4400 with the public address of the site (siteUrl). -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>http://localhost:4400/</loc>
+  </url>
+  <url>
+    <loc>http://localhost:4400/fonctionnalites</loc>
+  </url>
+  <url>
+    <loc>http://localhost:4400/tarifs</loc>
+  </url>
+  <url>
+    <loc>http://localhost:4400/securite</loc>
+  </url>
+  <url>
+    <loc>http://localhost:4400/guides</loc>
+  </url>
+  <url>
+    <loc>http://localhost:4400/guides/heures-supplementaires</loc>
+  </url>
+  <url>
+    <loc>http://localhost:4400/mentions-legales</loc>
+  </url>
+  <url>
+    <loc>http://localhost:4400/confidentialite</loc>
+  </url>
+  <url>
+    <loc>http://localhost:4400/cgv</loc>
+  </url>
+  <url>
+    <loc>http://localhost:4400/sous-traitance</loc>
+  </url>
+</urlset>

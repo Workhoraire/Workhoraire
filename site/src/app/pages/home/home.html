@@ -1,0 +1,168 @@
+<section class="hero wh-glow" aria-labelledby="hero-title">
+  <div class="wh-container">
+    <div class="hero-text">
+      <p class="wh-eyebrow">Pointage et suivi des heures</p>
+      <h1 id="hero-title">Le pointage simple et conforme pour les&nbsp;TPE</h1>
+      <p class="wh-lead">
+        Vos salariés pointent en un geste depuis leur téléphone. Vous suivez les heures de l’équipe
+        et les alertes légales, et la paie reçoit un export prêt à transmettre.
+      </p>
+      <div class="wh-actions">
+        <a class="wh-button wh-button--primary" [href]="links.signUp">Commencer gratuitement</a>
+        <a class="wh-button wh-button--outline" routerLink="/fonctionnalites">
+          Voir les fonctionnalités
+        </a>
+      </div>
+      <p class="hero-note">Gratuit jusqu’à 3&nbsp;salariés actifs · Sans&nbsp;engagement</p>
+    </div>
+
+    <div class="hero-visual">
+      <app-screenshot
+        class="hero-desktop"
+        src="/captures/tableau-de-bord.png"
+        alt="Tableau de bord d’un manager : salariés présents, heures travaillées du jour, demandes d’absence en attente et points de vigilance de la semaine"
+        [width]="1280"
+        [height]="900"
+        [priority]="true"
+      />
+      <app-screenshot
+        class="hero-phone"
+        device="phone"
+        src="/captures/pointer-mobile.png"
+        alt="Page « Pointer » sur téléphone : 9 h 30 travaillées aujourd’hui, session en cours et bouton « Pointer ma sortie »"
+        [width]="780"
+        [height]="1688"
+      />
+    </div>
+  </div>
+</section>
+
+<section class="wh-section" aria-labelledby="audiences-title">
+  <div class="wh-container">
+    <div class="wh-section-header">
+      <p class="wh-eyebrow">Pour qui&nbsp;?</p>
+      <h2 id="audiences-title">Pensé pour toute l’entreprise</h2>
+      <p class="wh-lead">
+        Les salariés pointent, les managers suivent, les dirigeants et la paie récupèrent des heures
+        justes. Chacun voit ce qui le concerne.
+      </p>
+    </div>
+
+    <ul class="wh-grid" role="list">
+      @for (audience of audiences; track audience.title) {
+        <li class="wh-card audience">
+          <span class="wh-icon-badge"><app-icon [name]="audience.icon" /></span>
+          <h3>{{ audience.title }}</h3>
+          <p class="promise">{{ audience.promise }}</p>
+          <ul class="wh-checklist" role="list">
+            @for (point of audience.points; track point) {
+              <li>{{ point }}</li>
+            }
+          </ul>
+        </li>
+      }
+    </ul>
+  </div>
+</section>
+
+<section class="wh-section wh-section--panel" aria-labelledby="benefits-title">
+  <div class="wh-container">
+    <div class="wh-section-header">
+      <p class="wh-eyebrow">Pourquoi WorkHoraire</p>
+      <h2 id="benefits-title">Des heures fiables, des calculs conformes</h2>
+      <p class="wh-lead">
+        Les règles du Code du travail sont appliquées pour vous, et chaque heure peut être justifiée.
+      </p>
+    </div>
+
+    <ul class="benefits" role="list">
+      @for (benefit of benefits; track benefit.title) {
+        <li class="benefit">
+          <span class="wh-icon-badge"><app-icon [name]="benefit.icon" /></span>
+          <h3>{{ benefit.title }}</h3>
+          <p>{{ benefit.text }}</p>
+        </li>
+      }
+    </ul>
+  </div>
+</section>
+
+<section class="wh-section" aria-labelledby="preview-title">
+  <div class="wh-container">
+    <div class="wh-section-header">
+      <p class="wh-eyebrow">Aperçu</p>
+      <h2 id="preview-title">Tout est lisible, au bureau comme sur le terrain</h2>
+      <p class="wh-lead">
+        Des écrans clairs, sur ordinateur comme sur téléphone.
+        <a routerLink="/fonctionnalites">Découvrir toutes les fonctionnalités</a>
+      </p>
+    </div>
+
+    <div class="gallery">
+      <app-screenshot
+        src="/captures/heures-equipe.png"
+        alt="Tableau des heures de la semaine par salarié et par jour, avec les congés payés, le total de chacun et une alerte"
+        caption="Les heures de toute l’équipe, jour par jour"
+        [width]="1280"
+        [height]="800"
+      />
+      <app-screenshot
+        src="/captures/feuille-de-temps.png"
+        alt="Feuille de temps d’une salariée : heures de la semaine, heures supplémentaires, périodes de chaque jour et une période marquée « Corrigé » avec son motif"
+        caption="La feuille de temps de chaque salarié, corrections comprises"
+        [width]="1280"
+        [height]="900"
+      />
+      <app-screenshot
+        src="/captures/exports.png"
+        alt="Page des exports pour la paie : choix du mois, puis téléchargement de la synthèse hebdomadaire et du détail journalier au format CSV"
+        caption="Les exports pour la paie, au format CSV"
+        [width]="1280"
+        [height]="800"
+      />
+    </div>
+    <p class="wh-small demo-note">Captures de l’application avec des données de démonstration fictives.</p>
+  </div>
+</section>
+
+<section class="wh-section wh-section--panel" aria-labelledby="steps-title">
+  <div class="wh-container">
+    <div class="wh-section-header">
+      <p class="wh-eyebrow">Comment ça marche</p>
+      <h2 id="steps-title">Prêt en trois étapes</h2>
+    </div>
+
+    <ol class="steps" role="list">
+      <li class="step">
+        <span class="step-number" aria-hidden="true">1</span>
+        <h3>Créez votre entreprise</h3>
+        <p>
+          Inscrivez-vous avec votre adresse e-mail, puis créez votre entreprise&nbsp;: vous en
+          devenez l’administrateur.
+        </p>
+      </li>
+      <li class="step">
+        <span class="step-number" aria-hidden="true">2</span>
+        <h3>Invitez l’équipe par un lien</h3>
+        <p>
+          Chaque salarié reçoit un lien d’invitation par e-mail. Son adresse est déjà
+          renseignée&nbsp;: il n’a plus qu’à choisir son mot de passe.
+        </p>
+      </li>
+      <li class="step">
+        <span class="step-number" aria-hidden="true">3</span>
+        <h3>Pointez</h3>
+        <p>
+          Chacun pointe son arrivée et sa sortie depuis son téléphone. Les heures, les heures
+          supplémentaires et les alertes sont calculées automatiquement.
+        </p>
+      </li>
+    </ol>
+
+    <div class="wh-actions steps-actions">
+      <a class="wh-button wh-button--primary" [href]="links.signUp">Commencer gratuitement</a>
+    </div>
+  </div>
+</section>
+
+<app-cta-band />

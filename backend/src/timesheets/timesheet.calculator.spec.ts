@@ -122,6 +122,87 @@ describe('calculateTimesheet', () => {
     expect(withSickLeave.weeks[0].overtime).toEqual({ tier25Minutes: 0, tier50Minutes: 0 });
   });
 
+  it('does not credit a day of leave that was actually worked, and flags it', () => {
+    // Paid leave Monday to Friday accepted, but the employee came back on Thursday.
+    const absences: CalculatorAbsence[] = [
+      {
+        id: 'cp',
+        type: AbsenceType.PAID_LEAVE,
+        startDate: '2026-09-21',
+        endDate: '2026-09-25',
+        startsAfternoon: false,
+        endsMorning: false,
+      },
+    ];
+    const timesheet = calculateTimesheet({
+      ...week(),
+      contractMinutes: FULL_TIME,
+      entries: [...standardDay('2026-09-24'), ...standardDay('2026-09-25')].map((item) => ({
+        ...item,
+        endAt: new Date(item.endAt!.getTime() - 30 * 60_000),
+      })),
+      absences,
+    });
+
+    // 2 x 7 h worked; only the 3 days really off are credited (3 x 7 h).
+    expect(timesheet.weeks[0].workedMinutes).toBe(14 * 60);
+    expect(timesheet.weeks[0].paidLeaveCreditMinutes).toBe(3 * 7 * 60);
+    expect(timesheet.weeks[0].overtime).toEqual({ tier25Minutes: 0, tier50Minutes: 0 });
+    expect(timesheet.days[3].alerts.map((alert) => alert.code)).toEqual(['WORK_DURING_ABSENCE']);
+    expect(timesheet.days[0].alerts).toEqual([]);
+  });
+
+  it('splits a night shift from Sunday to Monday between the two civil weeks', () => {
+    const timesheet = calculateTimesheet({
+      ...week('2026-09-21', '2026-09-27'),
+      contractMinutes: FULL_TIME,
+      entries: [
+        // Sunday 20 September 22:00 to Monday 21 September 06:00.
+        entry('2026-09-20', '22:00', '2026-09-21T06:00'),
+        ...['2026-09-22', '2026-09-23', '2026-09-24', '2026-09-25', '2026-09-26'].flatMap((date) => [
+          entry(date, '08:00', '12:00'),
+          entry(date, '13:00', '16:00'),
+        ]),
+      ],
+      absences: [],
+    });
+
+    // 6 h after Monday 0:00 + 5 x 7 h = 41 h in the week of Monday 21: 6 h of overtime.
+    expect(timesheet.weeks[0].workedMinutes).toBe(41 * 60);
+    expect(timesheet.weeks[0].overtime).toEqual({ tier25Minutes: 360, tier50Minutes: 0 });
+    // The shift itself is displayed on the Sunday it started, outside this week.
+    expect(timesheet.days[0].workedMinutes).toBe(0);
+  });
+
+  it('uses the contract in force each week', () => {
+    const timesheet = calculateTimesheet({
+      ...week('2026-09-21', '2026-10-04'),
+      contractMinutes: 28 * 60,
+      contracts: [
+        { from: '2000-01-03', minutes: 35 * 60 },
+        { from: '2026-09-28', minutes: 28 * 60 },
+      ],
+      entries: [
+        ...['2026-09-21', '2026-09-22', '2026-09-23', '2026-09-24', '2026-09-25'].flatMap((date) => [
+          entry(date, '08:00', '12:00'),
+          entry(date, '13:00', '16:00'),
+        ]),
+        ...['2026-09-28', '2026-09-29', '2026-09-30', '2026-10-01'].flatMap((date) => [
+          entry(date, '08:00', '12:00'),
+          entry(date, '13:00', '16:00'),
+        ]),
+      ],
+      absences: [],
+    });
+
+    // Week 1 under the former 35 h contract: nothing extra. Week 2 under 28 h: exactly the contract.
+    expect(timesheet.weeks.map((item) => item.contractMinutes)).toEqual([2100, 1680]);
+    expect(timesheet.weeks[0].complementary).toEqual({ tier10Minutes: 0, tier25Minutes: 0 });
+    expect(timesheet.weeks[0].overtime).toEqual({ tier25Minutes: 0, tier50Minutes: 0 });
+    expect(timesheet.weeks[1].complementary).toEqual({ tier10Minutes: 0, tier25Minutes: 0 });
+    expect(timesheet.contractMinutes).toBe(1680);
+  });
+
   it('computes complementary hours for part-time employees and flags the 1/10 limit', () => {
     // 24 h contract: 1/10 = 2h24. Worked 28 h = 4 h of complementary hours.
     const entries = ['2026-09-21', '2026-09-22', '2026-09-23', '2026-09-24'].map((date) =>

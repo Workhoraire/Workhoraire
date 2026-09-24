@@ -4,6 +4,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { RouterLink } from '@angular/router';
+import { Subscription } from 'rxjs';
 
 import { apiErrorMessage } from '../../core/http/error-message';
 import { ABSENCE_TYPE_LABELS, describeAlert } from '../../core/time/labels';
@@ -45,6 +46,8 @@ export class Team {
   protected readonly team = signal<TeamTimesheet | null>(null);
   protected readonly loading = signal(true);
   protected readonly error = signal<string | null>(null);
+  /** Only the last requested week may be displayed, even if an older response arrives later. */
+  private loadSubscription?: Subscription;
 
   protected readonly dates = computed(() =>
     Array.from({ length: 7 }, (_, index) => addDays(this.weekStart(), index)),
@@ -102,8 +105,9 @@ export class Team {
     const from = this.weekStart();
     this.loading.set(true);
     this.error.set(null);
+    this.loadSubscription?.unsubscribe();
 
-    this.timeService.getTeamTimesheet(from, addDays(from, 6)).subscribe({
+    this.loadSubscription = this.timeService.getTeamTimesheet(from, addDays(from, 6)).subscribe({
       next: (team) => {
         this.team.set(team);
         this.loading.set(false);

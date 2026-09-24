@@ -9,6 +9,7 @@ describe('CreateCompanyDto', () => {
       name: '  Acme  ',
       siret: '123 456 789 01234',
       timezone: ' Europe/Paris ',
+      acceptTerms: true,
     });
 
     const errors = await validate(dto);
@@ -33,6 +34,14 @@ describe('CreateCompanyDto', () => {
     expect(errors.map((error) => error.property)).toEqual(
       expect.arrayContaining(['name', 'siret', 'timezone']),
     );
+  });
+
+  it('requires the terms of sale to be accepted', async () => {
+    for (const acceptTerms of [undefined, false, 'true']) {
+      const dto = plainToInstance(CreateCompanyDto, { name: 'Acme', acceptTerms });
+      const errors = await validate(dto);
+      expect(errors.map((error) => error.property)).toEqual(['acceptTerms']);
+    }
   });
 
   it('rejects user and company identifiers supplied by the client', async () => {

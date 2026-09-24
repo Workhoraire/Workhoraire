@@ -1,0 +1,33 @@
+<section class="wh-page-hero wh-glow" aria-labelledby="page-title">
+  <div class="wh-container">
+    <p class="wh-eyebrow">Sécurité</p>
+    <h1 id="page-title">Des heures fiables, des données protégées</h1>
+    <p class="wh-lead">
+      Les heures de travail engagent l’entreprise comme ses salariés. Voici comment WorkHoraire
+      protège ces données, sans jargon.
+    </p>
+  </div>
+</section>
+
+<section class="wh-section wh-section--tight measures-section" aria-labelledby="measures-title">
+  <div class="wh-container">
+    <h2 id="measures-title" class="wh-visually-hidden">Les mesures de sécurité</h2>
+
+    <ul class="wh-grid" role="list">
+      @for (measure of measures; track measure.title) {
+        <li class="wh-card measure">
+          <span class="wh-icon-badge"><app-icon [name]="measure.icon" /></span>
+          <h3>{{ measure.title }}</h3>
+          <p>{{ measure.text }}</p>
+        </li>
+      }
+    </ul>
+
+    <p class="wh-note privacy-link">
+      Pour savoir comment les données personnelles sont traitées, consultez la
+      <a routerLink="/confidentialite">politique de confidentialité</a>.
+    </p>
+  </div>
+</section>
+
+<app-cta-band heading="Des heures justes, dans un outil de confiance" />

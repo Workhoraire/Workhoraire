@@ -52,3 +52,5 @@
 - Pas d'outil de lint ou de formatage partagé dans le dépôt (ESLint, Prettier) : à ajouter pour homogénéiser.
 - Pas de Dockerfile pour `backend` et `frontend`, alors qu'AGENTS.md prévoit les quatre services en conteneurs.
 - Pas d'intégration continue : lancer les tests unitaires, le build et les tests e2e sur chaque pull request.
+- L'historique des contrats d'un salarié n'est visible qu'à travers les calculs : l'afficher dans sa fiche.
+- Les invitations en attente ne sont pas listées : les afficher, avec la possibilité de les révoquer. Aujourd'hui, un nouveau lien remplace l'ancien.
