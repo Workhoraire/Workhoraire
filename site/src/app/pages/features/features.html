@@ -85,8 +85,8 @@
       <p class="wh-eyebrow">Alertes légales</p>
       <h2 id="alerts-title">Les seuils légaux surveillés pour vous</h2>
       <p class="wh-lead">
-        WorkHoraire signale les dépassements dans le tableau de bord et dans les heures de
-        l’équipe, avec la règle concernée.
+        WorkHoraire signale les dépassements dans le tableau de bord et dans les heures de l’équipe,
+        avec la règle concernée.
       </p>
     </div>
 
@@ -136,6 +136,10 @@
         supplémentaires, comme l’a jugé la Cour de cassation le 10&nbsp;septembre 2025.
       </p>
       <p>
+        Ce sont les règles légales par défaut&nbsp;: vérifiez votre convention collective, qui peut
+        prévoir d’autres taux.
+      </p>
+      <p>
         <a class="text-link" routerLink="/guides/heures-supplementaires">
           Lire le guide des heures supplémentaires
         </a>
@@ -145,6 +149,9 @@
       <figure class="week wh-card">
         <figcaption>Exemple&nbsp;: contrat de 35&nbsp;h, semaine du lundi au dimanche</figcaption>
         <table class="wh-table">
+          <caption class="wh-visually-hidden">
+            Heures travaillées par jour, contrat de 35&nbsp;h
+          </caption>
           <thead>
             <tr>
               <th scope="col">Jour</th>
@@ -152,14 +159,32 @@
             </tr>
           </thead>
           <tbody>
-            <tr><th scope="row">Lundi</th><td class="is-num">8&nbsp;h</td></tr>
-            <tr><th scope="row">Mardi</th><td class="is-num">8&nbsp;h</td></tr>
-            <tr><th scope="row">Mercredi</th><td class="is-num">8&nbsp;h</td></tr>
-            <tr><th scope="row">Jeudi</th><td class="is-num">8&nbsp;h</td></tr>
-            <tr><th scope="row">Vendredi</th><td class="is-num">7&nbsp;h</td></tr>
+            <tr>
+              <th scope="row">Lundi</th>
+              <td class="is-num">8&nbsp;h</td>
+            </tr>
+            <tr>
+              <th scope="row">Mardi</th>
+              <td class="is-num">8&nbsp;h</td>
+            </tr>
+            <tr>
+              <th scope="row">Mercredi</th>
+              <td class="is-num">8&nbsp;h</td>
+            </tr>
+            <tr>
+              <th scope="row">Jeudi</th>
+              <td class="is-num">8&nbsp;h</td>
+            </tr>
+            <tr>
+              <th scope="row">Vendredi</th>
+              <td class="is-num">7&nbsp;h</td>
+            </tr>
           </tbody>
           <tfoot>
-            <tr><th scope="row">Total</th><td class="is-num">39&nbsp;h</td></tr>
+            <tr>
+              <th scope="row">Total</th>
+              <td class="is-num">39&nbsp;h</td>
+            </tr>
           </tfoot>
         </table>
         <p class="week-result">
@@ -232,7 +257,12 @@
   </div>
 </section>
 
-<section id="invitation" class="wh-section feature" tabindex="-1" aria-labelledby="invitation-title">
+<section
+  id="invitation"
+  class="wh-section feature"
+  tabindex="-1"
+  aria-labelledby="invitation-title"
+>
   <div class="wh-container feature-grid is-reversed">
     <div class="feature-text">
       <p class="wh-eyebrow">Équipe</p>
@@ -240,7 +270,8 @@
       <p>
         Invitez un salarié&nbsp;: WorkHoraire lui envoie un lien par e-mail, que vous pouvez aussi
         copier et lui transmettre vous-même. Il voit quelle entreprise l’invite et son adresse est
-        déjà renseignée&nbsp;: il ne lui reste qu’à choisir son mot de passe.
+        déjà renseignée&nbsp;: il choisit son mot de passe, puis confirme son adresse depuis
+        l’e-mail de vérification.
       </p>
       <ul class="wh-checklist" role="list">
         <li>Rôle et durée du contrat renseignés dans l’invitation</li>

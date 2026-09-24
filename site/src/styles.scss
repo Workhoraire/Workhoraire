@@ -11,7 +11,8 @@
   --wh-lime: #c8ef73;
   --wh-lime-soft: #eef8d6;
   --wh-coral: #ff8d67;
-  --wh-coral-ink: #b4502f;
+  /* 5:1 or more, including on the lime glow of the page headers. */
+  --wh-coral-ink: #a3472a;
   --wh-coral-soft: #ffe8df;
   --wh-shadow: 0 20px 50px rgba(23, 33, 29, 0.08);
   --wh-radius: 1.25rem;
@@ -172,11 +173,6 @@ sup {
 
   > :last-child {
     margin-bottom: 0;
-  }
-
-  &.is-centered {
-    margin-inline: auto;
-    text-align: center;
   }
 }
 

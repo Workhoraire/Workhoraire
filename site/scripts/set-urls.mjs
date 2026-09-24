@@ -30,17 +30,32 @@ const siteUrl = publicUrl(siteArgument, 'SITE_URL');
 const appUrl = publicUrl(appArgument, 'APP_URL');
 
 // A public site must not go live with incomplete legal notices (LCEN): the
-// publisher's identity comes from src/app/core/legal/legal-info.json.
+// publisher's identity comes from src/app/core/legal/legal-info.json. Same
+// rules as missingPublisherFields() in src/app/core/legal/legal-info.ts.
+const SOLE_PROPRIETORSHIP = /entrepreneur individuel|\bEIRL?\b|micro-entrepreneur/i;
 const siteHost = new URL(siteUrl).hostname;
 if (siteHost !== 'localhost' && !siteHost.endsWith('.localhost')) {
   const info = JSON.parse(
     readFileSync(fileURLToPath(new URL('../src/app/core/legal/legal-info.json', import.meta.url)), 'utf8'),
   );
+  const { publisher, hosting, offsiteBackup } = info;
   const required = ['name', 'legalForm', 'address', 'registration', 'vatExempt', 'email', 'phone', 'publicationDirector'];
   const missing = [
-    ...required.filter((field) => info.publisher[field] === null).map((field) => `publisher.${field}`),
-    ...['address', 'phone'].filter((field) => info.hosting[field] === null).map((field) => `hosting.${field}`),
+    ...required.filter((field) => publisher[field] === null).map((field) => `publisher.${field}`),
+    ...['address', 'phone'].filter((field) => hosting[field] === null).map((field) => `hosting.${field}`),
   ];
+  // A company publishes its share capital; a sole proprietorship has none.
+  if (publisher.legalForm !== null && !SOLE_PROPRIETORSHIP.test(publisher.legalForm) && publisher.shareCapital === null) {
+    missing.push('publisher.shareCapital');
+  }
+  // Without the VAT franchise, the intra-community VAT number is due.
+  if (publisher.vatExempt === false && publisher.vatNumber === null) {
+    missing.push('publisher.vatNumber');
+  }
+  // The off-site backup storage is optional, but named and located once declared.
+  if (offsiteBackup !== undefined && offsiteBackup !== null) {
+    missing.push(...['name', 'location'].filter((field) => !offsiteBackup[field]).map((field) => `offsiteBackup.${field}`));
+  }
   if (missing.length > 0) {
     console.error(`Legal notice incomplete, fill src/app/core/legal/legal-info.json: ${missing.join(', ')}`);
     process.exit(1);

@@ -1,0 +1,35 @@
+/* Content of the guides, projected into the guide layout (guide-layout.scss). */
+
+:host {
+  display: block;
+}
+
+.disclaimer {
+  margin-bottom: 0;
+}
+
+.steps li::marker {
+  color: var(--wh-coral-ink);
+  font-weight: 800;
+}
+
+.wh-actions {
+  margin-top: 1.5rem;
+}
+
+.sources li {
+  line-height: 1.5;
+}
+
+/* Model notice of the employee information guide. */
+.model {
+  margin-bottom: 1.5rem;
+
+  ul {
+    margin-top: 0;
+  }
+
+  p:last-child {
+    margin-bottom: 0;
+  }
+}

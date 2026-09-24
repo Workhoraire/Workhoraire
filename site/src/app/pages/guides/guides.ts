@@ -18,6 +18,12 @@ const GUIDES: GuideSummary[] = [
     description:
       'Semaine civile, majorations de 25 % et 50 %, heures complémentaires des temps partiels et congés payés, avec un exemple chiffré.',
   },
+  {
+    path: '/guides/informer-les-salaries',
+    title: 'Mettre en place le pointage : informer vos salariés',
+    description:
+      'L’information préalable de chaque salarié, la consultation du CSE et un modèle de note d’information prêt à compléter.',
+  },
 ];
 
 @Component({

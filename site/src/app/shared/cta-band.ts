@@ -2,6 +2,10 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import { APP_LINKS } from '../core/links';
+import { PRICING_TEXT } from '../core/pricing';
+
+/** "Gratuit jusqu’à 3 utilisateurs actifs.": the end of the text of every call to action. */
+export const FREE_PLAN_SENTENCE = `Gratuit jusqu’à ${PRICING_TEXT.freeLimit}.`;
 
 /** Closing call to action of a page, on a dark band. */
 @Component({
@@ -55,7 +59,7 @@ import { APP_LINKS } from '../core/links';
 export class CtaBand {
   readonly heading = input('Remplacez le tableur des heures');
   readonly text = input(
-    'Gratuit jusqu’à 3 salariés actifs, puis 3 € HT par salarié actif et par mois, sans engagement.',
+    `${FREE_PLAN_SENTENCE} Au-delà, ${PRICING_TEXT.unitPrice} par utilisateur actif et par mois, tous comptés, sans engagement.`,
   );
 
   protected readonly links = APP_LINKS;

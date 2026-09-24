@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import { APP_LINKS } from '../../core/links';
+import { PRICING_TEXT } from '../../core/pricing';
 import { CtaBand } from '../../shared/cta-band';
 import { Icon, IconName } from '../../shared/icon';
 import { Screenshot } from '../../shared/screenshot';
@@ -28,6 +29,7 @@ interface Benefit {
 })
 export class Home {
   protected readonly links = APP_LINKS;
+  protected readonly pricing = PRICING_TEXT;
 
   protected readonly audiences: Audience[] = [
     {
@@ -79,7 +81,7 @@ export class Home {
     {
       icon: 'percent',
       title: 'Le Code du travail intégré',
-      text: 'Heures supplémentaires et complémentaires calculées par semaine civile, avec les majorations légales.',
+      text: 'Heures supplémentaires et complémentaires calculées par semaine civile, avec les majorations légales par défaut.',
     },
     {
       icon: 'alert',
@@ -94,7 +96,7 @@ export class Home {
     {
       icon: 'link',
       title: 'Une équipe invitée par lien',
-      text: 'Le salarié ouvre le lien reçu par e-mail et choisit son mot de passe : c’est tout.',
+      text: 'Le salarié ouvre le lien reçu par e-mail, choisit son mot de passe, puis confirme son adresse depuis l’e-mail de vérification.',
     },
   ];
 }

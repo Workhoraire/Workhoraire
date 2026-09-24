@@ -96,23 +96,6 @@
   min-width: 0;
 }
 
-.disclaimer {
-  margin-bottom: 0;
-}
-
-.steps li::marker {
-  color: var(--wh-coral-ink);
-  font-weight: 800;
-}
-
-.wh-actions {
-  margin-top: 1.5rem;
-}
-
-.sources li {
-  line-height: 1.5;
-}
-
 @media (min-width: 64rem) {
   .layout {
     gap: 4rem;

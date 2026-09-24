@@ -13,12 +13,9 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
 
+import { pathOf } from './core/url-path';
 import { SiteFooter } from './layout/site-footer';
 import { SiteHeader } from './layout/site-header';
-
-function pathOf(url: string): string {
-  return url.split(/[?#]/)[0] || '/';
-}
 
 @Component({
   selector: 'app-root',
