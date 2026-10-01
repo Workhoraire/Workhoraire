@@ -40,7 +40,7 @@
     "jest": "^29.7.0",
     "prisma": "^6.0.0",
     "ts-jest": "^29.2.5",
-    "typescript": "^5.7.3"
+    "typescript": "^7.0.2"
   },
   "overrides": {
     "deepmerge-ts": "^8.0.0"
