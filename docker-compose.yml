@@ -33,8 +33,9 @@ services:
       KC_DB_USERNAME: ${POSTGRES_USER:?POSTGRES_USER must be set in .env}
       KC_DB_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
       KC_DB_SCHEMA: keycloak
-      # Read by the realm file on its first import (redirect URIs of the application).
+      # Read by the realm file on its first import (redirect URIs of the application and site).
       WORKHORAIRE_APP_URL: ${WORKHORAIRE_APP_URL:-http://localhost:4200}
+      WORKHORAIRE_SITE_URL: ${WORKHORAIRE_SITE_URL:-http://localhost:4400}
     ports:
       - "127.0.0.1:${KEYCLOAK_PORT:-8180}:8080"
     depends_on:

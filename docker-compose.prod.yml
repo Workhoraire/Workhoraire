@@ -56,6 +56,7 @@ services:
       args:
         SITE_URL: https://${SITE_HOST}
         APP_URL: https://${APP_HOST}
+        KEYCLOAK_URL: https://${AUTH_HOST}
     restart: unless-stopped
 
   app:
@@ -121,8 +122,9 @@ services:
       KC_HOSTNAME_ADMIN: http://localhost:${KEYCLOAK_ADMIN_PORT:-8180}
       KC_HTTP_ENABLED: "true"
       KC_PROXY_HEADERS: xforwarded
-      # Read by the realm file on its first import (redirect URIs of the application).
+      # Read by the realm file on its first import (redirect URIs of the application and site).
       WORKHORAIRE_APP_URL: https://${APP_HOST}
+      WORKHORAIRE_SITE_URL: https://${SITE_HOST}
     ports:
       - "127.0.0.1:${KEYCLOAK_ADMIN_PORT:-8180}:8080"
     healthcheck:

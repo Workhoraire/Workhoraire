@@ -78,6 +78,19 @@ ul {
   }
 }
 
+.sign-out {
+  display: none;
+  padding: 0.5rem 0.25rem;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-weight: 700;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
 /* ---------- Phone and tablet menu ---------- */
 
 .menu-toggle {
@@ -204,6 +217,10 @@ ul {
   }
 
   .sign-in {
+    display: inline-flex;
+  }
+
+  .sign-out {
     display: inline-flex;
   }
 

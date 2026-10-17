@@ -1,5 +1,5 @@
 // Writes the public addresses into the site before the production build:
-// `node scripts/set-urls.mjs https://workhoraire.example https://app.workhoraire.example`.
+// `node scripts/set-urls.mjs https://workhoraire.example https://app.workhoraire.example https://auth.workhoraire.example`.
 // The pages are pre-rendered, so canonical URLs, Open Graph tags, robots.txt,
 // sitemap.xml and the links to the application are fixed at build time.
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 
 const LOCAL_SITE_URL = 'http://localhost:4400';
 const LOCAL_APP_URL = 'http://localhost:4200';
+const LOCAL_KEYCLOAK_URL = 'http://localhost:8180';
 
 function publicUrl(value, name) {
   let url;
@@ -21,13 +22,14 @@ function publicUrl(value, name) {
   return url.origin;
 }
 
-const [siteArgument, appArgument] = process.argv.slice(2);
-if (!siteArgument || !appArgument) {
-  console.error('Usage: node scripts/set-urls.mjs <site URL> <application URL>');
+const [siteArgument, appArgument, keycloakArgument] = process.argv.slice(2);
+if (!siteArgument || !appArgument || !keycloakArgument) {
+  console.error('Usage: node scripts/set-urls.mjs <site URL> <application URL> <Keycloak URL>');
   process.exit(1);
 }
 const siteUrl = publicUrl(siteArgument, 'SITE_URL');
 const appUrl = publicUrl(appArgument, 'APP_URL');
+const keycloakUrl = publicUrl(keycloakArgument, 'KEYCLOAK_URL');
 
 // A public site must not go live with incomplete legal notices (LCEN): the
 // publisher's identity comes from src/app/core/legal/legal-info.json. Same
@@ -67,7 +69,8 @@ for (const file of files) {
   const path = fileURLToPath(new URL(`../${file}`, import.meta.url));
   const content = readFileSync(path, 'utf8')
     .replaceAll(LOCAL_SITE_URL, siteUrl)
-    .replaceAll(LOCAL_APP_URL, appUrl);
+    .replaceAll(LOCAL_APP_URL, appUrl)
+    .replaceAll(LOCAL_KEYCLOAK_URL, keycloakUrl);
   writeFileSync(path, content);
 }
-console.log(`Site: ${siteUrl}, application: ${appUrl}`);
+console.log(`Site: ${siteUrl}, application: ${appUrl}, Keycloak: ${keycloakUrl}`);

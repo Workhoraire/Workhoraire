@@ -1,6 +1,7 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
+import { SiteAuthService } from '../core/auth/site-auth.service';
 import { APP_LINKS } from '../core/links';
 import { BrandLogo } from '../shared/brand-logo';
 
@@ -13,4 +14,9 @@ import { BrandLogo } from '../shared/brand-logo';
 })
 export class SiteFooter {
   protected readonly links = APP_LINKS;
+  protected readonly auth = inject(SiteAuthService);
+
+  protected logout(): void {
+    void this.auth.logout();
+  }
 }

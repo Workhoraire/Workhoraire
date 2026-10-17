@@ -1,15 +1,22 @@
-import { Component } from '@angular/core';
+import { Component, WritableSignal, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 
 import { environment } from '../../environments/environment';
+import { SiteAuthService, SiteAuthState } from '../core/auth/site-auth.service';
 import { SiteHeader } from './site-header';
 
 @Component({ template: '' })
 class Blank {}
 
 describe('SiteHeader', () => {
+  let authState: WritableSignal<SiteAuthState>;
+  let logout: jasmine.Spy;
+
   beforeEach(async () => {
+    authState = signal<SiteAuthState>('anonymous');
+    logout = jasmine.createSpy('logout').and.resolveTo();
+
     await TestBed.configureTestingModule({
       imports: [SiteHeader],
       providers: [
@@ -19,6 +26,10 @@ describe('SiteHeader', () => {
           { path: 'guides', component: Blank },
           { path: 'guides/heures-supplementaires', component: Blank },
         ]),
+        {
+          provide: SiteAuthService,
+          useValue: { status: authState.asReadonly(), logout },
+        },
       ],
     }).compileComponents();
   });
@@ -48,6 +59,21 @@ describe('SiteHeader', () => {
     expect(element.querySelector('.start')?.getAttribute('href')).toBe(
       `${environment.appUrl}/inscription?offre=decouverte`,
     );
+  });
+
+  it('shows the application space and logout action for authenticated visitors', () => {
+    authState.set('authenticated');
+    const fixture = TestBed.createComponent(SiteHeader);
+    fixture.detectChanges();
+    const element = fixture.nativeElement as HTMLElement;
+
+    expect(element.querySelector('.sign-in')?.textContent?.trim()).toBe('Mon espace');
+    expect(element.querySelector('.sign-in')?.getAttribute('href')).toBe(environment.appUrl);
+    expect(element.querySelector('.start')).toBeNull();
+    expect(element.querySelector('.sign-out')?.textContent?.trim()).toBe('Se déconnecter');
+
+    (element.querySelector('.sign-out') as HTMLButtonElement).click();
+    expect(logout).toHaveBeenCalled();
   });
 
   it('highlights the section of a sub-page, but only announces the page itself as current', async () => {

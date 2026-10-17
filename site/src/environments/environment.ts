@@ -8,4 +8,9 @@
 export const environment = {
   appUrl: 'http://localhost:4200',
   siteUrl: 'http://localhost:4400',
+  keycloak: {
+    url: 'http://localhost:8180',
+    realm: 'workhoraire',
+    clientId: 'workhoraire-web',
+  },
 } as const;

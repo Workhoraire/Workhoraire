@@ -4,7 +4,7 @@ Site public de WorkHoraire : accueil, fonctionnalités, tarifs (avec simulateur)
 
 C'est une application Angular 20 **prérendue en HTML statique** au moment du build (`@angular/ssr`, `outputMode: "static"`) : chaque page existe en HTML complet, lisible par les moteurs de recherche, puis Angular prend le relais dans le navigateur. En production, un simple serveur de fichiers suffit, sans Node.js.
 
-Le site n'utilise ni cookie, ni traceur, ni mesure d'audience. La police DM Sans est auto-hébergée (`@fontsource-variable/dm-sans`) : aucune requête ne part vers un service tiers.
+Le site n'utilise ni cookie propre, ni traceur, ni mesure d'audience. Il vérifie uniquement, côté navigateur, si une session SSO WorkHoraire existe afin d'afficher « Mon espace » et « Se déconnecter » aux personnes déjà connectées. La police DM Sans est auto-hébergée (`@fontsource-variable/dm-sans`) : aucune requête ne part vers un service tiers hors Keycloak.
 
 ## Commandes
 
@@ -33,8 +33,9 @@ Le serveur web doit servir `/tarifs` avec `tarifs/index.html`, et `404.html` pou
 |---|---|---|
 | `appUrl` | Adresse de l'application : liens « Se connecter », « Commencer gratuitement » (`/inscription?offre=decouverte`) et offre Essentiel (`/inscription?offre=essentiel`) | `http://localhost:4200` |
 | `siteUrl` | Adresse publique du site : URL canoniques et balises Open Graph | `http://localhost:4400` |
+| `keycloak.url` | Adresse publique de Keycloak, utilisée pour vérifier la session SSO | `http://localhost:8180` |
 
-`public/robots.txt` et `public/sitemap.xml` sont statiques et contiennent l'adresse locale du site. Pour la production, `scripts/set-urls.mjs`, lancé par l'image Docker avec `SITE_URL` et `APP_URL`, remplace les adresses locales par les adresses publiques dans ces deux fichiers et dans `environment.ts`. Toute nouvelle page indexable doit aussi être ajoutée à `sitemap.xml`.
+`public/robots.txt` et `public/sitemap.xml` sont statiques et contiennent l'adresse locale du site. Pour la production, `scripts/set-urls.mjs`, lancé par l'image Docker avec `SITE_URL`, `APP_URL` et `KEYCLOAK_URL`, remplace les adresses locales par les adresses publiques dans ces deux fichiers et dans `environment.ts`. Le client Keycloak `workhoraire-web` doit autoriser les redirect URI de l'application et du site. Toute nouvelle page indexable doit aussi être ajoutée à `sitemap.xml`.
 
 ## Contenu à compléter avant la mise en ligne
 

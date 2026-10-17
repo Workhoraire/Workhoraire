@@ -18,7 +18,7 @@
   "maxFailureWaitSeconds": 900,
   "eventsEnabled": true,
   "eventsExpiration": 15552000,
-  "passwordPolicy": "length(12) and notUsername and notEmail",
+  "passwordPolicy": "length(8) and notUsername and notEmail",
   "internationalizationEnabled": true,
   "supportedLocales": [
     "fr",
@@ -76,10 +76,12 @@
       "directAccessGrantsEnabled": false,
       "serviceAccountsEnabled": false,
       "redirectUris": [
-        "${WORKHORAIRE_APP_URL}/*"
+        "${WORKHORAIRE_APP_URL}/*",
+        "${WORKHORAIRE_SITE_URL}/*"
       ],
       "webOrigins": [
-        "${WORKHORAIRE_APP_URL}"
+        "${WORKHORAIRE_APP_URL}",
+        "${WORKHORAIRE_SITE_URL}"
       ],
       "attributes": {
         "pkce.code.challenge.method": "S256"

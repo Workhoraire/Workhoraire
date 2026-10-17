@@ -51,11 +51,21 @@
 {$SITE_HOST} {
 	import security_headers
 	import access_log
-	header X-Frame-Options "DENY"
-	# Pre-rendered Angular pages carry small inline scripts (hydration, event
-	# replay); nothing is loaded from elsewhere, and there is no form or cookie.
-	header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
-	reverse_proxy site:80
+	@silent_check_sso path /silent-check-sso.html
+	route {
+		header X-Frame-Options "DENY"
+		# Pre-rendered Angular pages carry small inline scripts (hydration, event
+		# replay); nothing is loaded from elsewhere, and there is no site-owned
+		# form or cookie.
+		header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' https://{$AUTH_HOST}; frame-src 'self' https://{$AUTH_HOST}; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://{$AUTH_HOST}; object-src 'none'"
+		# Keycloak redirects its silent SSO iframe to this page. Keep the
+		# exception limited to this non-content callback page.
+		header @silent_check_sso {
+			X-Frame-Options "SAMEORIGIN"
+			Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' https://{$AUTH_HOST}; frame-src 'self' https://{$AUTH_HOST}; frame-ancestors 'self' https://{$AUTH_HOST}; base-uri 'self'; form-action 'self' https://{$AUTH_HOST}; object-src 'none'"
+		}
+		reverse_proxy site:80
+	}
 }
 
 # The www form of the site (DNS record `www`) leads to the site itself.

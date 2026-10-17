@@ -25,6 +25,21 @@ a {
   }
 }
 
+.footer-action {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--wh-on-ink-muted);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+
+  &:hover {
+    color: var(--wh-on-ink);
+    text-decoration: underline;
+  }
+}
+
 .top {
   display: grid;
   gap: 2.5rem;

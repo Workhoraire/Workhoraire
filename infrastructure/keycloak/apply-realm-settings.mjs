@@ -15,7 +15,8 @@
  * Usage:  node infrastructure/keycloak/apply-realm-settings.mjs [--env-file <path>] [--dry-run] [--otp <code>]
  * The env file (default: .env at the root of the repository) gives
  * KEYCLOAK_ADMIN, KEYCLOAK_ADMIN_PASSWORD, KEYCLOAK_AUTH_SERVER_URL,
- * KEYCLOAK_REALM and the optional KEYCLOAK_SMTP_* and KEYCLOAK_VERIFY_EMAIL.
+ * KEYCLOAK_REALM, APP_HOST/SITE_HOST (or WORKHORAIRE_APP_URL/
+ * WORKHORAIRE_SITE_URL) and the optional KEYCLOAK_SMTP_* and KEYCLOAK_VERIFY_EMAIL.
  * --otp: the current one-time code of the administrator, once two-factor
  * authentication is on for that account.
  */
@@ -58,6 +59,10 @@ const profile =
     'kc.user.profile.config'
   ][0];
 const adminCli = realmFile.clients.find((client) => client.clientId === 'admin-cli');
+const appUrl = (env.WORKHORAIRE_APP_URL || (env.APP_HOST ? `https://${env.APP_HOST}` : 'http://localhost:4200')).replace(/\/+$/, '');
+const siteUrl = (env.WORKHORAIRE_SITE_URL || (env.SITE_HOST ? `https://${env.SITE_HOST}` : 'http://localhost:4400')).replace(/\/+$/, '');
+const webClientRedirectUris = [`${appUrl}/*`, `${siteUrl}/*`];
+const webClientOrigins = [appUrl, siteUrl];
 const server = env.KEYCLOAK_AUTH_SERVER_URL || 'http://localhost:8180';
 const realm = env.KEYCLOAK_REALM || 'workhoraire';
 
@@ -68,6 +73,7 @@ const realmUpdate = {
   ssoSessionMaxLifespanRememberMe: realmFile.ssoSessionMaxLifespanRememberMe,
   eventsEnabled: realmFile.eventsEnabled,
   eventsExpiration: realmFile.eventsExpiration,
+  passwordPolicy: realmFile.passwordPolicy,
 };
 if (env.KEYCLOAK_SMTP_HOST) {
   const user = env.KEYCLOAK_SMTP_USER || '';
@@ -109,6 +115,7 @@ console.log(
 console.log(
   `- client admin-cli du realm : connexion directe par mot de passe ${adminCli.directAccessGrantsEnabled ? 'autorisée' : 'refusée'}`,
 );
+console.log(`- client web : application ${appUrl}, site ${siteUrl}`);
 
 const placeholders = Object.entries(env)
   .filter(([name, value]) => name.startsWith('KEYCLOAK_') && /^<.*>$/.test(value))
@@ -165,6 +172,26 @@ if (client && client.directAccessGrantsEnabled !== adminCli.directAccessGrantsEn
     `/clients/${client.id}`,
     'le réglage du client admin-cli',
     JSON.stringify({ ...client, directAccessGrantsEnabled: adminCli.directAccessGrantsEnabled }),
+  );
+}
+const webClients = await (
+  await request('GET', '/clients?clientId=workhoraire-web', 'la lecture du client web')
+).json();
+const webClient = webClients[0];
+if (
+  webClient &&
+  (JSON.stringify(webClient.redirectUris ?? []) !== JSON.stringify(webClientRedirectUris) ||
+    JSON.stringify(webClient.webOrigins ?? []) !== JSON.stringify(webClientOrigins))
+) {
+  await request(
+    'PUT',
+    `/clients/${webClient.id}`,
+    'les URLs du client web',
+    JSON.stringify({
+      ...webClient,
+      redirectUris: webClientRedirectUris,
+      webOrigins: webClientOrigins,
+    }),
   );
 }
 console.log('Réglages appliqués.');

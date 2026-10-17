@@ -11,6 +11,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { filter } from 'rxjs';
 
+import { SiteAuthService } from '../core/auth/site-auth.service';
 import { APP_LINKS } from '../core/links';
 import { pathOf } from '../core/url-path';
 import { BrandLogo } from '../shared/brand-logo';
@@ -38,6 +39,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
 export class SiteHeader {
   protected readonly items = NAV_ITEMS;
   protected readonly links = APP_LINKS;
+  protected readonly auth = inject(SiteAuthService);
   /** State of the phone menu, a native <details> element that also works before hydration. */
   protected readonly menuOpen = signal(false);
   /**
@@ -76,5 +78,9 @@ export class SiteHeader {
       this.menuOpen.set(false);
       this.toggle()?.nativeElement.focus();
     }
+  }
+
+  protected logout(): void {
+    void this.auth.logout();
   }
 }

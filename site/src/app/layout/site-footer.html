@@ -30,8 +30,15 @@
       <div>
         <h2>Compte</h2>
         <ul>
-          <li><a [href]="links.signIn">Se connecter</a></li>
-          <li><a [href]="links.signUp">Commencer gratuitement</a></li>
+          @if (auth.status() === 'authenticated') {
+            <li><a [href]="links.signIn">Mon espace</a></li>
+            <li>
+              <button class="footer-action" type="button" (click)="logout()">Se déconnecter</button>
+            </li>
+          } @else {
+            <li><a [href]="links.signIn">Se connecter</a></li>
+            <li><a [href]="links.signUp">Commencer gratuitement</a></li>
+          }
         </ul>
       </div>
     </nav>

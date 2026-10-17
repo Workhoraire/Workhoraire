@@ -19,10 +19,15 @@
     </nav>
 
     <div class="actions">
-      <a class="sign-in" [href]="links.signIn">Se connecter</a>
-      <a class="wh-button wh-button--primary wh-button--small start" [href]="links.signUp">
-        Commencer gratuitement
-      </a>
+      @if (auth.status() === 'authenticated') {
+        <a class="sign-in" [href]="links.signIn">Mon espace</a>
+        <button class="sign-out" type="button" (click)="logout()">Se déconnecter</button>
+      } @else {
+        <a class="sign-in" [href]="links.signIn">Se connecter</a>
+        <a class="wh-button wh-button--primary wh-button--small start" [href]="links.signUp">
+          Commencer gratuitement
+        </a>
+      }
     </div>
 
     <details
@@ -53,12 +58,25 @@
           </ul>
         </nav>
         <div class="menu-actions">
-          <a class="wh-button wh-button--outline wh-button--block" [href]="links.signIn"
-            >Se connecter</a
-          >
-          <a class="wh-button wh-button--primary wh-button--block" [href]="links.signUp">
-            Commencer gratuitement
-          </a>
+          @if (auth.status() === 'authenticated') {
+            <a class="wh-button wh-button--outline wh-button--block" [href]="links.signIn"
+              >Mon espace</a
+            >
+            <button
+              class="wh-button wh-button--outline wh-button--block"
+              type="button"
+              (click)="logout()"
+            >
+              Se déconnecter
+            </button>
+          } @else {
+            <a class="wh-button wh-button--outline wh-button--block" [href]="links.signIn"
+              >Se connecter</a
+            >
+            <a class="wh-button wh-button--primary wh-button--block" [href]="links.signUp">
+              Commencer gratuitement
+            </a>
+          }
         </div>
       </div>
     </details>
